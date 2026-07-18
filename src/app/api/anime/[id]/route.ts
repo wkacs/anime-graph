@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime } from '@/db/schema'
+import { anime, opinions, tasteMemory } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
 const STATUSES = ['watching', 'completed', 'dropped', 'planned'] as const
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params
+  const animeId = Number(id)
+  const [row] = await db.select().from(anime).where(eq(anime.id, animeId))
+  if (!row) return NextResponse.json({ error: 'Nincs ilyen anime' }, { status: 404 })
+  const [opinion] = await db.select().from(opinions).where(eq(opinions.animeId, animeId))
+  const facts = await db.select({
+    id: tasteMemory.id,
+    animeId: tasteMemory.animeId,
+    kind: tasteMemory.kind,
+    text: tasteMemory.text,
+  }).from(tasteMemory).where(eq(tasteMemory.animeId, animeId))
+  return NextResponse.json({ anime: row, opinion: opinion ?? null, facts })
+}
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
