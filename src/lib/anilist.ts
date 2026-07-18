@@ -146,6 +146,31 @@ query ($id: Int!) {
   }
 }`
 
+const SEASON_QUERY = `
+query ($season: MediaSeason!, $seasonYear: Int!) {
+  Page(perPage: 25) {
+    media(season: $season, seasonYear: $seasonYear, type: ANIME, sort: POPULARITY_DESC) {
+      id
+      title { romaji }
+      coverImage { large }
+      genres
+      averageScore
+    }
+  }
+}`
+
+export async function fetchSeason(season: string, seasonYear: number): Promise<RecCandidate[]> {
+  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null }[] } }
+  const data = await anilistFetch<R>(SEASON_QUERY, { season, seasonYear })
+  return data.Page.media.map((m) => ({
+    anilistId: m.id,
+    title: m.title.romaji,
+    coverUrl: m.coverImage?.large ?? null,
+    genres: m.genres,
+    avgScore: m.averageScore,
+  }))
+}
+
 export async function fetchRecommendationsFor(anilistId: number): Promise<RecCandidate[]> {
   type R = { Media: { recommendations: { nodes: { mediaRecommendation: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null } | null }[] } } }
   const data = await anilistFetch<R>(MEDIA_RECS_QUERY, { id: anilistId })
