@@ -1,8 +1,11 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import WrappedCard from '@/components/WrappedCard'
+import { buildHeatmapCells, type HeatCell } from '@/lib/heatmap'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
+
+const HEAT_ALPHA = [0.05, 0.22, 0.42, 0.65, 0.95]
 
 const STATUS_ORDER = ['completed', 'watching', 'planned', 'dropped'] as const
 
@@ -90,12 +93,16 @@ function Bars({ data, ariaLabel }: { data: { label: string; count: number }[]; a
 export default function StatsPage() {
   const [list, setList] = useState<ApiAnime[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [heatCells, setHeatCells] = useState<HeatCell[]>([])
 
   useEffect(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => {
       setList(j.anime ?? [])
       setLoaded(true)
     })
+    fetch('/api/heatmap').then((r) => r.json()).then((j) => {
+      setHeatCells(buildHeatmapCells(j.entries ?? [], new Date(), 26))
+    }).catch(() => { /* heatmap nélkül is él */ })
   }, [])
 
   const stats = useMemo(() => {
@@ -216,6 +223,25 @@ export default function StatsPage() {
           </ul>
         </section>
       </div>
+
+      {heatCells.some((c) => c.count > 0) && (
+        <section className="glass rounded-3xl p-5">
+          <p className="label-mono mb-4">Aktivitás — az elmúlt fél év</p>
+          <div className="overflow-x-auto no-scrollbar">
+            <div className="grid grid-rows-7 grid-flow-col gap-[3px] w-max">
+              {heatCells.map((c) => (
+                <span
+                  key={c.date}
+                  title={`${c.date} · ${c.count} rész`}
+                  className="w-2.5 h-2.5 rounded-[3px]"
+                  style={{ background: `rgba(250,250,250,${HEAT_ALPHA[c.level]})` }}
+                />
+              ))}
+            </div>
+          </div>
+          <p className="label-mono mt-3">A „+1 rész” kattintásaidból épül</p>
+        </section>
+      )}
 
       <section className="glass rounded-3xl p-5">
         <p className="label-mono mb-4">Státusz-megoszlás</p>

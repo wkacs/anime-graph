@@ -30,6 +30,7 @@ export const anime = pgTable('anime', {
   progress: integer('progress').notNull().default(0),
   myScore: integer('my_score'),
   elo: real('elo').notNull().default(1200),
+  rewatchCount: integer('rewatch_count').notNull().default(0),
   watchedAt: timestamp('watched_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
@@ -66,6 +67,15 @@ export const duels = pgTable('duels', {
   loserId: integer('loser_id').notNull()
     .references(() => anime.id, { onDelete: 'cascade' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// one row per watched episode — feeds the activity heatmap
+export const episodeLog = pgTable('episode_log', {
+  id: serial('id').primaryKey(),
+  animeId: integer('anime_id').notNull()
+    .references(() => anime.id, { onDelete: 'cascade' }),
+  episode: integer('episode').notNull(),
+  watchedAt: timestamp('watched_at').notNull().defaultNow(),
 })
 
 export const recommendations = pgTable('recommendations', {

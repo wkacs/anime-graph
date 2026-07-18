@@ -186,6 +186,7 @@ export default function AnimePage() {
                 anime.durationMin != null ? `${anime.durationMin} perc` : null,
                 anime.studio,
                 anime.avgScore != null ? `AniList ${anime.avgScore}%` : null,
+                anime.rewatchCount > 0 ? `↻ ×${anime.rewatchCount} újranézve` : null,
               ].filter(Boolean).map((chip) => (
                 <span key={chip} className="glass rounded-full px-3 py-1 text-xs font-mono text-text-2">{chip}</span>
               ))}
@@ -246,6 +247,14 @@ export default function AnimePage() {
             />
             <span className="text-text-3">/ 10</span>
           </label>
+          {anime.status === 'completed' && (
+            <button
+              onClick={() => { if (confirm('Újranézed? A progressz nullázódik, a számláló nő.')) patch({ rewatch: true }) }}
+              className="btn-ghost border border-white/10 px-3.5 py-1.5 text-sm ml-auto"
+            >
+              ↻ Újranézés indítása
+            </button>
+          )}
         </section>
 
         {/* opinion */}

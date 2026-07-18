@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, opinions, tasteMemory } from '@/db/schema'
+import { anime, episodeLog, opinions, tasteMemory } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
 const STATUSES = ['watching', 'completed', 'dropped', 'planned'] as const
@@ -22,8 +22,20 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
+  const animeId = Number(id)
   const body = await req.json().catch(() => ({}))
   const patch: Record<string, unknown> = {}
+
+  // újranézés: számláló nő, progressz nullázódik, megy a "nézem"-be
+  if (body.rewatch === true) {
+    const [current] = await db.select().from(anime).where(eq(anime.id, animeId))
+    if (!current) return NextResponse.json({ error: 'Nincs ilyen anime' }, { status: 404 })
+    const [row] = await db.update(anime)
+      .set({ rewatchCount: current.rewatchCount + 1, progress: 0, status: 'watching' })
+      .where(eq(anime.id, animeId))
+      .returning()
+    return NextResponse.json({ anime: row })
+  }
 
   if (body.status !== undefined) {
     if (!STATUSES.includes(body.status)) {
@@ -45,7 +57,20 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if (!Object.keys(patch).length) {
     return NextResponse.json({ error: 'Üres módosítás' }, { status: 400 })
   }
-  const [row] = await db.update(anime).set(patch).where(eq(anime.id, Number(id))).returning()
+
+  // progressz-növekedés → epizód-napló a heatmaphez (max 30 sor/módosítás)
+  if (patch.progress !== undefined) {
+    const [before] = await db.select({ progress: anime.progress }).from(anime).where(eq(anime.id, animeId))
+    if (before && (patch.progress as number) > before.progress) {
+      const from = before.progress + 1
+      const to = Math.min(patch.progress as number, before.progress + 30)
+      const logs = []
+      for (let ep = from; ep <= to; ep++) logs.push({ animeId, episode: ep })
+      if (logs.length) await db.insert(episodeLog).values(logs)
+    }
+  }
+
+  const [row] = await db.update(anime).set(patch).where(eq(anime.id, animeId)).returning()
   if (!row) return NextResponse.json({ error: 'Nincs ilyen anime' }, { status: 404 })
   return NextResponse.json({ anime: row })
 }
