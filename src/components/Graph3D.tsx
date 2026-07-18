@@ -1,5 +1,5 @@
 'use client'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import * as THREE from 'three'
 import SpriteText from 'three-spritetext'
@@ -97,8 +97,16 @@ function animeObject(node: GraphNode): THREE.Object3D {
   return group
 }
 
+// timeline year marker: big mono year, no dot
+function timeObject(node: GraphNode): THREE.Object3D {
+  const label = new SpriteText(node.label, 7, 'rgba(250,250,250,0.55)')
+  label.fontFace = 'Geist Mono, monospace'
+  return label
+}
+
 // dimension node: name above a plain white dot (genre reads bigger than studio/year/…)
 function dimObject(node: GraphNode): THREE.Object3D {
+  if (node.timeNode) return timeObject(node)
   const group = new THREE.Group()
   const isGenre = node.dim === 'genre'
   const dot = new THREE.Mesh(
@@ -117,13 +125,39 @@ export default function Graph3D({
   data,
   onAnimeClick,
   onAnimeHover,
+  flythrough = 0,
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
   onAnimeHover: (animeId: number | null) => void
+  // timestamp trigger: when it changes to a non-zero value, the camera
+  // flies along the pinned x axis from the earliest to the latest node
+  flythrough?: number
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
+
+  useEffect(() => {
+    if (!flythrough) return
+    const timer = setInterval(() => {
+      const fg = fgRef.current
+      if (!fg) return
+      clearInterval(timer)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nodes = fg.graphData().nodes.filter((n: any) => n.type === 'anime' && n.fx !== undefined)
+      if (!nodes.length) return
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const xs = nodes.map((n: any) => n.fx as number)
+      const minX = Math.min(...xs)
+      const maxX = Math.max(...xs)
+      fg.cameraPosition({ x: minX - 30, y: 14, z: 105 }, { x: minX, y: 0, z: 0 }, 0)
+      const duration = Math.min(14000, Math.max(4000, nodes.length * 700))
+      setTimeout(() => {
+        fg.cameraPosition({ x: maxX + 30, y: 14, z: 105 }, { x: maxX, y: 0, z: 0 }, duration)
+      }, 700)
+    }, 150)
+    return () => clearInterval(timer)
+  }, [flythrough])
 
   // clone: force-graph mutates node objects (adds x/y/z)
   const graphData = useMemo(() => ({

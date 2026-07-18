@@ -5,7 +5,7 @@ import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import RecommendMorph from '@/components/RecommendMorph'
-import { buildGraph, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
+import { buildGraph, buildTimeline, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
@@ -18,6 +18,7 @@ export default function Home() {
   const [hoverId, setHoverId] = useState<number | null>(null)
   const [mouse, setMouse] = useState({ x: 0, y: 0 })
   const [loaded, setLoaded] = useState(false)
+  const [flythrough, setFlythrough] = useState(0) // 0 = normál mód, timestamp = idővonal
   const router = useRouter()
 
   useEffect(() => {
@@ -51,14 +52,17 @@ export default function Home() {
 
   useEffect(() => { refresh() }, [refresh])
 
-  const graph = useMemo(() => buildGraph(
-    animeList.map((a) => ({
+  const timelineMode = flythrough !== 0
+
+  const graph = useMemo(() => {
+    const rows = animeList.map((a) => ({
       id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
       coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
       status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
-    })),
-    config,
-  ), [animeList, config])
+      watchedAt: a.watchedAt, createdAt: a.createdAt,
+    }))
+    return timelineMode ? buildTimeline(rows) : buildGraph(rows, config)
+  }, [animeList, config, timelineMode])
 
   const hoverAnime = hoverId != null ? animeList.find((a) => a.id === hoverId) ?? null : null
 
@@ -73,14 +77,23 @@ export default function Home() {
         data={graph}
         onAnimeClick={(id) => router.push(`/anime/${id}`)}
         onAnimeHover={setHoverId}
+        flythrough={flythrough}
       />
 
       <div className="fixed top-20 left-4 z-20">
         <AddAnimeSearch onAdded={refresh} />
       </div>
 
-      <div className="fixed bottom-4 left-4 z-20">
-        <HierarchyPanel config={config} onChange={updateConfig} />
+      <div className="fixed bottom-4 left-4 z-20 flex items-end gap-2">
+        {!timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
+        <button
+          onClick={() => setFlythrough(timelineMode ? 0 : Date.now())}
+          className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
+            timelineMode ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
+          }`}
+        >
+          {timelineMode ? '✕ Idővonal' : 'Idővonal'}
+        </button>
       </div>
 
       <div className="fixed top-20 right-4 z-20">

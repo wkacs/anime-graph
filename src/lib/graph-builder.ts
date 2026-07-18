@@ -43,6 +43,11 @@ export type GraphNode = {
   status?: string
   animeId?: number
   dim?: Dimension
+  // timeline mode: pinned coordinates + year-marker flag
+  fx?: number
+  fy?: number
+  fz?: number
+  timeNode?: boolean
 }
 
 export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' }
@@ -73,6 +78,69 @@ function dimValue(a: GraphAnime, d: Dimension): string {
 }
 
 const RELATION_TYPES = new Set(['SEQUEL', 'PREQUEL', 'SIDE_STORY', 'SPIN_OFF', 'PARENT', 'ALTERNATIVE'])
+
+export type TimelineAnime = GraphAnime & { watchedAt: string | null; createdAt: string }
+
+const SPACING = 42
+
+// chronological layout: anime pinned along the x axis by watch date,
+// small deterministic y/z jitter so covers don't overlap, year markers above
+export function buildTimeline(rows: TimelineAnime[]): { nodes: GraphNode[]; links: GraphLink[] } {
+  const dated = rows
+    .map((a) => ({ a, t: new Date(a.watchedAt ?? a.createdAt).getTime() }))
+    .sort((x, y) => x.t - y.t)
+
+  const nodes: GraphNode[] = []
+  const links: GraphLink[] = []
+  let lastYear: number | null = null
+
+  dated.forEach(({ a, t }, i) => {
+    const fx = i * SPACING
+    const year = new Date(t).getFullYear()
+    if (year !== lastYear) {
+      lastYear = year
+      nodes.push({
+        id: `time:${year}:${i}`,
+        type: 'dim',
+        label: String(year),
+        val: 0,
+        timeNode: true,
+        fx,
+        fy: 42,
+        fz: 0,
+      })
+    }
+    nodes.push({
+      id: `anime:${a.id}`,
+      type: 'anime',
+      label: a.titleRomaji,
+      img: a.coverUrl ?? undefined,
+      val: a.myScore ?? 5,
+      status: a.status,
+      animeId: a.id,
+      fx,
+      fy: ((a.id * 37) % 5 - 2) * 5,
+      fz: ((a.id * 17) % 5 - 2) * 5,
+    })
+  })
+
+  const byAnilist = new Map(rows.map((a) => [a.anilistId, a.id]))
+  const seen = new Set<string>()
+  for (const a of rows) {
+    for (const rel of a.relations) {
+      if (!RELATION_TYPES.has(rel.type)) continue
+      const targetId = byAnilist.get(rel.anilistId)
+      if (targetId === undefined || targetId === a.id) continue
+      const [lo, hi] = a.id < targetId ? [a.id, targetId] : [targetId, a.id]
+      const key = `${lo}|${hi}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      links.push({ source: `anime:${lo}`, target: `anime:${hi}`, kind: 'relation' })
+    }
+  }
+
+  return { nodes, links }
+}
 
 export function buildGraph(rows: GraphAnime[], cfg: GraphConfig): { nodes: GraphNode[]; links: GraphLink[] } {
   const nodes = new Map<string, GraphNode>()
