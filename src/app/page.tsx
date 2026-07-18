@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Countdown from '@/components/Countdown'
+import RecommendMorph from '@/components/RecommendMorph'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 
@@ -62,6 +63,20 @@ export default function NewsPage() {
     if (res.ok) setAdded((s) => new Set(s).add(anilistId))
   }
 
+  async function bumpProgress(m: MineItem) {
+    const res = await fetch(`/api/anime/${m.animeId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progress: m.progress + 1 }),
+    })
+    if (res.ok && data) {
+      setData({
+        ...data,
+        mine: data.mine.map((x) => (x.animeId === m.animeId ? { ...x, progress: x.progress + 1 } : x)),
+      })
+    }
+  }
+
   if (error) {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
@@ -89,11 +104,14 @@ export default function NewsPage() {
 
   return (
     <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-8">
-      <div>
-        <p className="label-mono mb-1">News</p>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {data.season.year} {SEASON_LABELS[data.season.season] ?? data.season.season}
-        </h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="label-mono mb-1">News</p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {data.season.year} {SEASON_LABELS[data.season.season] ?? data.season.season}
+          </h1>
+        </div>
+        <RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} />
       </div>
 
       {data.mine.length > 0 && (
@@ -107,10 +125,11 @@ export default function NewsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: Math.min(i * 0.05, 0.3) }}
               >
-                <Link href={`/anime/${m.animeId}`} className="glass rounded-2xl p-3 flex gap-3 hover:bg-white/8 transition-colors h-full">
+                <div className="glass rounded-2xl p-3 flex gap-3 hover:bg-white/8 transition-colors h-full relative">
+                  <Link href={`/anime/${m.animeId}`} className="absolute inset-0" aria-label={m.title} />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   {m.coverUrl && <img src={m.coverUrl} alt="" className="w-12 rounded-lg object-cover self-start" />}
-                  <div className="min-w-0 flex flex-col">
+                  <div className="min-w-0 flex flex-col flex-1">
                     <p className="text-[13px] font-medium leading-tight line-clamp-2">{m.title}</p>
                     <p className="label-mono mt-1 flex items-center gap-1.5">
                       <span
@@ -118,12 +137,22 @@ export default function NewsPage() {
                         style={{ background: STATUS_CSS_VARS[m.status] ?? 'white' }}
                       />
                       {STATUS_LABELS[m.status] ?? m.status}
+                      <span className="text-text-3">· {m.progress}{m.episodes ? `/${m.episodes}` : ''} rész</span>
                     </p>
-                    <p className="mt-auto pt-2 font-mono text-sm text-text-1">
-                      EP {m.nextEpisode} · <Countdown airingAt={m.airingAt} />
-                    </p>
+                    <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                      <p className="font-mono text-sm text-text-1">
+                        EP {m.nextEpisode} · <Countdown airingAt={m.airingAt} />
+                      </p>
+                      <button
+                        onClick={() => bumpProgress(m)}
+                        title="Megnéztem egy részt"
+                        className="btn-ghost relative z-10 border border-white/10 px-2 py-0.5 text-xs whitespace-nowrap"
+                      >
+                        +1
+                      </button>
+                    </div>
                   </div>
-                </Link>
+                </div>
               </motion.div>
             ))}
           </div>

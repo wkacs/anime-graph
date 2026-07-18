@@ -24,6 +24,9 @@ export default function AnimePage() {
   const [extractStatus, setExtractStatus] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const [finishPrompt, setFinishPrompt] = useState(false)
+  const [finishScore, setFinishScore] = useState<number | null>(null)
+  const [finishText, setFinishText] = useState('')
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/anime/${id}`)
@@ -45,6 +48,36 @@ export default function AnimePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
+    // frissen befejezett anime pont/vélemény nélkül → egy lépéses értékelő
+    if (body.status === 'completed' && anime && (anime.myScore == null || !opinion.trim())) {
+      setFinishScore(anime.myScore)
+      setFinishText(opinion)
+      setFinishPrompt(true)
+    }
+    load()
+  }
+
+  async function saveFinish() {
+    if (finishScore != null && finishScore !== anime?.myScore) {
+      await fetch(`/api/anime/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ myScore: finishScore }),
+      })
+    }
+    setFinishPrompt(false)
+    if (finishText.trim() && finishText.trim() !== opinion.trim()) {
+      setOpinion(finishText)
+      setSaving(true)
+      const res = await fetch('/api/opinion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ animeId: Number(id), rawText: finishText }),
+      })
+      const json = await res.json()
+      setExtractStatus(json.extractStatus)
+      setSaving(false)
+    }
     load()
   }
 
@@ -265,6 +298,49 @@ export default function AnimePage() {
           Anime törlése a listából
         </button>
       </div>
+
+      {/* frissen befejezve → pont + vélemény egy lépésben */}
+      {finishPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setFinishPrompt(false)}>
+          <div
+            className="glass-strong rounded-3xl w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="label-mono mb-1">Befejezted 🎉</p>
+            <h2 className="text-lg font-semibold tracking-tight mb-4">Milyen volt?</h2>
+            <div className="flex gap-1 mb-4">
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setFinishScore(n)}
+                  className={`flex-1 rounded-lg py-1.5 text-sm font-mono transition-colors ${
+                    finishScore === n
+                      ? 'bg-white text-black font-semibold'
+                      : 'bg-white/6 text-text-2 hover:bg-white/12'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={finishText}
+              onChange={(e) => setFinishText(e.target.value)}
+              rows={4}
+              placeholder="Pár mondat: mi tetszett, mi nem — ebből tanul az ajánló."
+              className="field w-full rounded-2xl p-3 text-sm leading-relaxed mb-4"
+            />
+            <div className="flex items-center justify-end gap-3">
+              <button onClick={() => setFinishPrompt(false)} className="btn-ghost px-4 py-2 text-sm">
+                Kihagyom
+              </button>
+              <button onClick={saveFinish} className="btn-solid px-5 py-2 text-sm">
+                Mentés
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
