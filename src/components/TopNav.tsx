@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const TABS: { href: string; label: string; soon?: boolean }[] = [
-  { href: '/', label: 'Gráf' },
+  { href: '/', label: 'News' },
+  { href: '/graf', label: 'Gráf' },
   { href: '/lista', label: 'Lista' },
   { href: '/vibe', label: 'Vibe' },
   { href: '/duel', label: 'Duel' },

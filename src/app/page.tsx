@@ -1,154 +1,196 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Graph3D from '@/components/Graph3D'
-import HierarchyPanel from '@/components/HierarchyPanel'
-import AddAnimeSearch from '@/components/AddAnimeSearch'
-import RecommendMorph from '@/components/RecommendMorph'
-import { buildGraph, buildTimeline, COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import Countdown from '@/components/Countdown'
+import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
-import type { ApiAnime, ApiFact } from '@/lib/types'
 
-const CONFIG_KEY = 'anime-graph-config'
+type MineItem = {
+  animeId: number
+  anilistId: number
+  title: string
+  coverUrl: string | null
+  status: string
+  progress: number
+  episodes: number | null
+  airingAt: number
+  nextEpisode: number
+}
 
-export default function Home() {
-  const [animeList, setAnimeList] = useState<ApiAnime[]>([])
-  const [, setFacts] = useState<ApiFact[]>([])
-  const [config, setConfig] = useState<GraphConfig>(DEFAULT_CONFIG)
-  const [hoverId, setHoverId] = useState<number | null>(null)
-  const [mouse, setMouse] = useState({ x: 0, y: 0 })
-  const [loaded, setLoaded] = useState(false)
-  const [flythrough, setFlythrough] = useState(0) // 0 = normál mód, timestamp = idővonal
-  const router = useRouter()
+type SeasonItem = {
+  anilistId: number
+  title: string
+  coverUrl: string | null
+  genres: string[]
+  avgScore: number | null
+  episodes: number | null
+  format: string | null
+  airingAt: number | null
+  nextEpisode: number | null
+  owned: boolean
+  tasteScore: number | null
+  tasteReason: string | null
+}
+
+type NewsData = {
+  season: { season: string; year: number }
+  mine: MineItem[]
+  seasonItems: SeasonItem[]
+}
+
+export default function NewsPage() {
+  const [data, setData] = useState<NewsData | null>(null)
+  const [error, setError] = useState('')
+  const [added, setAdded] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    const saved = localStorage.getItem(CONFIG_KEY)
-    if (saved) {
-      try { setConfig(JSON.parse(saved)) } catch { /* keep default */ }
-      setLoaded(true)
-      return
-    }
-    // no local config yet → fall back to the saved default from settings
-    fetch('/api/settings')
-      .then((r) => r.json())
-      .then((j) => { if (j.hierarchyDefault) setConfig(j.hierarchyDefault) })
-      .catch(() => { /* keep default */ })
-      .finally(() => setLoaded(true))
+    fetch('/api/news')
+      .then(async (r) => {
+        if (!r.ok) throw new Error((await r.json()).error ?? 'Hiba történt')
+        setData(await r.json())
+      })
+      .catch((e) => setError(String(e.message ?? e)))
   }, [])
 
-  function updateConfig(c: GraphConfig) {
-    setConfig(c)
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(c))
+  async function addToPlanned(anilistId: number) {
+    const res = await fetch('/api/anime', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId }),
+    })
+    if (res.ok) setAdded((s) => new Set(s).add(anilistId))
   }
 
-  const openAnime = useCallback((id: number) => router.push(`/anime/${id}`), [router])
+  if (error) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4">
+        <div className="glass rounded-3xl px-10 py-12 text-center">
+          <p className="label-mono mb-2">News</p>
+          <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>
+        </div>
+      </main>
+    )
+  }
 
-  const refresh = useCallback(async () => {
-    const res = await fetch('/api/anime')
-    if (res.ok) {
-      const json = await res.json()
-      setAnimeList(json.anime)
-      setFacts(json.facts)
-    }
-  }, [])
-
-  useEffect(() => { refresh() }, [refresh])
-
-  const timelineMode = flythrough !== 0
-
-  const graph = useMemo(() => {
-    const rows = animeList.map((a) => ({
-      id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
-      coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
-      status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
-      watchedAt: a.watchedAt, createdAt: a.createdAt,
-    }))
-    return timelineMode ? buildTimeline(rows) : buildGraph(rows, config)
-  }, [animeList, config, timelineMode])
-
-  const hoverAnime = hoverId != null ? animeList.find((a) => a.id === hoverId) ?? null : null
-
-  // covers stay visible in every mode except the explicit dot fallback;
-  // 'auto' just drops the name labels + shrinks textures on big libraries
-  const coverMode = config.covers ?? 'auto'
-  const nodeMode =
-    coverMode === 'off' ? 'dot' as const
-    : coverMode === 'on' || animeList.length <= COVER_AUTO_LIMIT ? 'full' as const
-    : 'lite' as const
-
-  if (!loaded) return null
+  if (!data) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <motion.p
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 1.6, repeat: Infinity }}
+          className="label-mono"
+        >
+          Adások betöltése…
+        </motion.p>
+      </main>
+    )
+  }
 
   return (
-    <main
-      className="relative h-screen w-screen overflow-hidden"
-      onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
-    >
-      <Graph3D
-        data={graph}
-        onAnimeClick={openAnime}
-        onAnimeHover={setHoverId}
-        flythrough={flythrough}
-        nodeMode={nodeMode}
-      />
-
-      <div className="fixed top-20 left-4 z-20">
-        <AddAnimeSearch onAdded={refresh} />
+    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-8">
+      <div>
+        <p className="label-mono mb-1">News</p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {data.season.year} {SEASON_LABELS[data.season.season] ?? data.season.season}
+        </h1>
       </div>
 
-      <div className="fixed bottom-4 left-4 z-20 flex items-end gap-2">
-        {!timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
-        <button
-          onClick={() => setFlythrough(timelineMode ? 0 : Date.now())}
-          className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
-            timelineMode ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
-          }`}
-        >
-          {timelineMode ? '✕ Idővonal' : 'Idővonal'}
-        </button>
-      </div>
-
-      <div className="fixed top-20 right-4 z-20">
-        <RecommendMorph onAdded={refresh} />
-      </div>
-
-      {animeList.length === 0 && (
-        <div className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="glass rounded-3xl px-8 py-6 text-center">
-            <p className="label-mono mb-2">Üres univerzum</p>
-            <p className="text-sm text-text-2">Add hozzá az első animét a bal felső keresővel.</p>
+      {data.mine.length > 0 && (
+        <section>
+          <p className="label-mono mb-3">Amit követsz — következő rész</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {data.mine.map((m, i) => (
+              <motion.div
+                key={m.animeId}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: Math.min(i * 0.05, 0.3) }}
+              >
+                <Link href={`/anime/${m.animeId}`} className="glass rounded-2xl p-3 flex gap-3 hover:bg-white/8 transition-colors h-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {m.coverUrl && <img src={m.coverUrl} alt="" className="w-12 rounded-lg object-cover self-start" />}
+                  <div className="min-w-0 flex flex-col">
+                    <p className="text-[13px] font-medium leading-tight line-clamp-2">{m.title}</p>
+                    <p className="label-mono mt-1 flex items-center gap-1.5">
+                      <span
+                        className="inline-block w-1.5 h-1.5 rounded-full"
+                        style={{ background: STATUS_CSS_VARS[m.status] ?? 'white' }}
+                      />
+                      {STATUS_LABELS[m.status] ?? m.status}
+                    </p>
+                    <p className="mt-auto pt-2 font-mono text-sm text-text-1">
+                      EP {m.nextEpisode} · <Countdown airingAt={m.airingAt} />
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {hoverAnime && (
-        <div
-          className="glass-strong fixed z-30 w-64 rounded-2xl p-3 pointer-events-none flex gap-3"
-          style={{
-            left: Math.min(mouse.x + 18, typeof window !== 'undefined' ? window.innerWidth - 280 : mouse.x),
-            top: Math.min(mouse.y + 18, typeof window !== 'undefined' ? window.innerHeight - 180 : mouse.y),
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {hoverAnime.coverUrl && <img src={hoverAnime.coverUrl} alt="" className="w-14 rounded-lg self-start" />}
-          <div className="min-w-0">
-            <p className="text-sm font-medium leading-tight">{hoverAnime.titleRomaji}</p>
-            {hoverAnime.titleNative && (
-              <p className="text-[11px] text-text-3 leading-tight mt-0.5">{hoverAnime.titleNative}</p>
-            )}
-            <p className="label-mono mt-1.5">
-              {hoverAnime.year ?? '?'} · {hoverAnime.format ?? '?'} · {hoverAnime.episodes ?? '?'} rész
-            </p>
-            <p className="flex items-center gap-1.5 mt-1.5 text-xs text-text-2">
-              <span
-                className="inline-block w-2 h-2 rounded-full"
-                style={{ background: STATUS_CSS_VARS[hoverAnime.status] ?? 'white' }}
-              />
-              {STATUS_LABELS[hoverAnime.status] ?? hoverAnime.status}
-              {hoverAnime.myScore != null && <span className="text-text-3">· {hoverAnime.myScore}/10</span>}
-            </p>
-          </div>
+      <section>
+        <div className="flex items-baseline justify-between mb-3">
+          <p className="label-mono">A szezon</p>
+          <Link href="/szezon" className="label-mono hover:text-text-1 transition-colors">
+            Ízlés-pontozás →
+          </Link>
         </div>
-      )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {data.seasonItems.map((s, i) => (
+            <motion.article
+              key={s.anilistId}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(i * 0.03, 0.4) }}
+              className="glass rounded-3xl p-4 flex gap-4"
+            >
+              {s.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.coverUrl} alt="" className="w-16 rounded-xl object-cover self-start" />
+              ) : (
+                <div className="w-16 aspect-[2/3] rounded-xl bg-white/5 self-start" />
+              )}
+              <div className="flex-1 min-w-0 flex flex-col">
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="text-sm font-medium leading-tight">{s.title}</h2>
+                  {s.tasteScore != null && (
+                    <span
+                      className="font-mono text-sm font-semibold tabular-nums shrink-0"
+                      title={s.tasteReason ?? undefined}
+                      style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}
+                    >
+                      {s.tasteScore}
+                    </span>
+                  )}
+                </div>
+                <p className="label-mono mt-0.5">{s.genres.slice(0, 3).join(' · ')}</p>
+                <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+                  <p className="font-mono text-[13px] text-text-1">
+                    {s.airingAt != null ? (
+                      <>EP {s.nextEpisode} · <Countdown airingAt={s.airingAt} /></>
+                    ) : (
+                      <span className="text-text-3">nincs adásban</span>
+                    )}
+                  </p>
+                  {s.owned ? (
+                    <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
+                  ) : (
+                    <button
+                      onClick={() => addToPlanned(s.anilistId)}
+                      disabled={added.has(s.anilistId)}
+                      className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                    >
+                      {added.has(s.anilistId) ? '✓' : '+ Tervezem'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.article>
+          ))}
+        </div>
+      </section>
     </main>
   )
 }

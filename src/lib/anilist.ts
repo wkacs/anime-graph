@@ -195,6 +195,13 @@ query ($id: Int!) {
   }
 }`
 
+export type SeasonMedia = RecCandidate & {
+  episodes: number | null
+  format: string | null
+  airingAt: number | null // unix seconds of the next episode, null if not airing
+  nextEpisode: number | null
+}
+
 const SEASON_QUERY = `
 query ($season: MediaSeason!, $seasonYear: Int!) {
   Page(perPage: 25) {
@@ -204,12 +211,15 @@ query ($season: MediaSeason!, $seasonYear: Int!) {
       coverImage { large }
       genres
       averageScore
+      episodes
+      format
+      nextAiringEpisode { airingAt episode }
     }
   }
 }`
 
-export async function fetchSeason(season: string, seasonYear: number): Promise<RecCandidate[]> {
-  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null }[] } }
+export async function fetchSeason(season: string, seasonYear: number): Promise<SeasonMedia[]> {
+  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; episodes: number | null; format: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null }[] } }
   const data = await anilistFetch<R>(SEASON_QUERY, { season, seasonYear })
   return data.Page.media.map((m) => ({
     anilistId: m.id,
@@ -217,7 +227,38 @@ export async function fetchSeason(season: string, seasonYear: number): Promise<R
     coverUrl: m.coverImage?.large ?? null,
     genres: m.genres,
     avgScore: m.averageScore,
+    episodes: m.episodes,
+    format: m.format,
+    airingAt: m.nextAiringEpisode?.airingAt ?? null,
+    nextEpisode: m.nextAiringEpisode?.episode ?? null,
   }))
+}
+
+export type AiringInfo = { anilistId: number; airingAt: number; nextEpisode: number }
+
+const AIRING_QUERY = `
+query ($ids: [Int!]) {
+  Page(perPage: 50) {
+    media(id_in: $ids, type: ANIME) {
+      id
+      nextAiringEpisode { airingAt episode }
+    }
+  }
+}`
+
+// next-episode times for the given AniList ids (only airing ones come back)
+export async function fetchAiringFor(anilistIds: number[]): Promise<AiringInfo[]> {
+  type R = { Page: { media: { id: number; nextAiringEpisode: { airingAt: number; episode: number } | null }[] } }
+  const out: AiringInfo[] = []
+  for (let i = 0; i < anilistIds.length; i += 50) {
+    const data = await anilistFetch<R>(AIRING_QUERY, { ids: anilistIds.slice(i, i + 50) })
+    for (const m of data.Page.media) {
+      if (m.nextAiringEpisode) {
+        out.push({ anilistId: m.id, airingAt: m.nextAiringEpisode.airingAt, nextEpisode: m.nextAiringEpisode.episode })
+      }
+    }
+  }
+  return out
 }
 
 export async function fetchRecommendationsFor(anilistId: number): Promise<RecCandidate[]> {
