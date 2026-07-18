@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, tasteMemory, recommendations } from '@/db/schema'
+import { anime, duels, tasteMemory, recommendations } from '@/db/schema'
+import { desc } from 'drizzle-orm'
 import { fetchRecommendationsFor, type RecCandidate } from '@/lib/anilist'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
 import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
@@ -39,8 +40,24 @@ export async function POST() {
     title: f.animeId != null ? titleById.get(f.animeId) ?? null : null,
   }))
 
+  // duel-derived signals: only meaningful once actual duels happened
+  const duelRows = await db.select().from(duels).orderBy(desc(duels.createdAt)).limit(8)
+  const extras = {
+    eloTop: duelRows.length
+      ? [...rows].sort((a, b) => b.elo - a.elo).slice(0, 5).map((r) => r.titleRomaji)
+      : [],
+    dropped: rows.filter((r) => r.status === 'dropped').slice(0, 8).map((r) => r.titleRomaji),
+    recentDuels: duelRows
+      .map((d) => {
+        const w = titleById.get(d.winnerId)
+        const l = titleById.get(d.loserId)
+        return w && l ? `${w} > ${l}` : null
+      })
+      .filter((x): x is string => x !== null),
+  }
+
   try {
-    const raw = await glmChat(buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji)))
+    const raw = await glmChat(buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji), extras))
     const picks = parsePicks(raw)
     const byId = new Map(ranked.map((c) => [c.anilistId, c]))
     const result = picks

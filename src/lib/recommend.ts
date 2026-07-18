@@ -17,10 +17,17 @@ SZEMÉLYES magyar indoklást írsz, ami a felhasználó konkrét ízlés-tényei
 Válaszolj KIZÁRÓLAG JSON-nal: {"picks":[{"anilistId":szám,"reason":"indoklás"}]}
 Csak a jelöltlistában szereplő anilistId-ket használhatod.`
 
+export type RecommendExtras = {
+  eloTop?: string[]      // duel-rangsor élmezőnye
+  dropped?: string[]     // amit félbehagyott — negatív jel
+  recentDuels?: string[] // "A > B" formában
+}
+
 export function buildRecommendMessages(
   candidates: RecCandidate[],
   facts: { kind: string; text: string; title: string | null }[],
   topTitles: string[],
+  extras: RecommendExtras = {},
 ): ChatMessage[] {
   const candLines = candidates.map((c) =>
     `[${c.anilistId}] ${c.title} — műfaj: ${c.genres.join(', ')}; AniList-átlag: ${c.avgScore ?? '?'}`,
@@ -28,12 +35,19 @@ export function buildRecommendMessages(
   const factLines = facts.map((f) =>
     `- (${f.kind}${f.title ? `, ${f.title}` : ''}) ${f.text}`,
   ).join('\n')
+  const extraBlocks = [
+    extras.eloTop?.length ? `Párbaj-rangsorom éle (ezek nyernek nálam fej-fej mellett):\n${extras.eloTop.join(', ')}` : null,
+    extras.recentDuels?.length ? `Friss párbaj-döntéseim:\n${extras.recentDuels.map((d) => `- ${d}`).join('\n')}` : null,
+    extras.dropped?.length ? `Ezeket FÉLBEHAGYTAM (kerüld a hasonlókat):\n${extras.dropped.join(', ')}` : null,
+  ].filter(Boolean).join('\n\n')
   return [
     { role: 'system', content: SYSTEM },
     {
       role: 'user',
       content: `Kedvenc animéim (legjobbra értékelt): ${topTitles.join(', ') || 'nincs még'}\n\n` +
-        `Ízlés-memóriám:\n${factLines || '- (még üres)'}\n\nJelöltlista:\n${candLines}`,
+        `Ízlés-memóriám:\n${factLines || '- (még üres)'}\n\n` +
+        (extraBlocks ? `${extraBlocks}\n\n` : '') +
+        `Jelöltlista:\n${candLines}`,
     },
   ]
 }

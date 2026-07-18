@@ -20,6 +20,8 @@ export async function glmChat(
           Authorization: `Bearer ${process.env.GLM_API_KEY}`,
         },
         body: JSON.stringify({ model: MODEL, messages, temperature: 0.4 }),
+        // a hanging upstream must not block the route (Vercel cap is 60s anyway)
+        signal: AbortSignal.timeout(30_000),
       })
       if (res.status === 429 || res.status >= 500) {
         lastError = new Error(`GLM HTTP ${res.status}`)
@@ -32,7 +34,8 @@ export async function glmChat(
       return content
     } catch (e) {
       lastError = e
-      if (e instanceof TypeError) continue // network error → retry
+      const name = e instanceof Error ? e.name : ''
+      if (e instanceof TypeError || name === 'TimeoutError' || name === 'AbortError') continue // network/timeout → retry
       throw e
     }
   }

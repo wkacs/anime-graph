@@ -5,7 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import type { ApiAnime } from '@/lib/types'
 
 type OwnPick = { animeId: number; title: string; coverUrl: string | null; genres: string[]; status: string; reason: string }
-type NewPick = { title: string; reason: string }
+type NewPick = {
+  title: string
+  reason: string
+  anilistId: number | null
+  coverUrl: string | null
+  year: number | null
+  genres: string[]
+}
 
 export default function VibePage() {
   const [list, setList] = useState<ApiAnime[]>([])
@@ -18,6 +25,16 @@ export default function VibePage() {
   const [ownPicks, setOwnPicks] = useState<OwnPick[]>([])
   const [newPicks, setNewPicks] = useState<NewPick[]>([])
   const [ran, setRan] = useState(false)
+  const [addedNew, setAddedNew] = useState<Set<number>>(new Set())
+
+  async function addToPlanned(anilistId: number) {
+    const res = await fetch('/api/anime', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId }),
+    })
+    if (res.ok) setAddedNew((s) => new Set(s).add(anilistId))
+  }
 
   useEffect(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => setList(j.anime ?? []))
@@ -132,16 +149,39 @@ export default function VibePage() {
           <p className="label-mono mb-2">Új felfedezés</p>
           <ul className="flex flex-col gap-2">
             {newPicks.map((p) => (
-              <li key={p.title} className="glass rounded-2xl p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-medium">{p.title}</h3>
-                  <a
-                    href={`https://anilist.co/search/anime?search=${encodeURIComponent(p.title)}`}
-                    target="_blank" rel="noreferrer"
-                    className="label-mono hover:text-text-1 whitespace-nowrap"
-                  >AniList ↗</a>
+              <li key={p.title} className="glass rounded-2xl p-3 flex gap-3">
+                {p.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.coverUrl} alt="" className="w-12 rounded-lg self-start" />
+                ) : (
+                  <div className="w-12 aspect-[2/3] rounded-lg bg-white/5 self-start" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-sm font-medium leading-tight">{p.title}</h3>
+                    {p.anilistId != null ? (
+                      <button
+                        onClick={() => addToPlanned(p.anilistId!)}
+                        disabled={addedNew.has(p.anilistId)}
+                        className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                      >
+                        {addedNew.has(p.anilistId) ? '✓ Tervezem' : '+ Tervezem'}
+                      </button>
+                    ) : (
+                      <a
+                        href={`https://anilist.co/search/anime?search=${encodeURIComponent(p.title)}`}
+                        target="_blank" rel="noreferrer"
+                        className="label-mono hover:text-text-1 whitespace-nowrap shrink-0"
+                      >AniList ↗</a>
+                    )}
+                  </div>
+                  {(p.year != null || p.genres.length > 0) && (
+                    <p className="label-mono mt-0.5">
+                      {[p.year, ...p.genres.slice(0, 3)].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  <p className="text-[13px] text-text-2 leading-snug mt-1">{p.reason}</p>
                 </div>
-                <p className="text-[13px] text-text-2 leading-snug mt-1">{p.reason}</p>
               </li>
             ))}
           </ul>

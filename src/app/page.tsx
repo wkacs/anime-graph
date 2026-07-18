@@ -44,6 +44,7 @@ export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
   const [error, setError] = useState('')
   const [added, setAdded] = useState<Set<number>>(new Set())
+  const [digest, setDigest] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/news')
@@ -52,6 +53,11 @@ export default function NewsPage() {
         setData(await r.json())
       })
       .catch((e) => setError(String(e.message ?? e)))
+    // digest külön csatornán jön, nem lassítja az oldalt
+    fetch('/api/digest')
+      .then((r) => r.json())
+      .then((j) => setDigest(j.digest ?? null))
+      .catch(() => { /* digest nélkül is él az oldal */ })
   }, [])
 
   async function addToPlanned(anilistId: number) {
@@ -113,6 +119,17 @@ export default function NewsPage() {
         </div>
         <RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} />
       </div>
+
+      {digest && (
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl px-5 py-3.5 text-sm text-text-1 leading-relaxed -mt-3"
+        >
+          <span className="label-mono mr-2">✦ ma</span>
+          {digest}
+        </motion.p>
+      )}
 
       {data.mine.length > 0 && (
         <section>

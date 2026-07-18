@@ -2,7 +2,32 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, tasteMemory, recommendations } from '@/db/schema'
 import { buildVibeMessages, parseVibe, type VibeOwnAnime } from '@/lib/vibe'
+import { searchAnime } from '@/lib/anilist'
 import { glmChat } from '@/lib/glm'
+
+// GLM only names new titles — attach real AniList data so the cards are
+// addable with one click (best-effort, a failed lookup keeps the plain title)
+async function enrichNewPicks(
+  picks: { title: string; reason: string }[],
+  ownedAnilistIds: Set<number>,
+) {
+  return Promise.all(picks.map(async (p) => {
+    try {
+      const hit = (await searchAnime(p.title)).find((r) => !ownedAnilistIds.has(r.anilistId))
+      if (!hit) return { ...p, anilistId: null, coverUrl: null, year: null, genres: [] }
+      return {
+        title: hit.titleRomaji,
+        reason: p.reason,
+        anilistId: hit.anilistId,
+        coverUrl: hit.coverUrl,
+        year: hit.year,
+        genres: hit.genres,
+      }
+    } catch {
+      return { ...p, anilistId: null, coverUrl: null, year: null, genres: [] }
+    }
+  }))
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
@@ -46,7 +71,8 @@ export async function POST(req: NextRequest) {
           reason: p.reason,
         }
       })
-    const result = { ownPicks, newPicks: parsed.newPicks }
+    const owned = new Set(rows.map((r) => r.anilistId))
+    const result = { ownPicks, newPicks: await enrichNewPicks(parsed.newPicks, owned) }
     await db.insert(recommendations).values({
       kind: 'vibe',
       input: { prompt, animeIds },
