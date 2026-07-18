@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import WrappedCard from '@/components/WrappedCard'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
 
@@ -154,7 +155,10 @@ export default function StatsPage() {
 
   return (
     <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-4">
-      <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
+        <WrappedCard list={list} />
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatTile label="Anime a listán" value={String(list.length)} />
