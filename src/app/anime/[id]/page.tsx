@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import type { AnimeTheme } from '@/lib/themes'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
 const STATUS_OPTIONS = ['watching', 'completed', 'planned', 'dropped'] as const
@@ -27,6 +28,8 @@ export default function AnimePage() {
   const [finishPrompt, setFinishPrompt] = useState(false)
   const [finishScore, setFinishScore] = useState<number | null>(null)
   const [finishText, setFinishText] = useState('')
+  const [themes, setThemes] = useState<AnimeTheme[]>([])
+  const [activeTheme, setActiveTheme] = useState<AnimeTheme | null>(null)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/anime/${id}`)
@@ -41,6 +44,17 @@ export default function AnimePage() {
   }, [id])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!anime?.anilistId) return
+    fetch(`/api/themes/${anime.anilistId}`)
+      .then((r) => r.json())
+      .then((j) => {
+        setThemes(j.themes ?? [])
+        setActiveTheme((j.themes ?? [])[0] ?? null)
+      })
+      .catch(() => { /* marad a trailer-fallback */ })
+  }, [anime?.anilistId])
 
   async function patch(body: Record<string, unknown>) {
     await fetch(`/api/anime/${id}`, {
@@ -252,10 +266,45 @@ export default function AnimePage() {
           )}
         </section>
 
-        {/* trailer */}
+        {/* openings & endings (animethemes.moe), fallback: trailer */}
         <section className="glass rounded-3xl p-5">
-          <p className="label-mono mb-3">Opening / trailer</p>
-          {anime.trailerSite === 'youtube' && anime.trailerId ? (
+          <p className="label-mono mb-3">{themes.length ? 'Openingek & endingek' : 'Opening / trailer'}</p>
+          {themes.length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {themes.map((t) => (
+                  <button
+                    key={t.slug}
+                    onClick={() => setActiveTheme(t)}
+                    className={`rounded-full px-3 py-1 text-xs font-mono transition-colors ${
+                      activeTheme?.slug === t.slug
+                        ? 'bg-white text-black font-semibold'
+                        : 'bg-white/6 text-text-2 hover:bg-white/12'
+                    }`}
+                  >
+                    {t.slug}
+                  </button>
+                ))}
+              </div>
+              {activeTheme && (
+                <>
+                  <video
+                    key={activeTheme.videoUrl}
+                    src={activeTheme.videoUrl}
+                    controls
+                    preload="none"
+                    poster={anime.bannerUrl ?? undefined}
+                    className="w-full aspect-video rounded-2xl bg-black"
+                  />
+                  {activeTheme.song && (
+                    <p className="label-mono mt-2">
+                      {activeTheme.song}{activeTheme.artist ? ` — ${activeTheme.artist}` : ''}
+                    </p>
+                  )}
+                </>
+              )}
+            </>
+          ) : anime.trailerSite === 'youtube' && anime.trailerId ? (
             <iframe
               className="w-full aspect-video rounded-2xl"
               src={`https://www.youtube-nocookie.com/embed/${anime.trailerId}`}
