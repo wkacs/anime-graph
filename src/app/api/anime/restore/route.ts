@@ -15,11 +15,13 @@ export async function POST(req: NextRequest) {
     .where(eq(anime.anilistId, bundle.anime.anilistId))
   if (existing.length) return NextResponse.json({ anime: existing[0] })
 
-  const { id: _oldId, createdAt: _c, watchedAt, ...rest } = bundle.anime
-  const insert: AnimeInsert = {
+  const { watchedAt, ...rest } = bundle.anime as Record<string, unknown> & { watchedAt: string | null }
+  delete rest.id
+  delete rest.createdAt
+  const insert = {
     ...rest,
     watchedAt: watchedAt ? new Date(watchedAt) : null,
-  }
+  } as AnimeInsert
   const [row] = await db.insert(anime).values(insert).returning()
 
   if (bundle.opinion?.rawText) {
