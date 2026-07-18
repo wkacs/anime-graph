@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Anime Graph
 
-## Getting Started
+Személyes 3D anime-térkép: hierarchikus gráf (műfaj → stúdió → anime, kapcsolható
+szintekkel), animénkénti vélemények AI-ízlésmemóriával, és egy "Recommend me" gomb,
+ami GLM-mel ajánl a saját ízlésed alapján.
 
-First, run the development server:
+## Beüzemelés (kézzel, saját fiókokkal!)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Neon: hozz létre adatbázist, másold ki a connection stringet.
+2. `.env.local` a repo gyökerébe (minta: `.env.example`):
+   - `DATABASE_URL`, `GLM_API_KEY`, `APP_PASSWORD`, `SESSION_SECRET`
+3. Séma feltolása (a drizzle-kit NEM olvassa a `.env.local`-t automatikusan):
+   - PowerShell: `$env:DATABASE_URL="postgres://..."; npm run db:push`
+4. `npm install`, majd `npm run dev` → http://localhost:3000
+5. Vercel: importáld a repót a SAJÁT (nem céges!) fiókodba, állítsd be ugyanezt
+   a 4 env-változót, deploy.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Parancsok
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` / `npm run build` — fejlesztés / build (⚠️ ne futtasd a kettőt egyszerre,
+  közös a `.next` mappájuk)
+- `npm run test` — vitest unit tesztek (DB/hálózat nélkül futnak)
+- `npm run db:generate` / `npm run db:push` — Drizzle migrációk
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Architektúra
 
-## Learn More
+- `src/lib/` — tesztelt tiszta logika: `graph-builder` (hierarchia → node/link),
+  `candidates` (jelölt-rangsor), `extract` (vélemény → ízlés-tények), `glm`, `anilist`
+- `src/app/api/` — vékony route-ok a libek fölött
+- `src/components/` — `Graph3D` (react-force-graph-3d + bloom), `SidePanel`,
+  `HierarchyPanel`, `AddAnimeSearch`, `RecommendModal`
 
-To learn more about Next.js, take a look at the following resources:
+## Hogyan működik az ajánló
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Vélemény mentésekor a GLM (`glm-4.7-flash`) 3–8 rövid ízlés-tényt nyer ki
+   → `taste_memory` tábla (a nyers szöveg is megmarad).
+2. "Recommend me": a legjobbra értékelt animéid AniList-recommendation-poolja
+   → tag-átfedéses rangsor (`candidates`) → GLM újrarangsorol a teljes
+   ízlés-memóriád alapján, személyes indoklással.
