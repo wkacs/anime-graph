@@ -107,7 +107,7 @@ export default function ListaPage() {
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-1.5 text-xs text-text-2">
                     <span
-                      className="inline-block w-2 h-2 rounded-full shrink-0"
+                      className={`inline-block w-2 h-2 rounded-full shrink-0 ${a.status === 'watching' ? 'animate-pulse' : ''}`}
                       style={{ background: STATUS_CSS_VARS[a.status] ?? 'white' }}
                     />
                     {STATUS_LABELS[a.status] ?? a.status}

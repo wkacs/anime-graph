@@ -214,6 +214,43 @@ export default function Graph3D({
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
+  const introDone = useRef(false)
+
+  // ambient starfield + first-load camera dive
+  useEffect(() => {
+    if (!data.nodes.length) return
+    const timer = setInterval(() => {
+      const fg = fgRef.current
+      if (!fg) return
+      clearInterval(timer)
+      const scene = fg.scene()
+      if (!scene.getObjectByName('starfield')) {
+        const N = 700
+        const positions = new Float32Array(N * 3)
+        for (let i = 0; i < N; i++) {
+          const r = 600 + Math.random() * 900
+          const theta = Math.random() * Math.PI * 2
+          const phi = Math.acos(2 * Math.random() - 1)
+          positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
+          positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+          positions[i * 3 + 2] = r * Math.cos(phi)
+        }
+        const geo = new THREE.BufferGeometry()
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+        const stars = new THREE.Points(geo, new THREE.PointsMaterial({
+          color: 0xffffff, size: 1.5, transparent: true, opacity: 0.32, sizeAttenuation: true,
+        }))
+        stars.name = 'starfield'
+        scene.add(stars)
+      }
+      if (!introDone.current) {
+        introDone.current = true
+        fg.cameraPosition({ x: 0, y: 40, z: 1150 }, { x: 0, y: 0, z: 0 }, 0)
+        setTimeout(() => fg.zoomToFit(1500, 80), 450)
+      }
+    }, 120)
+    return () => clearInterval(timer)
+  }, [data])
 
   useEffect(() => {
     if (!flythrough) return

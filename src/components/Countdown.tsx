@@ -15,10 +15,15 @@ export default function Countdown({ airingAt }: { airingAt: number }) {
     return () => clearInterval(t)
   }, [remaining < 3600]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // last hour: mint + ticking seconds, so an imminent episode pops out
   if (remaining < 3600 && remaining > 0) {
     const m = Math.floor(remaining / 60)
     const s = remaining % 60
-    return <span className="tabular-nums">{`${m}:${String(s).padStart(2, '0')}`}</span>
+    return (
+      <span className="tabular-nums" style={{ color: 'var(--status-watching)' }}>
+        {`${m}:${String(s).padStart(2, '0')}`}
+      </span>
+    )
   }
   return <span className="tabular-nums">{formatCountdown(remaining)}</span>
 }

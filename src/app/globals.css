@@ -110,6 +110,15 @@ body {
   opacity: 0.35;
 }
 
+/* main CTA breathes softly */
+@keyframes ctaGlow {
+  0%, 100% { box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 0 16px rgba(250, 250, 250, 0.08); }
+  50% { box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 0 30px rgba(250, 250, 250, 0.2); }
+}
+.cta-glow {
+  animation: ctaGlow 3.4s ease-in-out infinite;
+}
+
 *:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.5);
   outline-offset: 2px;

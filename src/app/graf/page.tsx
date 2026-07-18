@@ -216,7 +216,7 @@ export default function GrafPage() {
             </p>
             <p className="flex items-center gap-1.5 mt-1.5 text-xs text-text-2">
               <span
-                className="inline-block w-2 h-2 rounded-full"
+                className={`inline-block w-2 h-2 rounded-full ${hoverAnime.status === 'watching' ? 'animate-pulse' : ''}`}
                 style={{ background: STATUS_CSS_VARS[hoverAnime.status] ?? 'white' }}
               />
               {STATUS_LABELS[hoverAnime.status] ?? hoverAnime.status}

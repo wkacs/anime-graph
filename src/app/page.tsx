@@ -133,7 +133,7 @@ export default function NewsPage() {
                     <p className="text-[13px] font-medium leading-tight line-clamp-2">{m.title}</p>
                     <p className="label-mono mt-1 flex items-center gap-1.5">
                       <span
-                        className="inline-block w-1.5 h-1.5 rounded-full"
+                        className={`inline-block w-1.5 h-1.5 rounded-full ${m.status === 'watching' ? 'animate-pulse' : ''}`}
                         style={{ background: STATUS_CSS_VARS[m.status] ?? 'white' }}
                       />
                       {STATUS_LABELS[m.status] ?? m.status}
