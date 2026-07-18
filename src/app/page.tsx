@@ -68,8 +68,13 @@ export default function Home() {
 
   const hoverAnime = hoverId != null ? animeList.find((a) => a.id === hoverId) ?? null : null
 
+  // covers stay visible in every mode except the explicit dot fallback;
+  // 'auto' just drops the name labels + shrinks textures on big libraries
   const coverMode = config.covers ?? 'auto'
-  const detail = coverMode === 'on' || (coverMode !== 'off' && animeList.length <= COVER_AUTO_LIMIT)
+  const nodeMode =
+    coverMode === 'off' ? 'dot' as const
+    : coverMode === 'on' || animeList.length <= COVER_AUTO_LIMIT ? 'full' as const
+    : 'lite' as const
 
   if (!loaded) return null
 
@@ -83,7 +88,7 @@ export default function Home() {
         onAnimeClick={openAnime}
         onAnimeHover={setHoverId}
         flythrough={flythrough}
-        detail={detail}
+        nodeMode={nodeMode}
       />
 
       <div className="fixed top-20 left-4 z-20">

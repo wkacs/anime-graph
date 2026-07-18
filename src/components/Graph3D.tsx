@@ -24,7 +24,6 @@ const STATUS_DOT: Record<string, number> = {
 }
 
 // AniList CDN sends no CORS headers → covers go through the Next image proxy
-const proxied = (url: string) => `/_next/image?url=${encodeURIComponent(url)}&w=128&q=70`
 
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
@@ -36,12 +35,17 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   ctx.closePath()
 }
 
+// per-size caches: texture AND material shared across node-object rebuilds
 const coverTexCache = new Map<string, THREE.CanvasTexture>()
+const coverMatCache = new Map<string, THREE.SpriteMaterial>()
 
-function coverTexture(url: string): THREE.CanvasTexture {
-  const cached = coverTexCache.get(url)
+function coverTexture(url: string, lite: boolean): THREE.CanvasTexture {
+  const key = `${lite ? 'l' : 'f'}|${url}`
+  const cached = coverTexCache.get(key)
   if (cached) return cached
-  const W = 96, H = 132, R = 12
+  const W = lite ? 48 : 96
+  const H = lite ? 66 : 132
+  const R = lite ? 6 : 12
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -60,14 +64,24 @@ function coverTexture(url: string): THREE.CanvasTexture {
     ctx.drawImage(img, 0, 0, W, H)
     ctx.restore()
     ctx.strokeStyle = 'rgba(255,255,255,0.28)'
-    ctx.lineWidth = 2
+    ctx.lineWidth = lite ? 1.5 : 2
     roundRectPath(ctx, 1, 1, W - 2, H - 2, R)
     ctx.stroke()
     tex.needsUpdate = true
   }
-  img.src = proxied(url)
-  coverTexCache.set(url, tex)
+  img.src = `/_next/image?url=${encodeURIComponent(url)}&w=${lite ? 64 : 128}&q=${lite ? 60 : 70}`
+  coverTexCache.set(key, tex)
   return tex
+}
+
+function coverMaterial(url: string, lite: boolean): THREE.SpriteMaterial {
+  const key = `${lite ? 'l' : 'f'}|${url}`
+  let mat = coverMatCache.get(key)
+  if (!mat) {
+    mat = new THREE.SpriteMaterial({ map: coverTexture(url, lite), transparent: true })
+    coverMatCache.set(key, mat)
+  }
+  return mat
 }
 
 const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
@@ -82,27 +96,47 @@ const STATUS_MATERIALS = new Map<string, THREE.MeshBasicMaterial>(
 const GENRE_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 })
 const DIM_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 })
 
-// anime node: cover on top, name below it, white status dot at the link anchor;
-// detail=false renders a bare dot only (name+cover come from the HTML hover card)
-function animeObject(node: GraphNode, detail: boolean): THREE.Object3D {
+export type NodeMode = 'full' | 'lite' | 'dot'
+
+// anime node: cover + status dot always; 'full' adds the name label,
+// 'lite' uses a smaller texture and no text (name lives on the hover card),
+// 'dot' is the bare fallback for weak machines
+function animeObject(node: GraphNode, mode: NodeMode): THREE.Object3D {
   const material = STATUS_MATERIALS.get(node.status ?? 'planned') ?? STATUS_MATERIALS.get('completed')!
   const dot = new THREE.Mesh(DOT_GEO, material)
-  if (!detail) return dot
+  if (mode === 'dot' || !node.img) {
+    if (mode !== 'dot' && !node.img) {
+      // no cover available → at least show the name so the node stays identifiable
+      const group = new THREE.Group()
+      group.add(dot)
+      const name = new SpriteText(truncate(node.label, 24), 2.6, '#d9d9df')
+      name.fontFace = 'Instrument Sans, Arial'
+      name.position.set(0, 4.6, 0)
+      group.add(name)
+      return group
+    }
+    return dot
+  }
 
   const group = new THREE.Group()
   group.add(dot)
 
-  const name = new SpriteText(truncate(node.label, 24), 2.6, '#d9d9df')
-  name.fontFace = 'Instrument Sans, Arial'
-  name.position.set(0, 4.6, 0)
-  group.add(name)
-
-  if (node.img) {
-    const mat = new THREE.SpriteMaterial({ map: coverTexture(node.img), transparent: true })
-    const cover = new THREE.Sprite(mat)
+  const lite = mode === 'lite'
+  const cover = new THREE.Sprite(coverMaterial(node.img, lite))
+  if (lite) {
+    cover.scale.set(7, 9.6, 1)
+    cover.position.set(0, 7.4, 0)
+  } else {
     cover.scale.set(10, 13.75, 1)
     cover.position.set(0, 14.2, 0)
-    group.add(cover)
+  }
+  group.add(cover)
+
+  if (!lite) {
+    const name = new SpriteText(truncate(node.label, 24), 2.6, '#d9d9df')
+    name.fontFace = 'Instrument Sans, Arial'
+    name.position.set(0, 4.6, 0)
+    group.add(name)
   }
   return group
 }
@@ -133,7 +167,7 @@ export default function Graph3D({
   onAnimeClick,
   onAnimeHover,
   flythrough = 0,
-  detail = true,
+  nodeMode = 'full',
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
@@ -141,8 +175,7 @@ export default function Graph3D({
   // timestamp trigger: when it changes to a non-zero value, the camera
   // flies along the pinned x axis from the earliest to the latest node
   flythrough?: number
-  // false → bare status dots for anime (fast with hundreds of nodes)
-  detail?: boolean
+  nodeMode?: NodeMode
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
@@ -178,8 +211,8 @@ export default function Graph3D({
   // stable prop identities: the underlying lib re-applies changed props on every
   // React re-render, so inline closures would rebuild all node objects constantly
   const nodeThreeObject = useCallback(
-    (n: GraphNode) => (n.type === 'anime' ? animeObject(n, detail) : dimObject(n)),
-    [detail],
+    (n: GraphNode) => (n.type === 'anime' ? animeObject(n, nodeMode) : dimObject(n)),
+    [nodeMode],
   )
   const nodeLabel = useCallback(() => '', [])
   const linkColor = useCallback(

@@ -87,16 +87,16 @@ export default function HierarchyPanel({
           <option value="elo">Elo</option>
         </select>
       </label>
-      <label className="flex items-center gap-2 text-text-2" title="Sok animénél a borítók lassítanak — Auto módban ilyenkor csak pöttyök">
-        Borítók:
+      <label className="flex items-center gap-2 text-text-2" title="Auto: sok animénél kisebb borító, név nélkül (a név hoverre így is látszik). Teljes: mindig nagy borító + név. Csak pöttyök: leggyorsabb.">
+        Nézet:
         <select
           value={config.covers ?? 'auto'}
           onChange={(e) => onChange({ ...config, covers: e.target.value as GraphConfig['covers'] })}
           className="field px-2 py-1 text-xs"
         >
           <option value="auto">Auto</option>
-          <option value="on">Mindig</option>
-          <option value="off">Soha</option>
+          <option value="on">Teljes</option>
+          <option value="off">Csak pöttyök</option>
         </select>
       </label>
     </div>
