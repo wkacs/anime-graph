@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Instrument_Sans, Geist_Mono, Noto_Sans_JP } from "next/font/google";
+import TopNav from "@/components/TopNav";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const instrument = Instrument_Sans({
+  variable: "--font-instrument",
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const notoJp = Noto_Sans_JP({
+  variable: "--font-noto-jp",
+  weight: ["400", "500"],
   subsets: ["latin"],
 });
 
@@ -23,10 +30,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="hu">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${instrument.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
+        <TopNav />
         {children}
       </body>
     </html>
