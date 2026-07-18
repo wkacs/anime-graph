@@ -1,13 +1,24 @@
 import {
   pgTable, serial, integer, text, timestamp, jsonb, real,
+  uniqueIndex, primaryKey,
 } from 'drizzle-orm/pg-core'
 
 export type TagEntry = { name: string; rank: number }
 export type RelationEntry = { type: string; anilistId: number; title: string }
 
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  username: text('username').notNull().unique(),
+  passwordHash: text('password_hash').notNull(), // scrypt: salt:hash hex
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// user_id oszlopok default 1-gyel: a multi-tenant váltás előtti adatok
+// az elsőként regisztrált (owner) fiókhoz tartoznak
 export const anime = pgTable('anime', {
   id: serial('id').primaryKey(),
-  anilistId: integer('anilist_id').notNull().unique(),
+  userId: integer('user_id').notNull().default(1),
+  anilistId: integer('anilist_id').notNull(),
   titleRomaji: text('title_romaji').notNull(),
   titleEnglish: text('title_english'),
   titleNative: text('title_native'),
@@ -33,7 +44,9 @@ export const anime = pgTable('anime', {
   rewatchCount: integer('rewatch_count').notNull().default(0),
   watchedAt: timestamp('watched_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-})
+}, (t) => [
+  uniqueIndex('anime_user_anilist_unique').on(t.userId, t.anilistId),
+])
 
 export const opinions = pgTable('opinions', {
   id: serial('id').primaryKey(),
@@ -46,6 +59,7 @@ export const opinions = pgTable('opinions', {
 
 export const tasteMemory = pgTable('taste_memory', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
   animeId: integer('anime_id')
     .references(() => anime.id, { onDelete: 'cascade' }), // null = global
   kind: text('kind').notNull(), // like | dislike | note
@@ -56,12 +70,16 @@ export const tasteMemory = pgTable('taste_memory', {
 })
 
 export const settings = pgTable('settings', {
-  key: text('key').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
+  key: text('key').notNull(),
   value: jsonb('value').notNull(),
-})
+}, (t) => [
+  primaryKey({ columns: [t.userId, t.key] }),
+])
 
 export const duels = pgTable('duels', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
   winnerId: integer('winner_id').notNull()
     .references(() => anime.id, { onDelete: 'cascade' }),
   loserId: integer('loser_id').notNull()
@@ -72,6 +90,7 @@ export const duels = pgTable('duels', {
 // one row per watched episode — feeds the activity heatmap
 export const episodeLog = pgTable('episode_log', {
   id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
   animeId: integer('anime_id').notNull()
     .references(() => anime.id, { onDelete: 'cascade' }),
   episode: integer('episode').notNull(),
@@ -80,7 +99,8 @@ export const episodeLog = pgTable('episode_log', {
 
 export const recommendations = pgTable('recommendations', {
   id: serial('id').primaryKey(),
-  kind: text('kind').notNull(), // recommend | vibe | seasonal
+  userId: integer('user_id').notNull().default(1),
+  kind: text('kind').notNull(), // recommend | vibe | seasonal | digest | profile
   input: jsonb('input').notNull(),
   result: jsonb('result').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),

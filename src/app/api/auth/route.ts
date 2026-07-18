@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sessionToken } from '@/lib/auth'
+import { db } from '@/db/client'
+import { users } from '@/db/schema'
+import { createSession } from '@/lib/auth'
+import { verifyPassword } from '@/lib/password'
+import { eq } from 'drizzle-orm'
 
-export async function POST(req: NextRequest) {
-  const { password } = await req.json().catch(() => ({ password: '' }))
-  if (!password || password !== process.env.APP_PASSWORD) {
-    return NextResponse.json({ error: 'Hibás jelszó' }, { status: 401 })
-  }
-  const token = await sessionToken(process.env.SESSION_SECRET!)
-  const res = NextResponse.json({ ok: true })
+function sessionResponse(token: string, body: object = { ok: true }) {
+  const res = NextResponse.json(body)
   res.cookies.set('session', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -16,6 +15,21 @@ export async function POST(req: NextRequest) {
     path: '/',
   })
   return res
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}))
+  const username = String(body.username ?? '').trim().toLowerCase()
+  const password = String(body.password ?? '')
+  if (!username || !password) {
+    return NextResponse.json({ error: 'Felhasználónév és jelszó kell' }, { status: 400 })
+  }
+  const [user] = await db.select().from(users).where(eq(users.username, username))
+  if (!user || !verifyPassword(password, user.passwordHash)) {
+    return NextResponse.json({ error: 'Hibás felhasználónév vagy jelszó' }, { status: 401 })
+  }
+  const token = await createSession(process.env.SESSION_SECRET!, user.id)
+  return sessionResponse(token)
 }
 
 export async function DELETE() {

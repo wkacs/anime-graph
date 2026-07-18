@@ -1,22 +1,35 @@
 import { describe, it, expect } from 'vitest'
-import { sessionToken, isValidSession } from './auth'
+import { createSession, verifySession } from './auth'
+import { hashPassword, verifyPassword } from './password'
 
-describe('auth', () => {
-  it('produces a stable hex token for a secret', async () => {
-    const a = await sessionToken('secret-1')
-    const b = await sessionToken('secret-1')
-    expect(a).toBe(b)
-    expect(a).toMatch(/^[0-9a-f]{64}$/)
+describe('session', () => {
+  it('round-trips the user id', async () => {
+    const token = await createSession('secret', 42)
+    expect(await verifySession('secret', token)).toBe(42)
   })
 
-  it('different secrets produce different tokens', async () => {
-    expect(await sessionToken('secret-1')).not.toBe(await sessionToken('secret-2'))
+  it('rejects tampering and wrong secret', async () => {
+    const token = await createSession('secret', 42)
+    expect(await verifySession('other', token)).toBeNull()
+    expect(await verifySession('secret', token.replace('42', '43'))).toBeNull()
+    expect(await verifySession('secret', undefined)).toBeNull()
+    expect(await verifySession('secret', 'garbage')).toBeNull()
   })
 
-  it('validates only the matching token', async () => {
-    const t = await sessionToken('s')
-    expect(await isValidSession('s', t)).toBe(true)
-    expect(await isValidSession('s', t + 'x')).toBe(false)
-    expect(await isValidSession('s', undefined)).toBe(false)
+  it('rejects expired sessions', async () => {
+    const token = await createSession('secret', 7, -1) // lejárt tegnap
+    expect(await verifySession('secret', token)).toBeNull()
+  })
+})
+
+describe('password', () => {
+  it('verifies the right password and rejects the wrong one', () => {
+    const stored = hashPassword('titkos123')
+    expect(verifyPassword('titkos123', stored)).toBe(true)
+    expect(verifyPassword('rossz', stored)).toBe(false)
+  })
+
+  it('salts: same password hashes differently', () => {
+    expect(hashPassword('x')).not.toBe(hashPassword('x'))
   })
 })
