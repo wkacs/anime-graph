@@ -70,9 +70,8 @@ export async function searchAnime(q: string): Promise<SearchResult[]> {
   }))
 }
 
-const MEDIA_QUERY = `
-query ($id: Int!) {
-  Media(id: $id, type: ANIME) {
+// shared media field selection — MEDIA_QUERY, list import and MAL batch all map through mapMedia
+const MEDIA_FIELDS = `
     id
     title { romaji english native }
     coverImage { large }
@@ -87,7 +86,11 @@ query ($id: Int!) {
     format
     averageScore
     trailer { id site }
-    relations { edges { relationType node { id type title { romaji } } } }
+    relations { edges { relationType node { id type title { romaji } } } }`
+
+const MEDIA_QUERY = `
+query ($id: Int!) {
+  Media(id: $id, type: ANIME) {${MEDIA_FIELDS}
   }
 }`
 
@@ -119,6 +122,52 @@ export function mapMedia(m: AnilistMedia): AnimeInsert {
     trailerId: m.trailer?.id ?? null,
     avgScore: m.averageScore,
   }
+}
+
+export type AnilistListEntry = {
+  status: string
+  score: number | null
+  progress: number
+  completedAt: { year: number | null; month: number | null; day: number | null } | null
+  media: AnilistMedia
+}
+
+const LIST_QUERY = `
+query ($userName: String!) {
+  MediaListCollection(userName: $userName, type: ANIME) {
+    lists {
+      entries {
+        status
+        score(format: POINT_10)
+        progress
+        completedAt { year month day }
+        media {${MEDIA_FIELDS}
+        }
+      }
+    }
+  }
+}`
+
+export async function fetchUserList(userName: string): Promise<AnilistListEntry[]> {
+  type R = { MediaListCollection: { lists: { entries: AnilistListEntry[] }[] } | null }
+  const data = await anilistFetch<R>(LIST_QUERY, { userName })
+  if (!data.MediaListCollection) return []
+  return data.MediaListCollection.lists.flatMap((l) => l.entries)
+}
+
+const MAL_BATCH_QUERY = `
+query ($malIds: [Int!]) {
+  Page(perPage: 50) {
+    media(idMal_in: $malIds, type: ANIME) {
+      idMal${MEDIA_FIELDS}
+    }
+  }
+}`
+
+export async function fetchByMalIds(malIds: number[]): Promise<(AnilistMedia & { idMal: number })[]> {
+  type R = { Page: { media: (AnilistMedia & { idMal: number })[] } }
+  const data = await anilistFetch<R>(MAL_BATCH_QUERY, { malIds })
+  return data.Page.media
 }
 
 export type RecCandidate = {

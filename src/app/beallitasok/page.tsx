@@ -10,6 +10,9 @@ export default function BeallitasokPage() {
   const [saved, setSaved] = useState(false)
   const [hierarchySaved, setHierarchySaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [anilistUser, setAnilistUser] = useState('')
+  const [importing, setImporting] = useState<'anilist' | 'mal' | null>(null)
+  const [importResult, setImportResult] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -45,6 +48,38 @@ export default function BeallitasokPage() {
   async function logout() {
     await fetch('/api/auth', { method: 'DELETE' })
     router.push('/login')
+  }
+
+  async function importAnilist() {
+    if (!anilistUser.trim()) return
+    setImporting('anilist')
+    setImportResult('')
+    const res = await fetch('/api/import/anilist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: anilistUser.trim() }),
+    })
+    const json = await res.json()
+    setImporting(null)
+    setImportResult(res.ok
+      ? `✓ ${json.added} új, ${json.updated} frissítve`
+      : `✕ ${json.error ?? 'Hiba történt'}`)
+  }
+
+  async function importMal(file: File) {
+    setImporting('mal')
+    setImportResult('')
+    const xml = await file.text()
+    const res = await fetch('/api/import/mal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ xml }),
+    })
+    const json = await res.json()
+    setImporting(null)
+    setImportResult(res.ok
+      ? `✓ ${json.added} új, ${json.updated} frissítve${json.notFound ? `, ${json.notFound} nem található AniList-en` : ''}`
+      : `✕ ${json.error ?? 'Hiba történt'}`)
   }
 
   return (
@@ -96,6 +131,45 @@ export default function BeallitasokPage() {
           </button>
           {hierarchySaved && <span className="label-mono text-[color:var(--status-watching)]">✓ mentve</span>}
         </div>
+      </section>
+
+      <section className="glass rounded-3xl p-6">
+        <p className="label-mono mb-1">Import</p>
+        <p className="text-sm text-text-2 mb-5">
+          Meglévő listád behúzása pontszámokkal és státusszal. Ami már fent van, annak
+          a státusza/pontja frissül.
+        </p>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <input
+            value={anilistUser}
+            onChange={(e) => setAnilistUser(e.target.value)}
+            placeholder="AniList felhasználónév"
+            className="field px-4 py-2 text-sm w-56"
+          />
+          <button
+            onClick={importAnilist}
+            disabled={importing !== null || !anilistUser.trim()}
+            className="btn-solid px-4 py-2 text-sm"
+          >
+            {importing === 'anilist' ? 'Import…' : 'AniList import'}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className={`btn-ghost border border-white/10 px-4 py-2 text-sm cursor-pointer ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
+            {importing === 'mal' ? 'Import…' : 'MAL export (.xml) feltöltése'}
+            <input
+              type="file"
+              accept=".xml,text/xml"
+              className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) importMal(f); e.target.value = '' }}
+            />
+          </label>
+        </div>
+        {importResult && (
+          <p className={`label-mono mt-4 ${importResult.startsWith('✓') ? 'text-[color:var(--status-watching)]' : 'text-[color:var(--status-dropped)]'}`}>
+            {importResult}
+          </p>
+        )}
       </section>
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between">
