@@ -10,6 +10,7 @@ const TABS: { href: string; label: string; soon?: boolean }[] = [
   { href: '/duel', label: 'Duel' },
   { href: '/stats', label: 'Stats' },
   { href: '/szezon', label: 'Szezon' },
+  { href: '/vs', label: 'VS' },
 ]
 
 export default function TopNav() {
