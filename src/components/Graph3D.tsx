@@ -109,7 +109,6 @@ export default function Graph3D({
     const node = fgRef.current.graphData().nodes.find((n: any) => n.id === focusNodeId)
     if (!node || node.x === undefined) return
     flyTo(node)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNodeId])
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

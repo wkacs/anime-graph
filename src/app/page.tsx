@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
+import SidePanel from '@/components/SidePanel'
 import { buildGraph, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
@@ -46,6 +47,8 @@ export default function Home() {
     config,
   ), [animeList, config])
 
+  const selectedAnime = animeList.find((a) => a.id === selectedAnimeId) ?? null
+
   if (!loaded) return null
 
   return (
@@ -56,11 +59,13 @@ export default function Home() {
         <HierarchyPanel config={config} onChange={updateConfig} />
       </div>
       {/* Task 12 mounts the Recommend button here (top-right) */}
-      {/* Task 10 mounts <SidePanel> here, driven by selectedAnimeId + facts + refresh */}
-      {selectedAnimeId && (
-        <div className="absolute top-4 right-4 z-10 text-slate-400 text-sm bg-slate-900/85 rounded-xl border border-slate-700 p-3">
-          Kiválasztva: #{selectedAnimeId} (panel a következő taskban)
-        </div>
+      {selectedAnime && (
+        <SidePanel
+          anime={selectedAnime}
+          facts={facts}
+          onClose={() => setSelectedAnimeId(null)}
+          onChanged={refresh}
+        />
       )}
     </main>
   )
