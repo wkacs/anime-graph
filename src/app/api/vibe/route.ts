@@ -6,15 +6,17 @@ import { searchAnime } from '@/lib/anilist'
 import { glmChat } from '@/lib/glm'
 
 // GLM only names new titles — attach real AniList data so the cards are
-// addable with one click (best-effort, a failed lookup keeps the plain title)
+// addable with one click. If the best match is already on the list, the pick
+// was a known title in disguise → dropped (only genuinely new things survive).
 async function enrichNewPicks(
   picks: { title: string; reason: string }[],
   ownedAnilistIds: Set<number>,
 ) {
-  return Promise.all(picks.map(async (p) => {
+  const enriched = await Promise.all(picks.map(async (p) => {
     try {
-      const hit = (await searchAnime(p.title)).find((r) => !ownedAnilistIds.has(r.anilistId))
+      const hit = (await searchAnime(p.title))[0]
       if (!hit) return { ...p, anilistId: null, coverUrl: null, year: null, genres: [] }
+      if (ownedAnilistIds.has(hit.anilistId)) return null
       return {
         title: hit.titleRomaji,
         reason: p.reason,
@@ -27,6 +29,7 @@ async function enrichNewPicks(
       return { ...p, anilistId: null, coverUrl: null, year: null, genres: [] }
     }
   }))
+  return enriched.filter((p): p is NonNullable<typeof p> => p !== null)
 }
 
 export async function POST(req: NextRequest) {
@@ -72,7 +75,17 @@ export async function POST(req: NextRequest) {
         }
       })
     const owned = new Set(rows.map((r) => r.anilistId))
-    const result = { ownPicks, newPicks: await enrichNewPicks(parsed.newPicks, owned) }
+    // hard guarantee: a "new" pick must not be on the list, even if the GLM slips
+    const ownedTitles = new Set(
+      rows.flatMap((r) => [r.titleRomaji, r.titleEnglish].filter(Boolean).map((t) => t!.toLowerCase())),
+    )
+    const freshOnly = parsed.newPicks
+      .filter((p) => !ownedTitles.has(p.title.toLowerCase()))
+      .slice(0, 6)
+    const result = {
+      ownPicks: ownPicks.slice(0, 4),
+      newPicks: await enrichNewPicks(freshOnly, owned),
+    }
     await db.insert(recommendations).values({
       kind: 'vibe',
       input: { prompt, animeIds },

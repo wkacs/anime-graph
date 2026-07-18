@@ -9,18 +9,22 @@ export const vibeSchema = z.object({
   newPicks: z.array(z.object({
     title: z.string().min(1).max(120),
     reason: z.string().min(5).max(300),
-  })).max(5).default([]),
+  })).max(8).default([]),
 })
 
 export type VibeResult = z.infer<typeof vibeSchema>
 
 const SYSTEM = `Anime-kereső asszisztens vagy. A felhasználó egy hangulatot/kívánságot ír le,
-és megadhat konkrét animéket a saját listájából kontextusnak. Két listát adsz vissza:
-- "ownPicks": a SAJÁT LISTÁJÁBÓL passzoló animék (csak a megadott animeId-ket használhatod),
-- "newPicks": max 3-5 ÚJ anime-cím amit még nem látott, de a kérésre passzol.
-Minden találathoz rövid magyar indoklás, ami a kérésére és az ízlés-tényeire hivatkozik.
+és megadhat konkrét animéket a saját listájából kontextusnak.
+A FŐ EREDMÉNY az ÚJ felfedezés:
+- "newPicks": 3-6 anime-cím, ami NINCS a felhasználó listáján és a kérésre passzol.
+  TILOS olyan címet adni, ami a "Saját listám" blokkban szerepel.
+- "ownPicks": mellé max 3-4 HASONLÓ cím a saját listájáról, referenciának
+  ("ilyesmit már ismersz") — az indoklás mondja meg, miben hasonlít a kérésre.
+  Csak a megadott animeId-ket használhatod.
+Minden indoklás rövid, magyar, az ízlés-tényekre hivatkozik.
 Válaszolj KIZÁRÓLAG JSON-nal:
-{"ownPicks":[{"animeId":szám,"reason":"…"}],"newPicks":[{"title":"…","reason":"…"}]}`
+{"newPicks":[{"title":"…","reason":"…"}],"ownPicks":[{"animeId":szám,"reason":"…"}]}`
 
 export type VibeOwnAnime = {
   id: number

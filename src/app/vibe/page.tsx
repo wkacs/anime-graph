@@ -123,30 +123,9 @@ export default function VibePage() {
 
       {error && <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>}
 
-      {ownPicks.length > 0 && (
-        <section>
-          <p className="label-mono mb-2">A listádból</p>
-          <ul className="flex flex-col gap-2">
-            {ownPicks.map((p) => (
-              <li key={p.animeId}>
-                <Link href={`/anime/${p.animeId}`} className="glass rounded-2xl flex gap-3 p-3 hover:bg-white/8 transition-colors">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {p.coverUrl && <img src={p.coverUrl} alt="" className="w-12 rounded-lg self-start" />}
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium">{p.title}</h3>
-                    <p className="label-mono mt-0.5 mb-1">{p.genres.slice(0, 3).join(' · ')}</p>
-                    <p className="text-[13px] text-text-2 leading-snug">{p.reason}</p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {newPicks.length > 0 && (
         <section>
-          <p className="label-mono mb-2">Új felfedezés</p>
+          <p className="label-mono mb-2">Új felfedezés — nincs a listádon</p>
           <ul className="flex flex-col gap-2">
             {newPicks.map((p) => (
               <li key={`${p.title}-${p.anilistId ?? 'x'}`} className="glass rounded-2xl p-3 flex gap-3">
@@ -182,6 +161,27 @@ export default function VibePage() {
                   )}
                   <p className="text-[13px] text-text-2 leading-snug mt-1">{p.reason}</p>
                 </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {ownPicks.length > 0 && (
+        <section>
+          <p className="label-mono mb-2">Hasonlók a listádból — ilyesmit már ismersz</p>
+          <ul className="flex flex-col gap-2">
+            {ownPicks.map((p) => (
+              <li key={p.animeId}>
+                <Link href={`/anime/${p.animeId}`} className="glass rounded-2xl flex gap-3 p-3 hover:bg-white/8 transition-colors opacity-80 hover:opacity-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p.coverUrl && <img src={p.coverUrl} alt="" className="w-10 rounded-lg self-start" />}
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium">{p.title}</h3>
+                    <p className="label-mono mt-0.5 mb-1">{p.genres.slice(0, 3).join(' · ')}</p>
+                    <p className="text-[13px] text-text-2 leading-snug">{p.reason}</p>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
