@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, tasteMemory, recommendations } from '@/db/schema'
 import { fetchSeason } from '@/lib/anilist'
@@ -58,7 +58,7 @@ export async function GET() {
   }
 }
 
-export async function POST(_req: NextRequest) {
+export async function POST() {
   // force refresh, ignoring the cache
   const input = currentSeason(new Date())
   try {

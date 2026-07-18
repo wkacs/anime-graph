@@ -2,13 +2,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const TABS = [
+const TABS: { href: string; label: string; soon?: boolean }[] = [
   { href: '/', label: 'Gráf' },
   { href: '/lista', label: 'Lista' },
   { href: '/vibe', label: 'Vibe' },
-  { href: '/duel', label: 'Duel', soon: true },
-  { href: '/stats', label: 'Stats', soon: true },
-  { href: '/szezon', label: 'Szezon', soon: true },
+  { href: '/duel', label: 'Duel' },
+  { href: '/stats', label: 'Stats' },
+  { href: '/szezon', label: 'Szezon' },
 ]
 
 export default function TopNav() {

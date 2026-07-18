@@ -96,10 +96,12 @@ export default function SzezonPage() {
               transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.4) }}
               className="glass rounded-3xl p-4 flex gap-4"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {it.coverUrl
-                ? <img src={it.coverUrl} alt="" className="w-20 rounded-xl object-cover self-start" />
-                : <div className="w-20 aspect-[2/3] rounded-xl bg-white/5 self-start" />}
+              {it.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={it.coverUrl} alt="" className="w-20 rounded-xl object-cover self-start" />
+              ) : (
+                <div className="w-20 aspect-[2/3] rounded-xl bg-white/5 self-start" />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-sm font-medium leading-tight">{it.title}</h2>

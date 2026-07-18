@@ -90,10 +90,12 @@ export default function DuelPage() {
                   phase === 'pick' ? 'hover:bg-white/10 cursor-pointer' : ''
                 } ${isWinner ? 'border-white/40' : ''}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {a.coverUrl
-                  ? <img src={a.coverUrl} alt="" className="w-full aspect-[2/3] object-cover rounded-2xl" />
-                  : <div className="w-full aspect-[2/3] rounded-2xl bg-white/5" />}
+                {a.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={a.coverUrl} alt="" className="w-full aspect-[2/3] object-cover rounded-2xl" />
+                ) : (
+                  <div className="w-full aspect-[2/3] rounded-2xl bg-white/5" />
+                )}
                 <p className="text-sm font-medium leading-tight mt-3">{a.titleRomaji}</p>
                 <p className="label-mono mt-1 flex items-center justify-between">
                   <span>{a.year ?? '?'} · {a.format ?? '?'}</span>
