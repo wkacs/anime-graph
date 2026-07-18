@@ -1,8 +1,15 @@
 'use client'
 import { useEffect, useState } from 'react'
 import type { SearchResult } from '@/lib/anilist'
+import type { ApiAnime } from '@/lib/types'
 
-export default function AddAnimeSearch({ onAdded }: { onAdded: () => void }) {
+const ADD_OPTIONS = [
+  { status: 'completed', label: 'Láttam' },
+  { status: 'watching', label: 'Nézem' },
+  { status: 'planned', label: 'Terv' },
+] as const
+
+export default function AddAnimeSearch({ onAdded }: { onAdded: (anime?: ApiAnime) => void }) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [busy, setBusy] = useState<number | null>(null)
@@ -16,19 +23,24 @@ export default function AddAnimeSearch({ onAdded }: { onAdded: () => void }) {
     return () => clearTimeout(t)
   }, [q])
 
-  async function add(anilistId: number) {
+  async function add(anilistId: number, status: string) {
     setBusy(anilistId)
     const res = await fetch('/api/anime', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ anilistId }),
+      body: JSON.stringify({ anilistId, status }),
     })
     setBusy(null)
-    if (res.ok) { setQ(''); setResults([]); onAdded() }
+    if (res.ok) {
+      const json = await res.json()
+      setQ('')
+      setResults([])
+      onAdded(json.anime)
+    }
   }
 
   return (
-    <div className="w-72 relative text-sm">
+    <div className="w-80 relative text-sm">
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -38,20 +50,30 @@ export default function AddAnimeSearch({ onAdded }: { onAdded: () => void }) {
       {results.length > 0 && (
         <ul className="glass-strong absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
           {results.map((r) => (
-            <li key={r.anilistId}>
-              <button
-                onClick={() => add(r.anilistId)}
-                disabled={busy !== null}
-                className="flex w-full items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 text-left transition-colors"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                {r.coverUrl && <img src={r.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
-                <span className="flex-1 text-text-1">
-                  {r.titleRomaji}
-                  <span className="block text-xs text-text-3 font-mono">{r.year ?? '?'} · {r.format ?? '?'}</span>
+            <li key={r.anilistId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 transition-colors">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {r.coverUrl && <img src={r.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
+              <span className="flex-1 min-w-0 text-text-1">
+                <span className="block truncate">{r.titleRomaji}</span>
+                <span className="block text-xs text-text-3 font-mono">{r.year ?? '?'} · {r.format ?? '?'}</span>
+              </span>
+              {busy === r.anilistId ? (
+                <span className="text-text-2 px-2">…</span>
+              ) : (
+                <span className="flex gap-1 shrink-0">
+                  {ADD_OPTIONS.map((o) => (
+                    <button
+                      key={o.status}
+                      onClick={() => add(r.anilistId, o.status)}
+                      disabled={busy !== null}
+                      title={`Hozzáadás: ${o.label}`}
+                      className="rounded-full border border-white/12 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-text-2 hover:text-text-1 hover:border-white/35 transition-colors"
+                    >
+                      {o.label}
+                    </button>
+                  ))}
                 </span>
-                {busy === r.anilistId && <span className="text-text-2">…</span>}
-              </button>
+              )}
             </li>
           ))}
         </ul>

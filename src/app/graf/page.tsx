@@ -28,6 +28,7 @@ export default function GrafPage() {
   const [focusGenre, setFocusGenre] = useState<string | null>(null)
   const [fitKey, setFitKey] = useState(0)
   const [showHint, setShowHint] = useState(false)
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -65,6 +66,17 @@ export default function GrafPage() {
       setFacts(json.facts)
     }
   }, [])
+
+  // új anime a keresőből → ugorjunk oda, ahova a gráfban került
+  const handleAdded = useCallback((added?: ApiAnime) => {
+    refresh()
+    if (!added) return
+    if (!advanced && flythrough === 0) {
+      setFocusGenre(added.genres[0] ?? 'Ismeretlen')
+    }
+    setFocusNodeId(`anime:${added.id}`)
+    setTimeout(() => setFocusNodeId(null), 6000)
+  }, [refresh, advanced, flythrough])
 
   useEffect(() => { refresh() }, [refresh])
 
@@ -127,10 +139,11 @@ export default function GrafPage() {
         nodeMode={nodeMode}
         onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
         fitKey={fitKey}
+        focusNodeId={focusNodeId}
       />
 
       <div className="fixed top-20 left-4 z-20">
-        <AddAnimeSearch onAdded={refresh} />
+        <AddAnimeSearch onAdded={handleAdded} />
       </div>
 
       {/* breadcrumb a drill-down nézetben */}

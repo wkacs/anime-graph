@@ -199,6 +199,7 @@ export default function Graph3D({
   nodeMode = 'full',
   onDimClick,
   fitKey = 0,
+  focusNodeId = null,
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
@@ -211,6 +212,8 @@ export default function Graph3D({
   onDimClick?: (node: GraphNode) => void
   // when it changes, the camera re-fits the whole graph
   fitKey?: number
+  // fly to this node once the layout has placed it (e.g. a freshly added anime)
+  focusNodeId?: string | null
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
@@ -327,6 +330,33 @@ export default function Graph3D({
     }, 150)
     return () => clearInterval(timer)
   }, [fitKey])
+
+  // fly to a freshly added node: the lib mutates our cloned graphData in place,
+  // so its coordinates show up right here once the layout picked it up
+  useEffect(() => {
+    if (!focusNodeId) return
+    let tries = 0
+    const timer = setInterval(() => {
+      const fg = fgRef.current
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const node = graphData.nodes.find((n) => n.id === focusNodeId) as any
+      if (!fg || !node || node.x === undefined) {
+        if (++tries > 60) clearInterval(timer)
+        return
+      }
+      clearInterval(timer)
+      setTimeout(() => {
+        const len = Math.hypot(node.x, node.y, node.z) || 1
+        const ratio = 1 + 70 / len
+        fg.cameraPosition(
+          { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
+          node,
+          1300,
+        )
+      }, 650)
+    }, 150)
+    return () => clearInterval(timer)
+  }, [focusNodeId, graphData])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeHover = useCallback((n: any) => {
     onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)

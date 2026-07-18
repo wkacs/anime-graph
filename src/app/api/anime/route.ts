@@ -18,15 +18,33 @@ export async function GET() {
   return NextResponse.json({ anime: rows, facts })
 }
 
+const ADD_STATUSES = ['watching', 'completed', 'dropped', 'planned'] as const
+
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const anilistId = Number(body?.anilistId)
   if (!Number.isInteger(anilistId) || anilistId <= 0) {
     return NextResponse.json({ error: 'anilistId kötelező' }, { status: 400 })
   }
+  const status = ADD_STATUSES.includes(body?.status) ? body.status as string : 'planned'
+  const userFields = {
+    status,
+    watchedAt: status === 'completed' ? new Date() : null,
+  }
+
   const existing = await db.select().from(anime).where(eq(anime.anilistId, anilistId))
-  if (existing.length) return NextResponse.json({ anime: existing[0] })
+  if (existing.length) {
+    // már fent van → csak a kért státuszt vesszük át
+    if (body?.status && existing[0].status !== status) {
+      const [row] = await db.update(anime)
+        .set({ status, watchedAt: existing[0].watchedAt ?? userFields.watchedAt })
+        .where(eq(anime.id, existing[0].id))
+        .returning()
+      return NextResponse.json({ anime: row })
+    }
+    return NextResponse.json({ anime: existing[0] })
+  }
   const media = await fetchMedia(anilistId)
-  const [row] = await db.insert(anime).values(mapMedia(media)).returning()
+  const [row] = await db.insert(anime).values({ ...mapMedia(media), ...userFields }).returning()
   return NextResponse.json({ anime: row }, { status: 201 })
 }

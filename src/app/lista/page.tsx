@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import AddAnimeSearch from '@/components/AddAnimeSearch'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
 
@@ -16,9 +17,11 @@ export default function ListaPage() {
   const [sortDir, setSortDir] = useState<1 | -1>(1)
   const router = useRouter()
 
-  useEffect(() => {
+  const reload = useCallback(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => setList(j.anime ?? []))
   }, [])
+
+  useEffect(() => { reload() }, [reload])
 
   function sortBy(key: SortKey) {
     if (key === sortKey) setSortDir((d) => (d === 1 ? -1 : 1))
@@ -52,8 +55,11 @@ export default function ListaPage() {
 
   return (
     <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16">
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <h1 className="text-xl font-semibold tracking-tight mr-auto">Lista</h1>
+        <AddAnimeSearch onAdded={() => reload()} />
+      </div>
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex gap-1">
           {FILTERS.map((f) => (
             <button
