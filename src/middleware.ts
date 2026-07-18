@@ -1,0 +1,22 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { isValidSession } from '@/lib/auth'
+
+const PUBLIC_PREFIXES = ['/login', '/api/auth']
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+  if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return NextResponse.next()
+  const ok = await isValidSession(
+    process.env.SESSION_SECRET!,
+    req.cookies.get('session')?.value,
+  )
+  if (ok) return NextResponse.next()
+  if (pathname.startsWith('/api')) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  }
+  return NextResponse.redirect(new URL('/login', req.url))
+}
+
+export const config = {
+  matcher: ['/((?!_next|favicon\\.ico).*)'],
+}
