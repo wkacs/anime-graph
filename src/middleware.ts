@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isValidSession } from '@/lib/auth'
 
-// /api/cron a saját CRON_SECRET-jével véd, a session-cookie-t a Vercel cron nem tudja
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/cron', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
+// /api/cron a saját CRON_SECRET-jével véd; /p + /api/public token-alapú megosztott nézet
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/cron', '/p/', '/api/public/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

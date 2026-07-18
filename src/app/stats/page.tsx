@@ -94,6 +94,8 @@ export default function StatsPage() {
   const [list, setList] = useState<ApiAnime[]>([])
   const [loaded, setLoaded] = useState(false)
   const [heatCells, setHeatCells] = useState<HeatCell[]>([])
+  const [profile, setProfile] = useState<{ portrait: string; badges: string[] } | null>(null)
+  const [profileBusy, setProfileBusy] = useState(false)
 
   useEffect(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => {
@@ -103,7 +105,17 @@ export default function StatsPage() {
     fetch('/api/heatmap').then((r) => r.json()).then((j) => {
       setHeatCells(buildHeatmapCells(j.entries ?? [], new Date(), 26))
     }).catch(() => { /* heatmap nélkül is él */ })
+    fetch('/api/profile').then((r) => r.json()).then((j) => setProfile(j.profile ?? null))
+      .catch(() => { /* profil nélkül is él */ })
   }, [])
+
+  async function regenerateProfile() {
+    setProfileBusy(true)
+    const res = await fetch('/api/profile', { method: 'POST' })
+    const json = await res.json().catch(() => null)
+    setProfileBusy(false)
+    if (res.ok && json?.profile) setProfile(json.profile)
+  }
 
   const stats = useMemo(() => {
     const watchedMinutes = list.reduce((sum, a) => {
@@ -166,6 +178,28 @@ export default function StatsPage() {
         <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
         <WrappedCard list={list} />
       </div>
+
+      {profile && (
+        <section className="glass rounded-3xl p-6">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <p className="label-mono">Ízlés-profilod</p>
+            <button
+              onClick={regenerateProfile}
+              disabled={profileBusy}
+              className="btn-ghost px-2.5 py-1 text-xs"
+              title="Újragenerálás"
+            >
+              {profileBusy ? '…' : '↻'}
+            </button>
+          </div>
+          <p className="text-[15px] leading-relaxed text-text-1 mb-4">{profile.portrait}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {profile.badges.map((b) => (
+              <span key={b} className="rounded-full border border-white/12 px-3 py-1 text-xs text-text-2">{b}</span>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatTile label="Anime a listán" value={String(list.length)} />

@@ -13,14 +13,34 @@ export default function BeallitasokPage() {
   const [anilistUser, setAnilistUser] = useState('')
   const [importing, setImporting] = useState<'anilist' | 'mal' | null>(null)
   const [importResult, setImportResult] = useState('')
+  const [publicToken, setPublicToken] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     fetch('/api/settings').then((r) => r.json()).then((j) => {
       setLikes(j.tasteLikes ?? '')
       setDislikes(j.tasteDislikes ?? '')
+      setPublicToken(j.publicToken ?? null)
     })
   }, [])
+
+  async function togglePublicLink() {
+    const res = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ publicToken: publicToken ? null : true }),
+    })
+    const json = await res.json().catch(() => null)
+    setPublicToken(publicToken ? null : json?.publicToken ?? null)
+  }
+
+  async function copyPublicLink() {
+    if (!publicToken) return
+    await navigator.clipboard.writeText(`${location.origin}/p/${publicToken}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   async function saveTaste() {
     setSaving(true)
@@ -170,6 +190,27 @@ export default function BeallitasokPage() {
             {importResult}
           </p>
         )}
+      </section>
+
+      <section className="glass rounded-3xl p-6">
+        <p className="label-mono mb-1">Publikus link</p>
+        <p className="text-sm text-text-2 mb-4">
+          Jelszó nélküli, csak-olvasható nézet a gyűjteményedről (borítók, státuszok, pontok).
+          Vélemények és ízlés-adatok nem látszanak.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={togglePublicLink} className="btn-ghost border border-white/10 px-4 py-2 text-sm">
+            {publicToken ? 'Link visszavonása' : 'Link létrehozása'}
+          </button>
+          {publicToken && (
+            <button onClick={copyPublicLink} className="btn-solid px-4 py-2 text-sm">
+              {copied ? '✓ Másolva' : 'Link másolása'}
+            </button>
+          )}
+          {publicToken && (
+            <code className="font-mono text-xs text-text-3 break-all">/p/{publicToken}</code>
+          )}
+        </div>
       </section>
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between">

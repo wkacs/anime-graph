@@ -29,6 +29,7 @@ export default function GrafPage() {
   const [fitKey, setFitKey] = useState(0)
   const [showHint, setShowHint] = useState(false)
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
+  const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
   const router = useRouter()
 
   useEffect(() => {
@@ -85,12 +86,22 @@ export default function GrafPage() {
 
   const timelineMode = flythrough !== 0
 
-  const rows = useMemo(() => animeList.map((a) => ({
-    id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
-    coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
-    status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
-    tags: a.tags, watchedAt: a.watchedAt, createdAt: a.createdAt,
-  })), [animeList])
+  // időutazás: csak az adott év végéig megnézett/felvett animék
+  const watchYear = (a: ApiAnime) => new Date(a.watchedAt ?? a.createdAt).getFullYear()
+  const minYear = useMemo(
+    () => (animeList.length ? Math.min(...animeList.map(watchYear)) : new Date().getFullYear()),
+    [animeList],
+  )
+  const maxYear = new Date().getFullYear()
+
+  const rows = useMemo(() => animeList
+    .filter((a) => yearCutoff == null || watchYear(a) <= yearCutoff)
+    .map((a) => ({
+      id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
+      coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
+      status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
+      tags: a.tags, watchedAt: a.watchedAt, createdAt: a.createdAt,
+    })), [animeList, yearCutoff])
 
   const graph = useMemo(() => {
     if (timelineMode) return buildTimeline(rows)
@@ -185,6 +196,27 @@ export default function GrafPage() {
       <div className="fixed top-20 right-4 z-20">
         <RecommendMorph onAdded={refresh} />
       </div>
+
+      {/* időutazás: így nőtt az univerzumod évről évre */}
+      {!timelineMode && minYear < maxYear && (
+        <div className="fixed bottom-4 right-4 z-20 glass rounded-full px-4 py-2.5 flex items-center gap-3">
+          <span className="label-mono">Időutazás</span>
+          <input
+            type="range"
+            min={minYear}
+            max={maxYear + 1}
+            value={yearCutoff ?? maxYear + 1}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              setYearCutoff(v > maxYear ? null : v)
+            }}
+            className="w-36 accent-white"
+          />
+          <span className="font-mono text-xs text-text-1 w-12">
+            {yearCutoff == null ? 'Teljes' : `≤ ${yearCutoff}`}
+          </span>
+        </div>
+      )}
 
       {animeList.length === 0 && (
         <div className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none">

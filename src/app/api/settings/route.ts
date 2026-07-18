@@ -18,6 +18,7 @@ export async function GET() {
     tasteLikes: map.tasteLikes ?? '',
     tasteDislikes: map.tasteDislikes ?? '',
     hierarchyDefault: map.hierarchyDefault ?? null,
+    publicToken: map.publicToken ?? null,
   })
 }
 
@@ -27,6 +28,18 @@ export async function PUT(req: NextRequest) {
 
   if (body.hierarchyDefault !== undefined) {
     await upsert('hierarchyDefault', body.hierarchyDefault)
+  }
+
+  // publikus link: true = új token generálása, null = visszavonás
+  if (body.publicToken !== undefined) {
+    if (body.publicToken === null) {
+      await upsert('publicToken', null)
+    } else {
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(12)))
+        .map((b) => b.toString(16).padStart(2, '0')).join('')
+      await upsert('publicToken', token)
+      return NextResponse.json({ ok: true, publicToken: token })
+    }
   }
 
   if (body.tasteLikes !== undefined || body.tasteDislikes !== undefined) {

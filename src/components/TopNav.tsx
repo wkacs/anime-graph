@@ -15,7 +15,7 @@ const TABS: { href: string; label: string; soon?: boolean }[] = [
 
 export default function TopNav() {
   const pathname = usePathname()
-  if (pathname === '/login') return null
+  if (pathname === '/login' || pathname.startsWith('/p/')) return null
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
