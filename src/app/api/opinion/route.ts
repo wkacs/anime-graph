@@ -2,21 +2,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, opinions, tasteMemory } from '@/db/schema'
 import { extractFacts } from '@/lib/extract'
+import { consumeAiQuota } from '@/lib/ai-quota'
+import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 
 export async function GET(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const animeId = Number(req.nextUrl.searchParams.get('animeId'))
   if (!animeId) return NextResponse.json({ opinion: null })
+  const [animeRow] = await db.select().from(anime)
+    .where(and(eq(anime.id, animeId), eq(anime.userId, userId)))
+  if (!animeRow) return NextResponse.json({ opinion: null })
   const [row] = await db.select().from(opinions).where(eq(opinions.animeId, animeId))
   return NextResponse.json({ opinion: row ?? null })
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const animeId = Number(body?.animeId)
   if (!animeId) return NextResponse.json({ error: 'animeId kötelező' }, { status: 400 })
 
-  const [animeRow] = await db.select().from(anime).where(eq(anime.id, animeId))
+  const [animeRow] = await db.select().from(anime)
+    .where(and(eq(anime.id, animeId), eq(anime.userId, userId)))
   if (!animeRow) return NextResponse.json({ error: 'Nincs ilyen anime' }, { status: 404 })
 
   let rawText: string
@@ -36,12 +46,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    await consumeAiQuota(userId)
     const facts = await extractFacts(animeRow.titleRomaji, rawText)
     await db.delete(tasteMemory).where(
       and(eq(tasteMemory.animeId, animeId), eq(tasteMemory.source, 'opinion')),
     )
     const inserted = await db.insert(tasteMemory).values(
-      facts.map((f) => ({ animeId, kind: f.kind, text: f.text, source: 'opinion' })),
+      facts.map((f) => ({ userId, animeId, kind: f.kind, text: f.text, source: 'opinion' })),
     ).returning()
     await db.update(opinions).set({ extractStatus: 'done' }).where(eq(opinions.animeId, animeId))
     return NextResponse.json({ extractStatus: 'done', facts: inserted })

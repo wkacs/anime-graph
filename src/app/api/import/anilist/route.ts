@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchUserList, mapMedia } from '@/lib/anilist'
 import { mapAnilistStatus } from '@/lib/import'
 import { upsertImported } from '@/lib/import-upsert'
+import { requireUserId } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const username = String(body?.username ?? '').trim()
   if (!username) return NextResponse.json({ error: 'Felhasználónév kötelező' }, { status: 400 })
@@ -30,6 +33,6 @@ export async function POST(req: NextRequest) {
         : null,
     }
   })
-  const result = await upsertImported(rows)
+  const result = await upsertImported(userId, rows)
   return NextResponse.json(result)
 }

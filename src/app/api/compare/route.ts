@@ -3,8 +3,12 @@ import { db } from '@/db/client'
 import { anime } from '@/db/schema'
 import { fetchUserList } from '@/lib/anilist'
 import { compareLists, type TheirEntry } from '@/lib/compare'
+import { requireUserId } from '@/lib/session'
+import { eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const username = String(body?.username ?? '').trim()
   if (!username) return NextResponse.json({ error: 'Felhasználónév kötelező' }, { status: 400 })
@@ -26,7 +30,7 @@ export async function POST(req: NextRequest) {
     score: e.score && e.score >= 1 ? Math.round(e.score) : null,
   }))
 
-  const rows = await db.select().from(anime)
+  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
   const mine = rows.map((r) => ({
     anilistId: r.anilistId,
     title: r.titleRomaji,

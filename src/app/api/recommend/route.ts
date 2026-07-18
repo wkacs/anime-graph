@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, duels, tasteMemory, recommendations } from '@/db/schema'
-import { desc } from 'drizzle-orm'
 import { fetchRecommendationsFor, type RecCandidate } from '@/lib/anilist'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
 import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
+import { consumeAiQuota } from '@/lib/ai-quota'
+import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
+import { desc, eq } from 'drizzle-orm'
 
 export async function POST() {
-  const rows = await db.select().from(anime)
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
   if (!rows.length) {
     return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
   }
@@ -33,7 +37,7 @@ export async function POST() {
     kind: tasteMemory.kind,
     text: tasteMemory.text,
     animeId: tasteMemory.animeId,
-  }).from(tasteMemory)
+  }).from(tasteMemory).where(eq(tasteMemory.userId, userId))
   const titleById = new Map(rows.map((r) => [r.id, r.titleRomaji]))
   const facts = factRows.map((f) => ({
     kind: f.kind, text: f.text,
@@ -41,7 +45,9 @@ export async function POST() {
   }))
 
   // duel-derived signals: only meaningful once actual duels happened
-  const duelRows = await db.select().from(duels).orderBy(desc(duels.createdAt)).limit(8)
+  const duelRows = await db.select().from(duels)
+    .where(eq(duels.userId, userId))
+    .orderBy(desc(duels.createdAt)).limit(8)
   const extras = {
     eloTop: duelRows.length
       ? [...rows].sort((a, b) => b.elo - a.elo).slice(0, 5).map((r) => r.titleRomaji)
@@ -57,6 +63,7 @@ export async function POST() {
   }
 
   try {
+    await consumeAiQuota(userId)
     const raw = await glmChat(buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji), extras))
     const picks = parsePicks(raw)
     const byId = new Map(ranked.map((c) => [c.anilistId, c]))
@@ -64,6 +71,7 @@ export async function POST() {
       .filter((p) => byId.has(p.anilistId))
       .map((p) => ({ ...byId.get(p.anilistId)!, reason: p.reason }))
     await db.insert(recommendations).values({
+      userId,
       kind: 'recommend',
       input: { topTitles: top.map((t) => t.titleRomaji), candidateCount: ranked.length },
       result,

@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 
 type PublicData = {
+  username: string | null
   stats: { total: number; completed: number; topGenres: { name: string; count: number }[] }
   anime: { title: string; coverUrl: string | null; status: string; myScore: number | null; year: number | null }[]
 }
@@ -37,7 +38,7 @@ export default function PublicProfilePage() {
   return (
     <main className="min-h-screen max-w-4xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-6">
       <div>
-        <p className="label-mono mb-1">アニメグラフ · megosztott gyűjtemény</p>
+        <p className="label-mono mb-1">アニメグラフ · {data.username ?? 'megosztott'} gyűjteménye</p>
         <h1 className="text-2xl font-semibold tracking-tight">
           {data.stats.total} anime · {data.stats.completed} befejezve
         </h1>

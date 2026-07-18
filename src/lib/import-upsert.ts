@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { anime, type AnimeInsert } from '@/db/schema'
 
@@ -10,10 +10,11 @@ function chunks<T>(arr: T[], size: number): T[][] {
 
 // batch upsert for importers: new rows get full metadata, existing rows only
 // get their user-owned fields refreshed (watched_at never cleared by a null)
-export async function upsertImported(rows: AnimeInsert[]): Promise<{ added: number; updated: number }> {
+export async function upsertImported(userId: number, rows: AnimeInsert[]): Promise<{ added: number; updated: number }> {
   if (!rows.length) return { added: 0, updated: 0 }
   const existing = new Set(
-    (await db.select({ anilistId: anime.anilistId }).from(anime)).map((r) => r.anilistId),
+    (await db.select({ anilistId: anime.anilistId }).from(anime)
+      .where(eq(anime.userId, userId))).map((r) => r.anilistId),
   )
   let added = 0
   let updated = 0
@@ -22,8 +23,8 @@ export async function upsertImported(rows: AnimeInsert[]): Promise<{ added: numb
     else added++
   }
   for (const chunk of chunks(rows, 50)) {
-    await db.insert(anime).values(chunk).onConflictDoUpdate({
-      target: anime.anilistId,
+    await db.insert(anime).values(chunk.map((r) => ({ ...r, userId }))).onConflictDoUpdate({
+      target: [anime.userId, anime.anilistId],
       set: {
         status: sql`excluded.status`,
         myScore: sql`excluded.my_score`,

@@ -3,16 +3,17 @@ import { db } from '@/db/client'
 import { anime, recommendations } from '@/db/schema'
 import { fetchAiringFor, fetchSeason } from '@/lib/anilist'
 import { currentSeason } from '@/lib/seasonal'
-import { desc, eq } from 'drizzle-orm'
+import { requireUserId } from '@/lib/session'
+import { and, desc, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
 type SeasonScore = { anilistId: number; score: number; reason: string }
 
 // cached taste scores from the szezon page, if a run exists for this season
-async function cachedSeasonScores(input: { season: string; year: number }): Promise<Map<number, SeasonScore>> {
+async function cachedSeasonScores(userId: number, input: { season: string; year: number }): Promise<Map<number, SeasonScore>> {
   const rows = await db.select().from(recommendations)
-    .where(eq(recommendations.kind, 'seasonal'))
+    .where(and(eq(recommendations.kind, 'seasonal'), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
   const latest = rows[0]
@@ -24,7 +25,9 @@ async function cachedSeasonScores(input: { season: string; year: number }): Prom
 }
 
 export async function GET() {
-  const rows = await db.select().from(anime)
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
   const season = currentSeason(new Date())
 
   const followedIds = rows
@@ -34,7 +37,7 @@ export async function GET() {
   const [airing, seasonList, scores] = await Promise.all([
     followedIds.length ? fetchAiringFor(followedIds).catch(() => []) : Promise.resolve([]),
     fetchSeason(season.season, season.year).catch(() => []),
-    cachedSeasonScores(season),
+    cachedSeasonScores(userId, season),
   ])
 
   const byAnilist = new Map(rows.map((r) => [r.anilistId, r]))

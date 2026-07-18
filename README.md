@@ -8,7 +8,10 @@ ami GLM-mel ajánl a saját ízlésed alapján.
 
 1. Neon: hozz létre adatbázist, másold ki a connection stringet.
 2. `.env.local` a repo gyökerébe (minta: `.env.example`):
-   - `DATABASE_URL`, `GLM_API_KEY`, `APP_PASSWORD`, `SESSION_SECRET`
+   - `DATABASE_URL`, `GLM_API_KEY`, `SESSION_SECRET`, `INVITE_CODE`
+   - Többfelhasználós: mindenki meghívó-kóddal regisztrál (felhasználónév + jelszó).
+     **Az első regisztrált fiók kapja a korábbi (multi-tenant előtti) adatokat.**
+   - Opcionális: `AI_DAILY_LIMIT` (napi AI-hívás/fő, default 20), `OPENROUTER_API_KEY`
 3. Séma feltolása (a drizzle-kit NEM olvassa a `.env.local`-t automatikusan):
    - PowerShell: `$env:DATABASE_URL="postgres://..."; npm run db:push`
 4. `npm install`, majd `npm run dev` → http://localhost:3000

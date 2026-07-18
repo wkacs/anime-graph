@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchByMalIds, mapMedia, type AnilistMedia } from '@/lib/anilist'
 import { parseMalXml } from '@/lib/import'
 import { upsertImported } from '@/lib/import-upsert'
+import { requireUserId } from '@/lib/session'
 
 function chunks<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
@@ -10,6 +11,8 @@ function chunks<T>(arr: T[], size: number): T[][] {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const xml = String(body?.xml ?? '')
   if (!xml.includes('<anime>')) {
@@ -43,6 +46,6 @@ export async function POST(req: NextRequest) {
       watchedAt: e.finishedAt ? new Date(`${e.finishedAt}T00:00:00.000Z`) : null,
     })
   }
-  const result = await upsertImported(rows)
+  const result = await upsertImported(userId, rows)
   return NextResponse.json({ ...result, notFound })
 }

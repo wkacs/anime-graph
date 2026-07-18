@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime } from '@/db/schema'
 import { fetchAiringFor } from '@/lib/anilist'
+import { eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ skipped: 'RESEND_API_KEY / NOTIFY_EMAIL nincs beállítva' })
   }
 
-  const rows = await db.select().from(anime)
+  // értesítés csak az owner-fióknak (user_id=1) — a többi fióknak nincs e-mailje
+  const rows = await db.select().from(anime).where(eq(anime.userId, 1))
   const followed = rows.filter((r) => r.status === 'watching' || r.status === 'planned')
   if (!followed.length) return NextResponse.json({ sent: false, reason: 'nincs követett anime' })
 

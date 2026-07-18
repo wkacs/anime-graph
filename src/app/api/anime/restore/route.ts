@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, opinions, tasteMemory, type AnimeInsert } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { requireUserId } from '@/lib/session'
+import { and, eq } from 'drizzle-orm'
 
 // undo for a deletion: re-insert the bundle returned by DELETE /api/anime/[id]
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const bundle = body?.bundle
   if (!bundle?.anime?.anilistId) {
@@ -12,14 +15,16 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await db.select().from(anime)
-    .where(eq(anime.anilistId, bundle.anime.anilistId))
+    .where(and(eq(anime.userId, userId), eq(anime.anilistId, bundle.anime.anilistId)))
   if (existing.length) return NextResponse.json({ anime: existing[0] })
 
   const { watchedAt, ...rest } = bundle.anime as Record<string, unknown> & { watchedAt: string | null }
   delete rest.id
   delete rest.createdAt
+  delete rest.userId
   const insert = {
     ...rest,
+    userId,
     watchedAt: watchedAt ? new Date(watchedAt) : null,
   } as AnimeInsert
   const [row] = await db.insert(anime).values(insert).returning()
@@ -35,6 +40,7 @@ export async function POST(req: NextRequest) {
   if (Array.isArray(bundle.facts) && bundle.facts.length) {
     await db.insert(tasteMemory).values(
       bundle.facts.map((f: { kind: string; text: string; source: string; weight?: number }) => ({
+        userId,
         animeId: row.id,
         kind: f.kind,
         text: f.text,

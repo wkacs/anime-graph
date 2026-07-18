@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, duels } from '@/db/schema'
 import { eloUpdate, pickDuelPair } from '@/lib/elo'
-import { eq } from 'drizzle-orm'
+import { requireUserId } from '@/lib/session'
+import { and, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,9 @@ function pairKey(a: number, b: number): string {
 }
 
 export async function GET() {
-  const rows = await db.select().from(anime)
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
   const pair = pickDuelPair(rows)
   if (!pair) {
     return NextResponse.json({ error: 'Legalább két anime kell a duelhez' }, { status: 400 })
@@ -33,6 +36,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const winnerId = Number(body?.winnerId)
   const loserId = Number(body?.loserId)
@@ -48,14 +53,16 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const [winner] = await db.select().from(anime).where(eq(anime.id, winnerId))
-  const [loser] = await db.select().from(anime).where(eq(anime.id, loserId))
+  const [winner] = await db.select().from(anime)
+    .where(and(eq(anime.id, winnerId), eq(anime.userId, userId)))
+  const [loser] = await db.select().from(anime)
+    .where(and(eq(anime.id, loserId), eq(anime.userId, userId)))
   if (!winner || !loser) return NextResponse.json({ error: 'Nincs ilyen anime' }, { status: 404 })
 
   const updated = eloUpdate(winner.elo, loser.elo)
   await db.update(anime).set({ elo: updated.winner }).where(eq(anime.id, winnerId))
   await db.update(anime).set({ elo: updated.loser }).where(eq(anime.id, loserId))
-  await db.insert(duels).values({ winnerId, loserId })
+  await db.insert(duels).values({ userId, winnerId, loserId })
 
   const res = NextResponse.json({
     winner: { id: winnerId, elo: updated.winner },

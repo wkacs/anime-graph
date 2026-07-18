@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory } from '@/db/schema'
 import { buildProfileMessages, parseProfile } from '@/lib/profile'
+import { consumeAiQuota } from '@/lib/ai-quota'
+import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
-async function generate() {
-  const rows = await db.select().from(anime)
-  const factRows = await db.select().from(tasteMemory)
+async function generate(userId: number) {
+  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
+  const factRows = await db.select().from(tasteMemory).where(eq(tasteMemory.userId, userId))
   if (!rows.length) return null
 
   const genreCounts = new Map<string, number>()
@@ -20,9 +22,11 @@ async function generate() {
     .slice(0, 5).map((r) => r.titleRomaji)
   const facts = factRows.map((f) => `(${f.kind}) ${f.text}`).slice(0, 60)
 
+  await consumeAiQuota(userId)
   const raw = await glmChat(buildProfileMessages(facts, topGenres, topTitles, rows.length))
   const profile = parseProfile(raw)
   await db.insert(recommendations).values({
+    userId,
     kind: 'profile',
     input: { factCount: factRows.length },
     result: profile,
@@ -31,18 +35,21 @@ async function generate() {
 }
 
 export async function GET() {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const cached = await db.select().from(recommendations)
-    .where(eq(recommendations.kind, 'profile'))
+    .where(and(eq(recommendations.kind, 'profile'), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
-  const factCount = (await db.select({ id: tasteMemory.id }).from(tasteMemory)).length
+  const factCount = (await db.select({ id: tasteMemory.id }).from(tasteMemory)
+    .where(eq(tasteMemory.userId, userId))).length
   const latest = cached[0]
   // amíg nem gyűlt új ízlés-tény, a tárolt portré érvényes
   if (latest && (latest.input as { factCount?: number }).factCount === factCount) {
     return NextResponse.json({ profile: latest.result, cached: true })
   }
   try {
-    const profile = await generate()
+    const profile = await generate(userId)
     return NextResponse.json({ profile, cached: false })
   } catch (e) {
     if (latest) return NextResponse.json({ profile: latest.result, cached: true, stale: true })
@@ -51,8 +58,10 @@ export async function GET() {
 }
 
 export async function POST() {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
-    const profile = await generate()
+    const profile = await generate(userId)
     return NextResponse.json({ profile, cached: false })
   } catch (e) {
     return NextResponse.json({ error: `AI-hiba: ${String(e)}` }, { status: 502 })

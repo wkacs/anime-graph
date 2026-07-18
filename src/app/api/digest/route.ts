@@ -3,24 +3,28 @@ import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory } from '@/db/schema'
 import { fetchAiringFor } from '@/lib/anilist'
 import { currentSeason } from '@/lib/seasonal'
+import { consumeAiQuota } from '@/lib/ai-quota'
+import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
 // one personal sentence-or-two for the top of the News page, cached per day
 export async function GET() {
+  const userId = await requireUserId()
+  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const today = new Date().toISOString().slice(0, 10)
 
   const cached = await db.select().from(recommendations)
-    .where(eq(recommendations.kind, 'digest'))
+    .where(and(eq(recommendations.kind, 'digest'), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
   if (cached[0] && (cached[0].input as { date?: string }).date === today) {
     return NextResponse.json({ digest: (cached[0].result as { text: string }).text })
   }
 
-  const rows = await db.select().from(anime)
+  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
   if (!rows.length) return NextResponse.json({ digest: null })
 
   const followed = rows.filter((r) => r.status === 'watching' || r.status === 'planned')
@@ -34,7 +38,7 @@ export async function GET() {
 
   const season = currentSeason(new Date())
   const seasonal = await db.select().from(recommendations)
-    .where(eq(recommendations.kind, 'seasonal'))
+    .where(and(eq(recommendations.kind, 'seasonal'), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
   const topSeason = seasonal[0] && (seasonal[0].input as { season: string }).season === season.season
@@ -42,12 +46,15 @@ export async function GET() {
         .slice(0, 2).map((i) => `${i.title} (${i.score}/100 ízlés-pont)`)
     : []
 
-  const facts = (await db.select().from(tasteMemory).orderBy(desc(tasteMemory.createdAt)).limit(10))
+  const facts = (await db.select().from(tasteMemory)
+    .where(eq(tasteMemory.userId, userId))
+    .orderBy(desc(tasteMemory.createdAt)).limit(10))
     .map((f) => `(${f.kind}) ${f.text}`)
 
   const watching = rows.filter((r) => r.status === 'watching').length
 
   try {
+    await consumeAiQuota(userId)
     const text = (await glmChat([
       {
         role: 'system',
@@ -63,6 +70,7 @@ export async function GET() {
       },
     ], { retries: 1 })).trim()
     await db.insert(recommendations).values({
+      userId,
       kind: 'digest',
       input: { date: today },
       result: { text },
