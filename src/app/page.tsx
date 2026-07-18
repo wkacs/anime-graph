@@ -4,6 +4,7 @@ import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import SidePanel from '@/components/SidePanel'
+import RecommendModal from '@/components/RecommendModal'
 import { buildGraph, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
@@ -58,7 +59,9 @@ export default function Home() {
         <AddAnimeSearch onAdded={refresh} />
         <HierarchyPanel config={config} onChange={updateConfig} />
       </div>
-      {/* Task 12 mounts the Recommend button here (top-right) */}
+      <div className={selectedAnime ? 'absolute top-4 right-[25rem] z-10' : 'absolute top-4 right-4 z-10'}>
+        <RecommendModal onAdded={refresh} />
+      </div>
       {selectedAnime && (
         <SidePanel
           anime={selectedAnime}
