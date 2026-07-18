@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Countdown from '@/components/Countdown'
 import RecommendMorph from '@/components/RecommendMorph'
+import TonightPicker from '@/components/TonightPicker'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 
@@ -117,7 +118,10 @@ export default function NewsPage() {
             {data.season.year} {SEASON_LABELS[data.season.season] ?? data.season.season}
           </h1>
         </div>
-        <RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} />
+        <div className="flex items-start gap-2">
+          <TonightPicker />
+          <RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} />
+        </div>
       </div>
 
       {digest && (
