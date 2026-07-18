@@ -139,25 +139,25 @@ export default function Graph3D({
 
   useEffect(() => {
     if (!flythrough) return
+    // the ref only exposes camera methods, so the axis range comes from props
+    const xs = data.nodes
+      .filter((n) => n.type === 'anime' && n.fx !== undefined)
+      .map((n) => n.fx as number)
+    if (!xs.length) return
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const duration = Math.min(14000, Math.max(4000, xs.length * 700))
     const timer = setInterval(() => {
       const fg = fgRef.current
       if (!fg) return
       clearInterval(timer)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const nodes = fg.graphData().nodes.filter((n: any) => n.type === 'anime' && n.fx !== undefined)
-      if (!nodes.length) return
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const xs = nodes.map((n: any) => n.fx as number)
-      const minX = Math.min(...xs)
-      const maxX = Math.max(...xs)
       fg.cameraPosition({ x: minX - 30, y: 14, z: 105 }, { x: minX, y: 0, z: 0 }, 0)
-      const duration = Math.min(14000, Math.max(4000, nodes.length * 700))
       setTimeout(() => {
         fg.cameraPosition({ x: maxX + 30, y: 14, z: 105 }, { x: maxX, y: 0, z: 0 }, duration)
       }, 700)
     }, 150)
     return () => clearInterval(timer)
-  }, [flythrough])
+  }, [flythrough, data])
 
   // clone: force-graph mutates node objects (adds x/y/z)
   const graphData = useMemo(() => ({
