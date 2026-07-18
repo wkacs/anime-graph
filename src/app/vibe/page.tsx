@@ -149,7 +149,7 @@ export default function VibePage() {
           <p className="label-mono mb-2">Új felfedezés</p>
           <ul className="flex flex-col gap-2">
             {newPicks.map((p) => (
-              <li key={p.title} className="glass rounded-2xl p-3 flex gap-3">
+              <li key={`${p.title}-${p.anilistId ?? 'x'}`} className="glass rounded-2xl p-3 flex gap-3">
                 {p.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={p.coverUrl} alt="" className="w-12 rounded-lg self-start" />
