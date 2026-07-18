@@ -174,6 +174,16 @@ export default function BeallitasokPage() {
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between">
         <div>
+          <p className="label-mono mb-1">Adatmentés</p>
+          <p className="text-sm text-text-2">Teljes lista + vélemények + ízlés-memória egy JSON-fájlban.</p>
+        </div>
+        <a href="/api/export" className="btn-ghost border border-white/10 px-5 py-2 text-sm">
+          Export letöltése
+        </a>
+      </section>
+
+      <section className="glass rounded-3xl p-6 flex items-center justify-between">
+        <div>
           <p className="label-mono mb-1">Munkamenet</p>
           <p className="text-sm text-text-2">Kijelentkezés erről az eszközről.</p>
         </div>
