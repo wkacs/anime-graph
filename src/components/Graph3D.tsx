@@ -332,29 +332,34 @@ export default function Graph3D({
   }, [fitKey])
 
   // fly to a freshly added node: the lib mutates our cloned graphData in place,
-  // so its coordinates show up right here once the layout picked it up
+  // so its coordinates show up right here once the layout picked it up.
+  // The layout keeps moving for seconds after a rebuild — flying too early
+  // aims at a stale position, so we wait until the node has settled.
   useEffect(() => {
     if (!focusNodeId) return
     let tries = 0
+    let last: { x: number; y: number; z: number } | null = null
     const timer = setInterval(() => {
       const fg = fgRef.current
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const node = graphData.nodes.find((n) => n.id === focusNodeId) as any
-      if (!fg || !node || node.x === undefined) {
-        if (++tries > 60) clearInterval(timer)
-        return
-      }
+      if (++tries > 40) { clearInterval(timer); return }
+      if (!fg || !node || node.x === undefined) return
+      const moved = last
+        ? Math.hypot(node.x - last.x, node.y - last.y, node.z - last.z)
+        : Infinity
+      last = { x: node.x, y: node.y, z: node.z }
+      // settled (or we ran out of patience) → one clean flight
+      if (moved > 1.5 && tries < 30) return
       clearInterval(timer)
-      setTimeout(() => {
-        const len = Math.hypot(node.x, node.y, node.z) || 1
-        const ratio = 1 + 70 / len
-        fg.cameraPosition(
-          { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
-          node,
-          1300,
-        )
-      }, 650)
-    }, 150)
+      const len = Math.hypot(node.x, node.y, node.z) || 1
+      const ratio = 1 + 70 / len
+      fg.cameraPosition(
+        { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
+        node,
+        1300,
+      )
+    }, 350)
     return () => clearInterval(timer)
   }, [focusNodeId, graphData])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -75,7 +75,7 @@ export default function GrafPage() {
       setFocusGenre(added.genres[0] ?? 'Ismeretlen')
     }
     setFocusNodeId(`anime:${added.id}`)
-    setTimeout(() => setFocusNodeId(null), 6000)
+    setTimeout(() => setFocusNodeId(null), 12000)
   }, [refresh, advanced, flythrough])
 
   useEffect(() => { refresh() }, [refresh])
