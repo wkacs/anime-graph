@@ -148,9 +148,27 @@ function timeObject(node: GraphNode): THREE.Object3D {
   return label
 }
 
+const BUBBLE_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
+const UNIT_SPHERE = new THREE.SphereGeometry(1, 16, 16)
+
+// drill-down entry: genre bubble, radius grows with the anime count
+function bubbleObject(node: GraphNode): THREE.Object3D {
+  const group = new THREE.Group()
+  const r = Math.min(16, 4 + Math.sqrt(node.val) * 2.2)
+  const sphere = new THREE.Mesh(UNIT_SPHERE, BUBBLE_MAT)
+  sphere.scale.setScalar(r)
+  group.add(sphere)
+  const label = new SpriteText(`${node.label} · ${node.val}`, 4.4, '#fafafa')
+  label.fontFace = 'Instrument Sans, Arial'
+  label.position.set(0, r + 5, 0)
+  group.add(label)
+  return group
+}
+
 // dimension node: name above a plain white dot (genre reads bigger than studio/year/…)
 function dimObject(node: GraphNode): THREE.Object3D {
   if (node.timeNode) return timeObject(node)
+  if (node.bubble) return bubbleObject(node)
   const group = new THREE.Group()
   const isGenre = node.dim === 'genre'
   const dot = new THREE.Mesh(isGenre ? DOT_GEO_BIG : DOT_GEO_MID, isGenre ? GENRE_MAT : DIM_MAT)
@@ -168,6 +186,8 @@ export default function Graph3D({
   onAnimeHover,
   flythrough = 0,
   nodeMode = 'full',
+  onDimClick,
+  fitKey = 0,
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
@@ -176,6 +196,10 @@ export default function Graph3D({
   // flies along the pinned x axis from the earliest to the latest node
   flythrough?: number
   nodeMode?: NodeMode
+  // drill-down: dimension-node click (bubble or hub); fallback is a camera fly-to
+  onDimClick?: (node: GraphNode) => void
+  // when it changes, the camera re-fits the whole graph
+  fitKey?: number
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
@@ -229,6 +253,10 @@ export default function Graph3D({
       onAnimeClick(n.animeId)
       return
     }
+    if (onDimClick && n.type === 'dim' && !n.timeNode) {
+      onDimClick(n as GraphNode)
+      return
+    }
     const dist = 80
     const len = Math.hypot(n.x, n.y, n.z) || 1
     const ratio = 1 + dist / len
@@ -237,12 +265,25 @@ export default function Graph3D({
       n,
       1000,
     )
-  }, [onAnimeClick])
+  }, [onAnimeClick, onDimClick])
+
+  useEffect(() => {
+    if (!fitKey) return
+    const timer = setInterval(() => {
+      const fg = fgRef.current
+      if (!fg) return
+      clearInterval(timer)
+      // small delay so the force layout has settled a bit before framing
+      setTimeout(() => fg.zoomToFit(700, 70), 450)
+    }, 150)
+    return () => clearInterval(timer)
+  }, [fitKey])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeHover = useCallback((n: any) => {
     onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)
-    document.body.style.cursor = n?.type === 'anime' ? 'pointer' : 'default'
-  }, [onAnimeHover])
+    const clickable = n?.type === 'anime' || (!!onDimClick && n?.type === 'dim' && !n.timeNode)
+    document.body.style.cursor = clickable ? 'pointer' : 'default'
+  }, [onAnimeHover, onDimClick])
 
   return (
     <ForceGraph3D

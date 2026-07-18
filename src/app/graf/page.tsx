@@ -5,30 +5,37 @@ import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import RecommendMorph from '@/components/RecommendMorph'
-import { buildGraph, buildTimeline, COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
+import {
+  buildBubbles, buildGenreDetail, buildGraph, buildTimeline,
+  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig, type GraphNode,
+} from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
 const CONFIG_KEY = 'anime-graph-config'
+const VIEW_KEY = 'anime-graph-view'
+const HINT_KEY = 'anime-graph-hint-seen'
 
-export default function Home() {
+export default function GrafPage() {
   const [animeList, setAnimeList] = useState<ApiAnime[]>([])
   const [, setFacts] = useState<ApiFact[]>([])
   const [config, setConfig] = useState<GraphConfig>(DEFAULT_CONFIG)
   const [hoverId, setHoverId] = useState<number | null>(null)
   const [mouse, setMouse] = useState({ x: 0, y: 0 })
   const [loaded, setLoaded] = useState(false)
-  const [flythrough, setFlythrough] = useState(0) // 0 = normál mód, timestamp = idővonal
+  const [flythrough, setFlythrough] = useState(0) // 0 = nem idővonal, timestamp = idővonal
+  const [advanced, setAdvanced] = useState(false)
+  const [focusGenre, setFocusGenre] = useState<string | null>(null)
+  const [fitKey, setFitKey] = useState(0)
+  const [showHint, setShowHint] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
     const saved = localStorage.getItem(CONFIG_KEY)
-    if (saved) {
-      try { setConfig(JSON.parse(saved)) } catch { /* keep default */ }
-      setLoaded(true)
-      return
-    }
-    // no local config yet → fall back to the saved default from settings
+    if (saved) try { setConfig(JSON.parse(saved)) } catch { /* keep default */ }
+    setAdvanced(localStorage.getItem(VIEW_KEY) === 'advanced')
+    setShowHint(!localStorage.getItem(HINT_KEY))
+    if (saved) { setLoaded(true); return }
     fetch('/api/settings')
       .then((r) => r.json())
       .then((j) => { if (j.hierarchyDefault) setConfig(j.hierarchyDefault) })
@@ -39,6 +46,13 @@ export default function Home() {
   function updateConfig(c: GraphConfig) {
     setConfig(c)
     localStorage.setItem(CONFIG_KEY, JSON.stringify(c))
+  }
+
+  function setView(adv: boolean) {
+    setAdvanced(adv)
+    setFocusGenre(null)
+    localStorage.setItem(VIEW_KEY, adv ? 'advanced' : 'simple')
+    setFitKey(Date.now())
   }
 
   const openAnime = useCallback((id: number) => router.push(`/anime/${id}`), [router])
@@ -56,25 +70,47 @@ export default function Home() {
 
   const timelineMode = flythrough !== 0
 
+  const rows = useMemo(() => animeList.map((a) => ({
+    id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
+    coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
+    status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
+    watchedAt: a.watchedAt, createdAt: a.createdAt,
+  })), [animeList])
+
   const graph = useMemo(() => {
-    const rows = animeList.map((a) => ({
-      id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
-      coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
-      status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
-      watchedAt: a.watchedAt, createdAt: a.createdAt,
-    }))
-    return timelineMode ? buildTimeline(rows) : buildGraph(rows, config)
-  }, [animeList, config, timelineMode])
+    if (timelineMode) return buildTimeline(rows)
+    if (advanced) return buildGraph(rows, config)
+    if (focusGenre) return buildGenreDetail(rows, focusGenre)
+    return buildBubbles(rows)
+  }, [rows, config, timelineMode, advanced, focusGenre])
+
+  const animeNodeCount = useMemo(
+    () => graph.nodes.filter((n) => n.type === 'anime').length,
+    [graph],
+  )
 
   const hoverAnime = hoverId != null ? animeList.find((a) => a.id === hoverId) ?? null : null
 
-  // covers stay visible in every mode except the explicit dot fallback;
-  // 'auto' just drops the name labels + shrinks textures on big libraries
+  // covers stay visible except the explicit dot fallback; 'auto' only drops
+  // the name labels + shrinks textures when the current view is big
   const coverMode = config.covers ?? 'auto'
   const nodeMode =
     coverMode === 'off' ? 'dot' as const
-    : coverMode === 'on' || animeList.length <= COVER_AUTO_LIMIT ? 'full' as const
+    : coverMode === 'on' || animeNodeCount <= COVER_AUTO_LIMIT ? 'full' as const
     : 'lite' as const
+
+  const handleDimClick = useCallback((n: GraphNode) => {
+    if (n.dim !== 'genre') return
+    if (n.bubble) {
+      setFocusGenre(n.label)
+      setFitKey(Date.now())
+      localStorage.setItem(HINT_KEY, '1')
+      setShowHint(false)
+    } else {
+      setFocusGenre(null)
+      setFitKey(Date.now())
+    }
+  }, [])
 
   if (!loaded) return null
 
@@ -89,14 +125,37 @@ export default function Home() {
         onAnimeHover={setHoverId}
         flythrough={flythrough}
         nodeMode={nodeMode}
+        onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
+        fitKey={fitKey}
       />
 
       <div className="fixed top-20 left-4 z-20">
         <AddAnimeSearch onAdded={refresh} />
       </div>
 
+      {/* breadcrumb a drill-down nézetben */}
+      {!advanced && !timelineMode && focusGenre && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-20">
+          <button
+            onClick={() => { setFocusGenre(null); setFitKey(Date.now()) }}
+            className="glass rounded-full px-4 py-2 text-sm text-text-1 hover:bg-white/10 transition-colors"
+          >
+            ← Minden műfaj
+            <span className="label-mono ml-2">{focusGenre} · {animeNodeCount}</span>
+          </button>
+        </div>
+      )}
+
       <div className="fixed bottom-4 left-4 z-20 flex items-end gap-2">
-        {!timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
+        {advanced && !timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
+        {!timelineMode && (
+          <button
+            onClick={() => setView(!advanced)}
+            className="glass rounded-full px-4 py-2.5 label-mono hover:bg-white/10 transition-colors"
+          >
+            {advanced ? 'Egyszerű nézet' : 'Haladó nézet'}
+          </button>
+        )}
         <button
           onClick={() => setFlythrough(timelineMode ? 0 : Date.now())}
           className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
@@ -116,6 +175,23 @@ export default function Home() {
           <div className="glass rounded-3xl px-8 py-6 text-center">
             <p className="label-mono mb-2">Üres univerzum</p>
             <p className="text-sm text-text-2">Add hozzá az első animét a bal felső keresővel.</p>
+          </div>
+        </div>
+      )}
+
+      {/* első látogatás: rövid vezetés */}
+      {showHint && !advanced && !timelineMode && !focusGenre && animeList.length > 0 && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-20">
+          <div className="glass-strong rounded-2xl px-5 py-3 flex items-center gap-4 text-sm text-text-1">
+            <span>
+              Kattints egy buborékra a műfaj animéihez · húzással forgathatod a teret
+            </span>
+            <button
+              onClick={() => { setShowHint(false); localStorage.setItem(HINT_KEY, '1') }}
+              className="btn-ghost px-2 py-0.5 text-xs shrink-0"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

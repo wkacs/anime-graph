@@ -56,6 +56,8 @@ export type GraphNode = {
   fy?: number
   fz?: number
   timeNode?: boolean
+  // drill-down entry view: genre bubble sized by anime count
+  bubble?: boolean
 }
 
 export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' }
@@ -86,6 +88,63 @@ function dimValue(a: GraphAnime, d: Dimension): string {
 }
 
 const RELATION_TYPES = new Set(['SEQUEL', 'PREQUEL', 'SIDE_STORY', 'SPIN_OFF', 'PARENT', 'ALTERNATIVE'])
+
+// drill-down entry view: one bubble per genre, sized by how many anime carry it
+export function buildBubbles(rows: GraphAnime[]): { nodes: GraphNode[]; links: GraphLink[] } {
+  const counts = new Map<string, number>()
+  for (const a of rows) {
+    const genres = a.genres.length ? a.genres : ['Ismeretlen']
+    for (const g of genres) counts.set(g, (counts.get(g) ?? 0) + 1)
+  }
+  const nodes: GraphNode[] = [...counts.entries()].map(([genre, count]) => ({
+    id: `dim:genre:${genre}`,
+    type: 'dim',
+    label: genre,
+    val: count,
+    dim: 'genre',
+    bubble: true,
+  }))
+  return { nodes, links: [] }
+}
+
+// drill-down detail: the chosen genre as hub + every anime tagged with it
+export function buildGenreDetail(rows: GraphAnime[], genre: string): { nodes: GraphNode[]; links: GraphLink[] } {
+  const subset = rows.filter((a) =>
+    genre === 'Ismeretlen' ? a.genres.length === 0 : a.genres.includes(genre),
+  )
+  const hubId = `dim:genre:${genre}`
+  const nodes: GraphNode[] = [
+    { id: hubId, type: 'dim', label: genre, val: 12, dim: 'genre' },
+  ]
+  const links: GraphLink[] = []
+  for (const a of subset) {
+    nodes.push({
+      id: `anime:${a.id}`,
+      type: 'anime',
+      label: a.titleRomaji,
+      img: a.coverUrl ?? undefined,
+      val: a.myScore ?? 5,
+      status: a.status,
+      animeId: a.id,
+    })
+    links.push({ source: hubId, target: `anime:${a.id}`, kind: 'chain' })
+  }
+  const byAnilist = new Map(subset.map((a) => [a.anilistId, a.id]))
+  const seen = new Set<string>()
+  for (const a of subset) {
+    for (const rel of a.relations) {
+      if (!RELATION_TYPES.has(rel.type)) continue
+      const targetId = byAnilist.get(rel.anilistId)
+      if (targetId === undefined || targetId === a.id) continue
+      const [lo, hi] = a.id < targetId ? [a.id, targetId] : [targetId, a.id]
+      const key = `${lo}|${hi}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      links.push({ source: `anime:${lo}`, target: `anime:${hi}`, kind: 'relation' })
+    }
+  }
+  return { nodes, links }
+}
 
 export type TimelineAnime = GraphAnime & { watchedAt: string | null; createdAt: string }
 
