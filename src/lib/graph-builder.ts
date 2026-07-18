@@ -1,16 +1,24 @@
 export type Dimension = 'genre' | 'studio' | 'scoreBand' | 'year' | 'status'
 
+export type CoverMode = 'auto' | 'on' | 'off'
+
 export type GraphConfig = {
   levels: Dimension[]
   crossLinks: boolean
   sizeBy: 'score' | 'elo'
+  // node detail: 'auto' shows covers+names only under the perf threshold
+  covers?: CoverMode
 }
 
 export const DEFAULT_CONFIG: GraphConfig = {
   levels: ['genre', 'studio'],
   crossLinks: true,
   sizeBy: 'score',
+  covers: 'auto',
 }
+
+// above this many anime nodes 'auto' drops covers/labels for plain dots
+export const COVER_AUTO_LIMIT = 80
 
 export const DIM_LABELS: Record<Dimension, string> = {
   genre: 'Műfaj',

@@ -5,7 +5,7 @@ import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import RecommendMorph from '@/components/RecommendMorph'
-import { buildGraph, buildTimeline, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
+import { buildGraph, buildTimeline, COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
@@ -41,6 +41,8 @@ export default function Home() {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(c))
   }
 
+  const openAnime = useCallback((id: number) => router.push(`/anime/${id}`), [router])
+
   const refresh = useCallback(async () => {
     const res = await fetch('/api/anime')
     if (res.ok) {
@@ -66,6 +68,9 @@ export default function Home() {
 
   const hoverAnime = hoverId != null ? animeList.find((a) => a.id === hoverId) ?? null : null
 
+  const coverMode = config.covers ?? 'auto'
+  const detail = coverMode === 'on' || (coverMode !== 'off' && animeList.length <= COVER_AUTO_LIMIT)
+
   if (!loaded) return null
 
   return (
@@ -75,9 +80,10 @@ export default function Home() {
     >
       <Graph3D
         data={graph}
-        onAnimeClick={(id) => router.push(`/anime/${id}`)}
+        onAnimeClick={openAnime}
         onAnimeHover={setHoverId}
         flythrough={flythrough}
+        detail={detail}
       />
 
       <div className="fixed top-20 left-4 z-20">

@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import * as THREE from 'three'
 import SpriteText from 'three-spritetext'
@@ -72,14 +72,24 @@ function coverTexture(url: string): THREE.CanvasTexture {
 
 const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
 
-// anime node: cover on top, name below it, white status dot at the link anchor
-function animeObject(node: GraphNode): THREE.Object3D {
+// shared geometry/materials: with hundreds of nodes, per-node allocations kill the GPU
+const DOT_GEO = new THREE.SphereGeometry(1.4, 8, 8)
+const DOT_GEO_BIG = new THREE.SphereGeometry(2.6, 10, 10)
+const DOT_GEO_MID = new THREE.SphereGeometry(1.9, 8, 8)
+const STATUS_MATERIALS = new Map<string, THREE.MeshBasicMaterial>(
+  Object.entries(STATUS_DOT).map(([s, c]) => [s, new THREE.MeshBasicMaterial({ color: c })]),
+)
+const GENRE_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95 })
+const DIM_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.75 })
+
+// anime node: cover on top, name below it, white status dot at the link anchor;
+// detail=false renders a bare dot only (name+cover come from the HTML hover card)
+function animeObject(node: GraphNode, detail: boolean): THREE.Object3D {
+  const material = STATUS_MATERIALS.get(node.status ?? 'planned') ?? STATUS_MATERIALS.get('completed')!
+  const dot = new THREE.Mesh(DOT_GEO, material)
+  if (!detail) return dot
+
   const group = new THREE.Group()
-  const color = STATUS_DOT[node.status ?? 'planned'] ?? 0xfafafa
-  const dot = new THREE.Mesh(
-    new THREE.SphereGeometry(1.4, 16, 16),
-    new THREE.MeshBasicMaterial({ color }),
-  )
   group.add(dot)
 
   const name = new SpriteText(truncate(node.label, 24), 2.6, '#d9d9df')
@@ -109,10 +119,7 @@ function dimObject(node: GraphNode): THREE.Object3D {
   if (node.timeNode) return timeObject(node)
   const group = new THREE.Group()
   const isGenre = node.dim === 'genre'
-  const dot = new THREE.Mesh(
-    new THREE.SphereGeometry(isGenre ? 2.6 : 1.9, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: isGenre ? 0.95 : 0.75 }),
-  )
+  const dot = new THREE.Mesh(isGenre ? DOT_GEO_BIG : DOT_GEO_MID, isGenre ? GENRE_MAT : DIM_MAT)
   group.add(dot)
   const label = new SpriteText(node.label, isGenre ? 3.6 : 2.9, isGenre ? '#fafafa' : '#b9b9c1')
   label.fontFace = 'Instrument Sans, Arial'
@@ -126,6 +133,7 @@ export default function Graph3D({
   onAnimeClick,
   onAnimeHover,
   flythrough = 0,
+  detail = true,
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
@@ -133,6 +141,8 @@ export default function Graph3D({
   // timestamp trigger: when it changes to a non-zero value, the camera
   // flies along the pinned x axis from the earliest to the latest node
   flythrough?: number
+  // false → bare status dots for anime (fast with hundreds of nodes)
+  detail?: boolean
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
@@ -165,39 +175,56 @@ export default function Graph3D({
     links: data.links.map((l) => ({ ...l })),
   }), [data])
 
+  // stable prop identities: the underlying lib re-applies changed props on every
+  // React re-render, so inline closures would rebuild all node objects constantly
+  const nodeThreeObject = useCallback(
+    (n: GraphNode) => (n.type === 'anime' ? animeObject(n, detail) : dimObject(n)),
+    [detail],
+  )
+  const nodeLabel = useCallback(() => '', [])
+  const linkColor = useCallback(
+    (l: GraphLink) => (l.kind === 'relation' ? '#ffffff' : '#8f8f96'),
+    [],
+  )
+  const linkLineDash = useCallback(
+    (l: GraphLink) => (l.kind === 'relation' ? [3, 2] : null),
+    [],
+  )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function flyTo(node: any) {
+  const handleNodeClick = useCallback((n: any) => {
+    if (n.type === 'anime' && n.animeId) {
+      onAnimeClick(n.animeId)
+      return
+    }
     const dist = 80
-    const len = Math.hypot(node.x, node.y, node.z) || 1
+    const len = Math.hypot(n.x, n.y, n.z) || 1
     const ratio = 1 + dist / len
-    fgRef.current.cameraPosition(
-      { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
-      node,
+    fgRef.current?.cameraPosition(
+      { x: n.x * ratio, y: n.y * ratio, z: n.z * ratio },
+      n,
       1000,
     )
-  }
+  }, [onAnimeClick])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleNodeHover = useCallback((n: any) => {
+    onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)
+    document.body.style.cursor = n?.type === 'anime' ? 'pointer' : 'default'
+  }, [onAnimeHover])
 
   return (
     <ForceGraph3D
       fgRef={fgRef}
       graphData={graphData}
       backgroundColor="rgba(0,0,0,0)"
-      nodeThreeObject={(n: GraphNode) => (n.type === 'anime' ? animeObject(n) : dimObject(n))}
-      nodeLabel={() => ''}
-      linkColor={(l: GraphLink) => (l.kind === 'relation' ? '#ffffff' : '#8f8f96')}
+      nodeThreeObject={nodeThreeObject}
+      nodeLabel={nodeLabel}
+      cooldownTime={8000}
+      linkColor={linkColor}
       linkOpacity={0.28}
       linkWidth={0}
-      linkLineDash={(l: GraphLink) => (l.kind === 'relation' ? [3, 2] : null)}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onNodeClick={(n: any) => {
-        if (n.type === 'anime' && n.animeId) onAnimeClick(n.animeId)
-        else flyTo(n)
-      }}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onNodeHover={(n: any) => {
-        onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)
-        document.body.style.cursor = n?.type === 'anime' ? 'pointer' : 'default'
-      }}
+      linkLineDash={linkLineDash}
+      onNodeClick={handleNodeClick}
+      onNodeHover={handleNodeHover}
     />
   )
 }
