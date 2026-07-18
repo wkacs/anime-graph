@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isValidSession } from '@/lib/auth'
 
-const PUBLIC_PREFIXES = ['/login', '/api/auth']
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

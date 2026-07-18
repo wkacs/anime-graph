@@ -40,6 +40,7 @@ export type GraphAnime = {
   myScore: number | null
   elo: number
   relations: { type: string; anilistId: number }[]
+  tags?: { name: string; rank: number }[]
 }
 
 export type GraphNode = {
@@ -58,9 +59,11 @@ export type GraphNode = {
   timeNode?: boolean
   // drill-down entry view: genre bubble sized by anime count
   bubble?: boolean
+  // bubble decoration: top covers of the genre
+  covers?: string[]
 }
 
-export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' }
+export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' | 'vibe' }
 
 const STATUS_LABELS: Record<string, string> = {
   watching: 'Nézem',
@@ -89,22 +92,63 @@ function dimValue(a: GraphAnime, d: Dimension): string {
 
 const RELATION_TYPES = new Set(['SEQUEL', 'PREQUEL', 'SIDE_STORY', 'SPIN_OFF', 'PARENT', 'ALTERNATIVE'])
 
-// drill-down entry view: one bubble per genre, sized by how many anime carry it
+// drill-down entry view: one bubble per genre, sized by how many anime carry it,
+// decorated with the genre's top-scored covers
 export function buildBubbles(rows: GraphAnime[]): { nodes: GraphNode[]; links: GraphLink[] } {
-  const counts = new Map<string, number>()
+  const byGenre = new Map<string, GraphAnime[]>()
   for (const a of rows) {
     const genres = a.genres.length ? a.genres : ['Ismeretlen']
-    for (const g of genres) counts.set(g, (counts.get(g) ?? 0) + 1)
+    for (const g of genres) {
+      const list = byGenre.get(g) ?? []
+      list.push(a)
+      byGenre.set(g, list)
+    }
   }
-  const nodes: GraphNode[] = [...counts.entries()].map(([genre, count]) => ({
+  const nodes: GraphNode[] = [...byGenre.entries()].map(([genre, list]) => ({
     id: `dim:genre:${genre}`,
     type: 'dim',
     label: genre,
-    val: count,
+    val: list.length,
     dim: 'genre',
     bubble: true,
+    covers: [...list]
+      .filter((a) => a.coverUrl)
+      .sort((x, y) => (y.myScore ?? 0) - (x.myScore ?? 0) || y.elo - x.elo)
+      .slice(0, 3)
+      .map((a) => a.coverUrl!),
   }))
   return { nodes, links: [] }
+}
+
+// faint "same vibe" edges: enough shared tags, capped so it never becomes a hairball
+const VIBE_MIN_SHARED = 3
+const VIBE_MAX_PER_ANIME = 2
+
+function vibeLinks(subset: GraphAnime[]): GraphLink[] {
+  const tagSets = new Map<number, Set<string>>()
+  for (const a of subset) {
+    if (a.tags?.length) tagSets.set(a.id, new Set(a.tags.map((t) => t.name)))
+  }
+  const candidates: { a: number; b: number; shared: number }[] = []
+  const items = [...tagSets.entries()]
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      let shared = 0
+      for (const t of items[i][1]) if (items[j][1].has(t)) shared++
+      if (shared >= VIBE_MIN_SHARED) candidates.push({ a: items[i][0], b: items[j][0], shared })
+    }
+  }
+  candidates.sort((x, y) => y.shared - x.shared)
+  const degree = new Map<number, number>()
+  const links: GraphLink[] = []
+  for (const c of candidates) {
+    if ((degree.get(c.a) ?? 0) >= VIBE_MAX_PER_ANIME || (degree.get(c.b) ?? 0) >= VIBE_MAX_PER_ANIME) continue
+    degree.set(c.a, (degree.get(c.a) ?? 0) + 1)
+    degree.set(c.b, (degree.get(c.b) ?? 0) + 1)
+    const [lo, hi] = c.a < c.b ? [c.a, c.b] : [c.b, c.a]
+    links.push({ source: `anime:${lo}`, target: `anime:${hi}`, kind: 'vibe' })
+  }
+  return links
 }
 
 // drill-down detail: the chosen genre as hub + every anime tagged with it
@@ -143,6 +187,7 @@ export function buildGenreDetail(rows: GraphAnime[], genre: string): { nodes: Gr
       links.push({ source: `anime:${lo}`, target: `anime:${hi}`, kind: 'relation' })
     }
   }
+  links.push(...vibeLinks(subset))
   return { nodes, links }
 }
 

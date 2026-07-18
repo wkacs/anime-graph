@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   description: "Személyes 3D anime-térkép",
 };
 
+export const viewport = {
+  themeColor: "#09090b",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

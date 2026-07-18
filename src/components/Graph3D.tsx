@@ -151,16 +151,27 @@ function timeObject(node: GraphNode): THREE.Object3D {
 const BUBBLE_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 })
 const UNIT_SPHERE = new THREE.SphereGeometry(1, 16, 16)
 
-// drill-down entry: genre bubble, radius grows with the anime count
+// drill-down entry: genre bubble, radius grows with the anime count,
+// topped with the genre's best covers as a small collage
 function bubbleObject(node: GraphNode): THREE.Object3D {
   const group = new THREE.Group()
   const r = Math.min(16, 4 + Math.sqrt(node.val) * 2.2)
   const sphere = new THREE.Mesh(UNIT_SPHERE, BUBBLE_MAT)
   sphere.scale.setScalar(r)
   group.add(sphere)
+
+  const covers = node.covers ?? []
+  const fan = covers.length === 1 ? [0] : covers.length === 2 ? [-4.5, 4.5] : [-7.5, 0, 7.5]
+  covers.forEach((url, i) => {
+    const sprite = new THREE.Sprite(coverMaterial(url, true))
+    sprite.scale.set(6.4, 8.8, 1)
+    sprite.position.set(fan[i], r + 6.5 + (fan[i] === 0 ? 2.2 : 0), 0)
+    group.add(sprite)
+  })
+
   const label = new SpriteText(`${node.label} · ${node.val}`, 4.4, '#fafafa')
   label.fontFace = 'Instrument Sans, Arial'
-  label.position.set(0, r + 5, 0)
+  label.position.set(0, -(r + 5), 0)
   group.add(label)
   return group
 }
@@ -240,11 +251,12 @@ export default function Graph3D({
   )
   const nodeLabel = useCallback(() => '', [])
   const linkColor = useCallback(
-    (l: GraphLink) => (l.kind === 'relation' ? '#ffffff' : '#8f8f96'),
+    (l: GraphLink) =>
+      l.kind === 'relation' ? '#ffffff' : l.kind === 'vibe' ? '#5c5c66' : '#8f8f96',
     [],
   )
   const linkLineDash = useCallback(
-    (l: GraphLink) => (l.kind === 'relation' ? [3, 2] : null),
+    (l: GraphLink) => (l.kind === 'relation' ? [3, 2] : l.kind === 'vibe' ? [1.5, 3.5] : null),
     [],
   )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

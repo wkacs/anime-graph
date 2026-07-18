@@ -74,7 +74,7 @@ export default function GrafPage() {
     id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
     coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
     status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
-    watchedAt: a.watchedAt, createdAt: a.createdAt,
+    tags: a.tags, watchedAt: a.watchedAt, createdAt: a.createdAt,
   })), [animeList])
 
   const graph = useMemo(() => {
