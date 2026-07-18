@@ -20,7 +20,7 @@ export default function TopNav() {
     href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   return (
-    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-40 glass rounded-full pl-5 pr-2 py-1.5 flex items-center gap-3">
+    <nav className="fixed top-4 left-1/2 -translate-x-1/2 z-40 glass rounded-full pl-5 pr-2 py-1.5 flex items-center gap-3 max-w-[95vw] overflow-x-auto no-scrollbar whitespace-nowrap">
       <Link href="/" className="flex items-baseline gap-2 mr-1">
         <span className="text-[15px] font-semibold tracking-tight text-text-1">Anime Graph</span>
         <span className="label-mono hidden sm:inline">アニメ</span>

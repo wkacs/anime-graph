@@ -30,6 +30,7 @@ export default function AnimePage() {
   const [finishText, setFinishText] = useState('')
   const [themes, setThemes] = useState<AnimeTheme[]>([])
   const [activeTheme, setActiveTheme] = useState<AnimeTheme | null>(null)
+  const [streamLinks, setStreamLinks] = useState<{ site: string; url: string }[]>([])
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/anime/${id}`)
@@ -54,6 +55,10 @@ export default function AnimePage() {
         setActiveTheme((j.themes ?? [])[0] ?? null)
       })
       .catch(() => { /* marad a trailer-fallback */ })
+    fetch(`/api/links/${anime.anilistId}`)
+      .then((r) => r.json())
+      .then((j) => setStreamLinks(j.links ?? []))
+      .catch(() => { /* linkek nélkül is él az oldal */ })
   }, [anime?.anilistId])
 
   async function patch(body: Record<string, unknown>) {
@@ -190,11 +195,23 @@ export default function AnimePage() {
                 <span key={g} className="rounded-full border border-white/10 px-3 py-1 text-xs text-text-2">{g}</span>
               ))}
             </div>
-            <a
-              href={`https://anilist.co/anime/${anime.anilistId}`}
-              target="_blank" rel="noreferrer"
-              className="inline-block mt-4 text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20"
-            >AniList ↗</a>
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              {streamLinks.map((l) => (
+                <a
+                  key={l.url}
+                  href={l.url}
+                  target="_blank" rel="noreferrer"
+                  className="rounded-full border border-white/15 px-3 py-1 text-xs text-text-1 hover:bg-white/10 transition-colors"
+                >
+                  ▶ {l.site}
+                </a>
+              ))}
+              <a
+                href={`https://anilist.co/anime/${anime.anilistId}`}
+                target="_blank" rel="noreferrer"
+                className="text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20"
+              >AniList ↗</a>
+            </div>
           </div>
         </header>
 

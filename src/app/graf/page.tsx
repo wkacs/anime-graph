@@ -68,15 +68,18 @@ export default function GrafPage() {
   }, [])
 
   // új anime a keresőből → ugorjunk oda, ahova a gráfban került
+  const flyToAnime = useCallback((a: ApiAnime) => {
+    if (!advanced && flythrough === 0) {
+      setFocusGenre(a.genres[0] ?? 'Ismeretlen')
+    }
+    setFocusNodeId(`anime:${a.id}`)
+    setTimeout(() => setFocusNodeId(null), 12000)
+  }, [advanced, flythrough])
+
   const handleAdded = useCallback((added?: ApiAnime) => {
     refresh()
-    if (!added) return
-    if (!advanced && flythrough === 0) {
-      setFocusGenre(added.genres[0] ?? 'Ismeretlen')
-    }
-    setFocusNodeId(`anime:${added.id}`)
-    setTimeout(() => setFocusNodeId(null), 12000)
-  }, [refresh, advanced, flythrough])
+    if (added) flyToAnime(added)
+  }, [refresh, flyToAnime])
 
   useEffect(() => { refresh() }, [refresh])
 
@@ -143,7 +146,7 @@ export default function GrafPage() {
       />
 
       <div className="fixed top-20 left-4 z-20">
-        <AddAnimeSearch onAdded={handleAdded} />
+        <AddAnimeSearch onAdded={handleAdded} ownList={animeList} onPickOwn={flyToAnime} />
       </div>
 
       {/* breadcrumb a drill-down nézetben */}
