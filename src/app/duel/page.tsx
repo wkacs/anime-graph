@@ -1,9 +1,15 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { ApiAnime } from '@/lib/types'
 
 type Phase = 'pick' | 'reveal' | 'loading'
+
+type DuelStats = {
+  top: { animeId: number; title: string; coverUrl: string | null; elo: number; myScore: number | null }[]
+  history: { winner: string; loser: string; at: string }[]
+}
 
 export default function DuelPage() {
   const [pair, setPair] = useState<[ApiAnime, ApiAnime] | null>(null)
@@ -12,6 +18,13 @@ export default function DuelPage() {
   const [deltas, setDeltas] = useState<Record<number, number>>({})
   const [rounds, setRounds] = useState(0)
   const [error, setError] = useState('')
+  const [stats, setStats] = useState<DuelStats | null>(null)
+
+  const loadStats = useCallback(() => {
+    fetch('/api/duel/stats').then((r) => r.json()).then(setStats).catch(() => { /* opcionális */ })
+  }, [])
+
+  useEffect(() => { loadStats() }, [loadStats])
 
   const nextPair = useCallback(async () => {
     setPhase('loading')
@@ -42,6 +55,7 @@ export default function DuelPage() {
         [loser.id]: json.loser.elo - loser.elo,
       })
       setRounds((r) => r + 1)
+      loadStats()
     }
     setTimeout(nextPair, 1400)
   }
@@ -132,6 +146,43 @@ export default function DuelPage() {
           <button onClick={nextPair} className="btn-ghost border border-white/10 px-4 py-1.5 text-xs">
             Kihagyás
           </button>
+        </div>
+      )}
+
+      {stats && stats.top.length > 0 && (
+        <div className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-4 mt-14">
+          <section className="glass rounded-3xl p-5">
+            <p className="label-mono mb-3">Elo-toplista</p>
+            <ol className="flex flex-col gap-1.5">
+              {stats.top.slice(0, 10).map((t, i) => (
+                <li key={t.animeId}>
+                  <Link href={`/anime/${t.animeId}`} className="flex items-center gap-2.5 rounded-xl px-2 py-1 hover:bg-white/6 transition-colors">
+                    <span className="label-mono w-5 text-right">{i + 1}</span>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {t.coverUrl && <img src={t.coverUrl} alt="" className="w-7 h-9 object-cover rounded" />}
+                    <span className="flex-1 min-w-0 text-sm truncate">{t.title}</span>
+                    <span className="font-mono text-xs text-text-2 tabular-nums">{t.elo}</span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section className="glass rounded-3xl p-5">
+            <p className="label-mono mb-3">Utolsó meccsek</p>
+            {stats.history.length ? (
+              <ul className="flex flex-col gap-2 text-sm">
+                {stats.history.map((h, i) => (
+                  <li key={i} className="flex items-center gap-2 min-w-0">
+                    <span className="truncate text-text-1">{h.winner}</span>
+                    <span className="label-mono shrink-0">›</span>
+                    <span className="truncate text-text-3">{h.loser}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-text-3">Még nem dueleztél.</p>
+            )}
+          </section>
         </div>
       )}
     </main>

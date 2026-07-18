@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Countdown from '@/components/Countdown'
 import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
+import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 
@@ -176,6 +177,35 @@ export default function NewsPage() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {data.mine.length > 0 && (
+        <section>
+          <p className="label-mono mb-3">Heti adásnaptár</p>
+          <div className="glass rounded-3xl p-4 grid grid-cols-7 gap-2">
+            {WEEKDAY_LABELS.map((label, day) => {
+              const todayIdx = weekdayIndexBudapest(Math.floor(Date.now() / 1000))
+              const items = data.mine.filter((m) => weekdayIndexBudapest(m.airingAt) === day)
+              return (
+                <div key={label} className={`rounded-xl p-2 min-h-24 ${day === todayIdx ? 'bg-white/8' : 'bg-white/3'}`}>
+                  <p className={`label-mono mb-2 text-center ${day === todayIdx ? '!text-text-1' : ''}`}>{label}</p>
+                  <div className="flex flex-col items-center gap-1.5">
+                    {items.map((m) => (
+                      <Link key={m.animeId} href={`/anime/${m.animeId}`} title={m.title}>
+                        {m.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.coverUrl} alt={m.title} className="w-9 h-12 object-cover rounded-md hover:scale-110 transition-transform" />
+                        ) : (
+                          <span className="text-[10px] text-text-2">{m.title.slice(0, 8)}</span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </section>
       )}
