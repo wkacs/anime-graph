@@ -1,4 +1,5 @@
 'use client'
+import { useState } from 'react'
 import { type Dimension, type GraphConfig, DIM_LABELS } from '@/lib/graph-builder'
 
 const ALL_DIMS: Dimension[] = ['genre', 'studio', 'scoreBand', 'year', 'status']
@@ -10,6 +11,7 @@ export default function HierarchyPanel({
   config: GraphConfig
   onChange: (c: GraphConfig) => void
 }) {
+  const [open, setOpen] = useState(false)
   const inactive = ALL_DIMS.filter((d) => !config.levels.includes(d))
 
   function move(i: number, dir: -1 | 1) {
@@ -20,52 +22,66 @@ export default function HierarchyPanel({
     onChange({ ...config, levels })
   }
 
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="glass rounded-full px-4 py-2.5 label-mono hover:bg-white/10 transition-colors"
+      >
+        Szintek · {config.levels.length}
+      </button>
+    )
+  }
+
   return (
-    <div className="w-60 rounded-xl bg-slate-900/85 border border-slate-700 p-4 text-sm text-slate-200 backdrop-blur">
-      <h2 className="font-semibold mb-2">Hierarchia-szintek</h2>
+    <div className="glass rounded-2xl w-64 p-4 text-sm">
+      <div className="flex items-center justify-between mb-3">
+        <span className="label-mono">Hierarchia</span>
+        <button onClick={() => setOpen(false)} className="btn-ghost px-2 py-0.5 text-xs">✕</button>
+      </div>
       <ul className="flex flex-col gap-1 mb-3">
         {config.levels.map((d, i) => (
-          <li key={d} className="flex items-center gap-2 rounded bg-slate-800 px-2 py-1">
-            <span className="flex-1">{i + 1}. {DIM_LABELS[d]}</span>
-            <button onClick={() => move(i, -1)} disabled={i === 0} className="disabled:opacity-30">▲</button>
-            <button onClick={() => move(i, 1)} disabled={i === config.levels.length - 1} className="disabled:opacity-30">▼</button>
+          <li key={d} className="flex items-center gap-1.5 rounded-lg bg-white/5 border border-white/5 px-2.5 py-1.5">
+            <span className="flex-1 text-text-1">{i + 1} · {DIM_LABELS[d]}</span>
+            <button onClick={() => move(i, -1)} disabled={i === 0} className="btn-ghost px-1 disabled:opacity-25">▲</button>
+            <button onClick={() => move(i, 1)} disabled={i === config.levels.length - 1} className="btn-ghost px-1 disabled:opacity-25">▼</button>
             <button
               onClick={() => onChange({ ...config, levels: config.levels.filter((x) => x !== d) })}
-              className="text-red-400"
+              className="btn-ghost px-1 text-text-3 hover:text-[color:var(--status-dropped)]"
               title="Szint kikapcsolása"
             >✕</button>
           </li>
         ))}
-        {config.levels.length === 0 && <li className="text-slate-500 italic">Nincs szint — csak animék</li>}
+        {config.levels.length === 0 && (
+          <li className="text-text-3 italic px-1">Nincs szint — csak animék</li>
+        )}
       </ul>
       {inactive.length > 0 && (
-        <div className="mb-3">
-          <p className="text-slate-400 mb-1">Hozzáadható:</p>
-          <div className="flex flex-wrap gap-1">
-            {inactive.map((d) => (
-              <button
-                key={d}
-                onClick={() => onChange({ ...config, levels: [...config.levels, d] })}
-                className="rounded-full border border-slate-600 px-2 py-0.5 hover:border-cyan-400"
-              >+ {DIM_LABELS[d]}</button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {inactive.map((d) => (
+            <button
+              key={d}
+              onClick={() => onChange({ ...config, levels: [...config.levels, d] })}
+              className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-text-2 hover:text-text-1 hover:border-white/30 transition-colors"
+            >+ {DIM_LABELS[d]}</button>
+          ))}
         </div>
       )}
-      <label className="flex items-center gap-2 mb-1">
+      <label className="flex items-center gap-2 mb-2 text-text-2">
         <input
           type="checkbox"
           checked={config.crossLinks}
           onChange={(e) => onChange({ ...config, crossLinks: e.target.checked })}
+          className="accent-white"
         />
         Sequel/prequel élek
       </label>
-      <label className="flex items-center gap-2">
+      <label className="flex items-center gap-2 text-text-2">
         Méret:
         <select
           value={config.sizeBy}
           onChange={(e) => onChange({ ...config, sizeBy: e.target.value as GraphConfig['sizeBy'] })}
-          className="bg-slate-800 rounded px-1 py-0.5"
+          className="field px-2 py-1 text-xs"
         >
           <option value="score">Pontszám</option>
           <option value="elo">Elo</option>

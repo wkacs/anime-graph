@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import * as THREE from 'three'
 import SpriteText from 'three-spritetext'
@@ -16,68 +16,111 @@ const ForceGraph3D = dynamic(
   { ssr: false },
 )
 
-const STATUS_TINT: Record<string, number> = {
-  completed: 0xffffff,
-  watching: 0xffffff,
-  planned: 0x8899aa,
-  dropped: 0x555555,
+const STATUS_DOT: Record<string, number> = {
+  completed: 0xfafafa,
+  watching: 0x8ce0b0,
+  planned: 0x8a8f98,
+  dropped: 0xe08c8c,
 }
 
-const texLoader = new THREE.TextureLoader()
-texLoader.setCrossOrigin('anonymous')
-const texCache = new Map<string, THREE.Texture>()
+// AniList CDN sends no CORS headers → covers go through the Next image proxy
+const proxied = (url: string) => `/_next/image?url=${encodeURIComponent(url)}&w=128&q=70`
 
+function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.arcTo(x + w, y, x + w, y + h, r)
+  ctx.arcTo(x + w, y + h, x, y + h, r)
+  ctx.arcTo(x, y + h, x, y, r)
+  ctx.arcTo(x, y, x + w, y, r)
+  ctx.closePath()
+}
+
+const coverTexCache = new Map<string, THREE.CanvasTexture>()
+
+function coverTexture(url: string): THREE.CanvasTexture {
+  const cached = coverTexCache.get(url)
+  if (cached) return cached
+  const W = 96, H = 132, R = 12
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  ctx.fillStyle = 'rgba(255,255,255,0.08)'
+  roundRectPath(ctx, 0, 0, W, H, R)
+  ctx.fill()
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  const img = new Image()
+  img.onload = () => {
+    ctx.clearRect(0, 0, W, H)
+    ctx.save()
+    roundRectPath(ctx, 0, 0, W, H, R)
+    ctx.clip()
+    ctx.drawImage(img, 0, 0, W, H)
+    ctx.restore()
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)'
+    ctx.lineWidth = 2
+    roundRectPath(ctx, 1, 1, W - 2, H - 2, R)
+    ctx.stroke()
+    tex.needsUpdate = true
+  }
+  img.src = proxied(url)
+  coverTexCache.set(url, tex)
+  return tex
+}
+
+const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
+
+// anime node: cover on top, name below it, white status dot at the link anchor
 function animeObject(node: GraphNode): THREE.Object3D {
   const group = new THREE.Group()
-  const size = Math.max(6, Math.min(16, node.val * 1.5))
+  const color = STATUS_DOT[node.status ?? 'planned'] ?? 0xfafafa
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(1.4, 16, 16),
+    new THREE.MeshBasicMaterial({ color }),
+  )
+  group.add(dot)
+
+  const name = new SpriteText(truncate(node.label, 24), 2.6, '#d9d9df')
+  name.fontFace = 'Instrument Sans, Arial'
+  name.position.set(0, 4.6, 0)
+  group.add(name)
+
   if (node.img) {
-    let tex = texCache.get(node.img)
-    if (!tex) {
-      tex = texLoader.load(node.img)
-      texCache.set(node.img, tex)
-    }
-    const mat = new THREE.SpriteMaterial({ map: tex })
-    mat.color.setHex(STATUS_TINT[node.status ?? 'planned'] ?? 0xffffff)
-    const sprite = new THREE.Sprite(mat)
-    sprite.scale.set(size * 0.7, size, 1)
-    group.add(sprite)
-  } else {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(size / 3),
-      new THREE.MeshLambertMaterial({ color: 0x66ddff }),
-    )
-    group.add(mesh)
-  }
-  if (node.status === 'watching') {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(size * 0.55, 0.35, 8, 32),
-      new THREE.MeshBasicMaterial({ color: 0x22ffcc }),
-    )
-    group.add(ring)
+    const mat = new THREE.SpriteMaterial({ map: coverTexture(node.img), transparent: true })
+    const cover = new THREE.Sprite(mat)
+    cover.scale.set(10, 13.75, 1)
+    cover.position.set(0, 14.2, 0)
+    group.add(cover)
   }
   return group
 }
 
+// dimension node: name above a plain white dot (genre reads bigger than studio/year/…)
 function dimObject(node: GraphNode): THREE.Object3D {
   const group = new THREE.Group()
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(3),
-    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 }),
+  const isGenre = node.dim === 'genre'
+  const dot = new THREE.Mesh(
+    new THREE.SphereGeometry(isGenre ? 2.6 : 1.9, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: isGenre ? 0.95 : 0.75 }),
   )
-  const label = new SpriteText(node.label, 4, '#bae6fd')
-  label.position.set(0, 6, 0)
-  group.add(sphere, label)
+  group.add(dot)
+  const label = new SpriteText(node.label, isGenre ? 3.6 : 2.9, isGenre ? '#fafafa' : '#b9b9c1')
+  label.fontFace = 'Instrument Sans, Arial'
+  label.position.set(0, isGenre ? 6 : 5, 0)
+  group.add(label)
   return group
 }
 
 export default function Graph3D({
   data,
   onAnimeClick,
-  focusNodeId,
+  onAnimeHover,
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
-  focusNodeId: string | null
+  onAnimeHover: (animeId: number | null) => void
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
@@ -88,38 +131,15 @@ export default function Graph3D({
     links: data.links.map((l) => ({ ...l })),
   }), [data])
 
-  // bloom pass, added once the underlying lib instance exists
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const fg = fgRef.current
-      if (!fg) return
-      clearInterval(timer)
-      import('three/examples/jsm/postprocessing/UnrealBloomPass.js').then(({ UnrealBloomPass }) => {
-        const pass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.1, 0.5, 0.15)
-        fg.postProcessingComposer().addPass(pass)
-      })
-    }, 200)
-    return () => clearInterval(timer)
-  }, [])
-
-  // fly to a node when asked (search hit / external focus)
-  useEffect(() => {
-    if (!focusNodeId || !fgRef.current) return
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const node = fgRef.current.graphData().nodes.find((n: any) => n.id === focusNodeId)
-    if (!node || node.x === undefined) return
-    flyTo(node)
-  }, [focusNodeId])
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function flyTo(node: any) {
-    const dist = 70
+    const dist = 80
     const len = Math.hypot(node.x, node.y, node.z) || 1
     const ratio = 1 + dist / len
     fgRef.current.cameraPosition(
       { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
       node,
-      1200,
+      1000,
     )
   }
 
@@ -127,16 +147,22 @@ export default function Graph3D({
     <ForceGraph3D
       fgRef={fgRef}
       graphData={graphData}
-      backgroundColor="#04060f"
+      backgroundColor="rgba(0,0,0,0)"
       nodeThreeObject={(n: GraphNode) => (n.type === 'anime' ? animeObject(n) : dimObject(n))}
-      nodeLabel={(n: GraphNode) => n.label}
-      linkColor={(l: GraphLink) => (l.kind === 'relation' ? '#f472b6' : '#334155')}
-      linkOpacity={0.5}
-      linkWidth={(l: GraphLink) => (l.kind === 'relation' ? 1.5 : 0.5)}
+      nodeLabel={() => ''}
+      linkColor={(l: GraphLink) => (l.kind === 'relation' ? '#ffffff' : '#8f8f96')}
+      linkOpacity={0.28}
+      linkWidth={0}
+      linkLineDash={(l: GraphLink) => (l.kind === 'relation' ? [3, 2] : null)}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onNodeClick={(n: any) => {
-        flyTo(n)
         if (n.type === 'anime' && n.animeId) onAnimeClick(n.animeId)
+        else flyTo(n)
+      }}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      onNodeHover={(n: any) => {
+        onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)
+        document.body.style.cursor = n?.type === 'anime' ? 'pointer' : 'default'
       }}
     />
   )

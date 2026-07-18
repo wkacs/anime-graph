@@ -33,24 +33,24 @@ export default function AddAnimeSearch({ onAdded }: { onAdded: () => void }) {
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Anime hozzáadása…"
-        className="w-full rounded-xl bg-slate-900/85 border border-slate-700 px-3 py-2 text-slate-200 outline-none focus:border-cyan-400 backdrop-blur"
+        className="field glass w-full rounded-full px-4 py-2.5"
       />
       {results.length > 0 && (
-        <ul className="absolute mt-1 w-full max-h-80 overflow-auto rounded-xl bg-slate-900 border border-slate-700 z-20">
+        <ul className="glass-strong absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
           {results.map((r) => (
             <li key={r.anilistId}>
               <button
                 onClick={() => add(r.anilistId)}
                 disabled={busy !== null}
-                className="flex w-full items-center gap-2 px-2 py-1.5 hover:bg-slate-800 text-left"
+                className="flex w-full items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 text-left transition-colors"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {r.coverUrl && <img src={r.coverUrl} alt="" className="w-8 h-11 object-cover rounded" />}
-                <span className="flex-1 text-slate-200">
+                {r.coverUrl && <img src={r.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
+                <span className="flex-1 text-text-1">
                   {r.titleRomaji}
-                  <span className="block text-xs text-slate-400">{r.year ?? '?'} · {r.format ?? '?'}</span>
+                  <span className="block text-xs text-text-3 font-mono">{r.year ?? '?'} · {r.format ?? '?'}</span>
                 </span>
-                {busy === r.anilistId && <span className="text-cyan-400">…</span>}
+                {busy === r.anilistId && <span className="text-text-2">…</span>}
               </button>
             </li>
           ))}
