@@ -22,8 +22,17 @@ export default function Home() {
 
   useEffect(() => {
     const saved = localStorage.getItem(CONFIG_KEY)
-    if (saved) try { setConfig(JSON.parse(saved)) } catch { /* keep default */ }
-    setLoaded(true)
+    if (saved) {
+      try { setConfig(JSON.parse(saved)) } catch { /* keep default */ }
+      setLoaded(true)
+      return
+    }
+    // no local config yet → fall back to the saved default from settings
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((j) => { if (j.hierarchyDefault) setConfig(j.hierarchyDefault) })
+      .catch(() => { /* keep default */ })
+      .finally(() => setLoaded(true))
   }, [])
 
   function updateConfig(c: GraphConfig) {
