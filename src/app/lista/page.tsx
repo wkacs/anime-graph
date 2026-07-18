@@ -23,6 +23,28 @@ export default function ListaPage() {
 
   useEffect(() => { reload() }, [reload])
 
+  // törlés utáni undo-toast (a detail-oldal teszi be a sessionStorage-ba)
+  const [undoBundle, setUndoBundle] = useState<{ anime: { titleRomaji: string } } | null>(null)
+  useEffect(() => {
+    const raw = sessionStorage.getItem('anime-graph-undo')
+    if (!raw) return
+    sessionStorage.removeItem('anime-graph-undo')
+    try { setUndoBundle(JSON.parse(raw)) } catch { return }
+    const t = setTimeout(() => setUndoBundle(null), 8000)
+    return () => clearTimeout(t)
+  }, [])
+
+  async function undoDelete() {
+    if (!undoBundle) return
+    const res = await fetch('/api/anime/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bundle: undoBundle }),
+    })
+    setUndoBundle(null)
+    if (res.ok) reload()
+  }
+
   function sortBy(key: SortKey) {
     if (key === sortKey) setSortDir((d) => (d === 1 ? -1 : 1))
     else { setSortKey(key); setSortDir(1) }
@@ -135,6 +157,13 @@ export default function ListaPage() {
         </table>
       </div>
       <p className="label-mono mt-3 text-right">{rows.length} / {list.length} anime</p>
+
+      {undoBundle && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass-strong rounded-2xl px-5 py-3 flex items-center gap-4 text-sm">
+          <span className="text-text-2">Törölve: <span className="text-text-1">{undoBundle.anime.titleRomaji}</span></span>
+          <button onClick={undoDelete} className="btn-solid px-4 py-1.5 text-xs">Visszavonás</button>
+        </div>
+      )}
     </main>
   )
 }

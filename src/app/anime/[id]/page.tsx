@@ -115,8 +115,13 @@ export default function AnimePage() {
 
   async function remove() {
     if (!anime || !confirm(`Törlöd: ${anime.titleRomaji}?`)) return
-    await fetch(`/api/anime/${id}`, { method: 'DELETE' })
-    router.push('/')
+    const res = await fetch(`/api/anime/${id}`, { method: 'DELETE' })
+    const json = await res.json().catch(() => null)
+    if (json?.bundle) {
+      // a lista-oldal undo-toastja ebből tud visszaállítani
+      sessionStorage.setItem('anime-graph-undo', JSON.stringify(json.bundle))
+    }
+    router.push('/lista')
   }
 
   if (notFound) {

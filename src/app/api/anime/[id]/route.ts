@@ -52,6 +52,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
-  await db.delete(anime).where(eq(anime.id, Number(id)))
-  return NextResponse.json({ ok: true })
+  const animeId = Number(id)
+  // return the full bundle so the client can offer an undo
+  const [row] = await db.select().from(anime).where(eq(anime.id, animeId))
+  if (!row) return NextResponse.json({ ok: true, bundle: null })
+  const [opinion] = await db.select().from(opinions).where(eq(opinions.animeId, animeId))
+  const facts = await db.select().from(tasteMemory).where(eq(tasteMemory.animeId, animeId))
+  await db.delete(anime).where(eq(anime.id, animeId))
+  return NextResponse.json({ ok: true, bundle: { anime: row, opinion: opinion ?? null, facts } })
 }
