@@ -219,6 +219,59 @@ export default function Graph3D({
   const fgRef = useRef<any>(null)
   const introDone = useRef(false)
 
+  // WASD (+ Q/E fel-le) repülés: a kamera ÉS az orbit-pivot együtt mozog,
+  // így az egeres forgatás közben is működik. Gépelés közben inaktív.
+  useEffect(() => {
+    const pressed = new Set<string>()
+    const MOVE_KEYS = new Set(['w', 'a', 's', 'd', 'q', 'e'])
+    const isTyping = () => {
+      const el = document.activeElement
+      return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+    }
+    const down = (ev: KeyboardEvent) => {
+      const k = ev.key.toLowerCase()
+      if (MOVE_KEYS.has(k) && !isTyping()) pressed.add(k)
+    }
+    const up = (ev: KeyboardEvent) => pressed.delete(ev.key.toLowerCase())
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+
+    let raf = 0
+    const forward = new THREE.Vector3()
+    const right = new THREE.Vector3()
+    const delta = new THREE.Vector3()
+    const UP = new THREE.Vector3(0, 1, 0)
+    const tick = () => {
+      raf = requestAnimationFrame(tick)
+      if (!pressed.size) return
+      const fg = fgRef.current
+      if (!fg) return
+      const camera = fg.camera()
+      const controls = fg.controls()
+      camera.getWorldDirection(forward)
+      right.crossVectors(forward, UP).normalize()
+      delta.set(0, 0, 0)
+      const speed = 3.2
+      if (pressed.has('w')) delta.addScaledVector(forward, speed)
+      if (pressed.has('s')) delta.addScaledVector(forward, -speed)
+      if (pressed.has('d')) delta.addScaledVector(right, speed)
+      if (pressed.has('a')) delta.addScaledVector(right, -speed)
+      if (pressed.has('e')) delta.addScaledVector(UP, speed)
+      if (pressed.has('q')) delta.addScaledVector(UP, -speed)
+      camera.position.add(delta)
+      if (controls?.target) {
+        controls.target.add(delta)
+        controls.update?.()
+      }
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+    }
+  }, [])
+
   // ambient starfield + first-load camera dive
   useEffect(() => {
     if (!data.nodes.length) return

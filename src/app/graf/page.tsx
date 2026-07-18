@@ -232,7 +232,7 @@ export default function GrafPage() {
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-20">
           <div className="glass-strong rounded-2xl px-5 py-3 flex items-center gap-4 text-sm text-text-1">
             <span>
-              Kattints egy buborékra a műfaj animéihez · húzással forgathatod a teret
+              Kattints egy buborékra a műfaj animéihez · húzással forgatsz · WASD + Q/E: repülés
             </span>
             <button
               onClick={() => { setShowHint(false); localStorage.setItem(HINT_KEY, '1') }}
