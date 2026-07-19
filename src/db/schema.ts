@@ -126,5 +126,50 @@ export const recommendations = pgTable('recommendations', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// egy globális közös "együtt nézzük" lista az instance-nek (housemates-modell)
+export const watchlistItems = pgTable('watchlist_items', {
+  id: serial('id').primaryKey(),
+  anilistId: integer('anilist_id').notNull().unique(),
+  mediaType: text('media_type').notNull().default('ANIME'),
+  title: text('title').notNull(),
+  coverUrl: text('cover_url'),
+  addedBy: integer('added_by').notNull(),
+  watchedEpisodes: integer('watched_episodes').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+// push-dedup: egy (anime, epizód) párra egyszer megy ki értesítés
+export const notifiedAiring = pgTable('notified_airing', {
+  id: serial('id').primaryKey(),
+  anilistId: integer('anilist_id').notNull(),
+  episode: integer('episode').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('notified_airing_unique').on(t.anilistId, t.episode),
+])
+
+export const animeStaff = pgTable('anime_staff', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
+  animeId: integer('anime_id').notNull()
+    .references(() => anime.id, { onDelete: 'cascade' }),
+  staffId: integer('staff_id').notNull(), // AniList staff id
+  name: text('name').notNull(),
+  image: text('image'),
+  role: text('role').notNull(), // elsőre csak 'Director'
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('anime_staff_unique').on(t.userId, t.animeId, t.staffId),
+])
+
 export type AnimeSelect = typeof anime.$inferSelect
 export type AnimeInsert = typeof anime.$inferInsert
