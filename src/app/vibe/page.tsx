@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import MediaCard from '@/components/MediaCard'
+import { VIBE_PRESETS, buildVibePrompt } from '@/lib/vibe-presets'
 import type { ApiAnime } from '@/lib/types'
 
 type OwnPick = { animeId: number; title: string; coverUrl: string | null; genres: string[]; status: string; reason: string }
@@ -12,11 +13,13 @@ type NewPick = {
   coverUrl: string | null
   year: number | null
   genres: string[]
+  description?: string | null
 }
 
 export default function VibePage() {
   const [list, setList] = useState<ApiAnime[]>([])
-  const [prompt, setPrompt] = useState('')
+  const [chips, setChips] = useState<Set<string>>(new Set())
+  const [custom, setCustom] = useState('')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerQ, setPickerQ] = useState('')
@@ -56,6 +59,17 @@ export default function VibePage() {
     })
   }
 
+  function toggleChip(id: string) {
+    setChips((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const prompt = buildVibePrompt([...chips], custom)
+
   async function run() {
     setLoading(true)
     setError('')
@@ -79,19 +93,38 @@ export default function VibePage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Vibe-keresés</h1>
         <p className="text-sm text-text-2 mt-1">
-          Írd le, mire vágysz — a kiválasztott animék fixen bemennek kontextusnak, akkor is, ha a szövegben nem említed őket.
+          Jelöld be, mire vágysz — a kiválasztott animék fixen bemennek kontextusnak.
         </p>
       </div>
 
-      <section className="glass rounded-3xl p-5">
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          rows={3}
-          placeholder="pl. olyat mint a Steins;Gate, de rövidebb és kevésbé nyomasztó…"
-          className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
+      <section className="glass rounded-3xl p-5 flex flex-col gap-4">
+        {VIBE_PRESETS.map((group) => (
+          <div key={group.group}>
+            <p className="label-mono mb-1.5">{group.group}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {group.chips.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => toggleChip(c.id)}
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    chips.has(c.id)
+                      ? 'bg-white/12 border-white/40 text-text-1'
+                      : 'border-white/10 text-text-2 hover:text-text-1 hover:border-white/30'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <input
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          placeholder="Egyéb kívánság — ha valami kimaradt volna…"
+          className="field w-full rounded-full px-4 py-2.5 text-sm"
         />
-        <div className="flex flex-wrap items-center gap-2 mt-3">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedAnime.map((a) => (
             <button
               key={a.id}
@@ -126,23 +159,23 @@ export default function VibePage() {
       {newPicks.length > 0 && (
         <section>
           <p className="label-mono mb-2">Új felfedezés — nincs a listádon</p>
-          <ul className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {newPicks.map((p) => (
-              <li key={`${p.title}-${p.anilistId ?? 'x'}`} className="glass rounded-2xl p-3 flex gap-3">
-                {p.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.coverUrl} alt="" className="w-12 rounded-lg self-start" />
-                ) : (
-                  <div className="w-12 aspect-[2/3] rounded-lg bg-white/5 self-start" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-sm font-medium leading-tight">{p.title}</h3>
+              <MediaCard
+                key={`${p.title}-${p.anilistId ?? 'x'}`}
+                title={p.title}
+                coverUrl={p.coverUrl}
+                genres={p.genres}
+                description={p.description}
+                href={p.anilistId != null ? `/anime/preview/${p.anilistId}` : undefined}
+                footer={
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-[12px] text-text-2 leading-snug">{p.reason}</p>
                     {p.anilistId != null ? (
                       <button
                         onClick={() => addToPlanned(p.anilistId!)}
                         disabled={addedNew.has(p.anilistId)}
-                        className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                        className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap self-start disabled:text-[color:var(--status-watching)] disabled:border-transparent"
                       >
                         {addedNew.has(p.anilistId) ? '✓ Tervezem' : '+ Tervezem'}
                       </button>
@@ -150,41 +183,32 @@ export default function VibePage() {
                       <a
                         href={`https://anilist.co/search/anime?search=${encodeURIComponent(p.title)}`}
                         target="_blank" rel="noreferrer"
-                        className="label-mono hover:text-text-1 whitespace-nowrap shrink-0"
+                        className="label-mono hover:text-text-1 whitespace-nowrap self-start"
                       >AniList ↗</a>
                     )}
                   </div>
-                  {(p.year != null || p.genres.length > 0) && (
-                    <p className="label-mono mt-0.5">
-                      {[p.year, ...p.genres.slice(0, 3)].filter(Boolean).join(' · ')}
-                    </p>
-                  )}
-                  <p className="text-[13px] text-text-2 leading-snug mt-1">{p.reason}</p>
-                </div>
-              </li>
+                }
+              />
             ))}
-          </ul>
+          </div>
         </section>
       )}
 
       {ownPicks.length > 0 && (
         <section>
           <p className="label-mono mb-2">Hasonlók a listádból — ilyesmit már ismersz</p>
-          <ul className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 opacity-85">
             {ownPicks.map((p) => (
-              <li key={p.animeId}>
-                <Link href={`/anime/${p.animeId}`} className="glass rounded-2xl flex gap-3 p-3 hover:bg-white/8 transition-colors opacity-80 hover:opacity-100">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {p.coverUrl && <img src={p.coverUrl} alt="" className="w-10 rounded-lg self-start" />}
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium">{p.title}</h3>
-                    <p className="label-mono mt-0.5 mb-1">{p.genres.slice(0, 3).join(' · ')}</p>
-                    <p className="text-[13px] text-text-2 leading-snug">{p.reason}</p>
-                  </div>
-                </Link>
-              </li>
+              <MediaCard
+                key={p.animeId}
+                title={p.title}
+                coverUrl={p.coverUrl}
+                genres={p.genres}
+                href={`/anime/${p.animeId}`}
+                footer={<p className="text-[12px] text-text-2 leading-snug">{p.reason}</p>}
+              />
             ))}
-          </ul>
+          </div>
         </section>
       )}
 

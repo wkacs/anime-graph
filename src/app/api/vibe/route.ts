@@ -18,7 +18,7 @@ async function enrichNewPicks(
   const enriched = await Promise.all(picks.map(async (p) => {
     try {
       const hit = (await searchAnime(p.title))[0]
-      if (!hit) return { ...p, anilistId: null, coverUrl: null, year: null, genres: [] }
+      if (!hit) return { ...p, anilistId: null, coverUrl: null, year: null, genres: [], description: null }
       if (ownedAnilistIds.has(hit.anilistId)) return null
       return {
         title: hit.titleRomaji,
@@ -27,9 +27,10 @@ async function enrichNewPicks(
         coverUrl: hit.coverUrl,
         year: hit.year,
         genres: hit.genres,
+        description: hit.description,
       }
     } catch {
-      return { ...p, anilistId: null, coverUrl: null, year: null, genres: [] }
+      return { ...p, anilistId: null, coverUrl: null, year: null, genres: [], description: null }
     }
   }))
   return enriched.filter((p): p is NonNullable<typeof p> => p !== null)

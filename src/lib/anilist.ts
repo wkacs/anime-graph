@@ -32,6 +32,7 @@ export type SearchResult = {
   year: number | null
   format: string | null
   genres: string[]
+  description: string | null
 }
 
 export async function anilistFetch<T>(query: string, variables: Record<string, unknown>): Promise<T> {
@@ -56,12 +57,13 @@ query ($search: String!, $type: MediaType!) {
       seasonYear
       format
       genres
+      description
     }
   }
 }`
 
 export async function searchAnime(q: string, type: 'ANIME' | 'MANGA' = 'ANIME'): Promise<SearchResult[]> {
-  type R = { Page: { media: { id: number; title: { romaji: string; english: string | null }; coverImage: { large: string | null } | null; seasonYear: number | null; format: string | null; genres: string[] }[] } }
+  type R = { Page: { media: { id: number; title: { romaji: string; english: string | null }; coverImage: { large: string | null } | null; seasonYear: number | null; format: string | null; genres: string[]; description: string | null }[] } }
   const data = await anilistFetch<R>(SEARCH_QUERY, { search: q, type })
   return data.Page.media.map((m) => ({
     anilistId: m.id,
@@ -71,6 +73,7 @@ export async function searchAnime(q: string, type: 'ANIME' | 'MANGA' = 'ANIME'):
     year: m.seasonYear,
     format: m.format,
     genres: m.genres,
+    description: m.description,
   }))
 }
 
