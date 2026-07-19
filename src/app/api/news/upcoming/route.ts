@@ -11,6 +11,8 @@ import { and, desc, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 const TTL_MS = 7 * 24 * 3600 * 1000
+// GLM-hiba után rövid negatív cache, hogy a News-betöltések ne égessék a kvótát
+const FAIL_TTL_MS = 3600 * 1000
 
 export async function GET() {
   const userId = await requireUserId()
@@ -22,8 +24,12 @@ export async function GET() {
     .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, kind)))
     .orderBy(desc(recommendations.createdAt)).limit(1)
   const cached = cachedRows[0]
-  if (cached && Date.now() - cached.createdAt.getTime() < TTL_MS) {
-    return NextResponse.json({ season, items: (cached.result as { items: unknown[] }).items, cached: true })
+  if (cached) {
+    const result = cached.result as { items: unknown[]; failed?: boolean }
+    const ttl = result.failed ? FAIL_TTL_MS : TTL_MS
+    if (Date.now() - cached.createdAt.getTime() < ttl) {
+      return NextResponse.json({ season, items: result.items, cached: true })
+    }
   }
 
   const [rows, facts, seasonList] = await Promise.all([
@@ -44,9 +50,14 @@ export async function GET() {
       .sort((a, b) => b.score - a.score).slice(0, 8)
       .filter((s) => byId.has(s.anilistId))
       .map((s) => ({ ...byId.get(s.anilistId)!, tasteScore: s.score, tasteReason: s.reason, owned: owned.has(s.anilistId) }))
+    await db.delete(recommendations)
+      .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, kind)))
     await db.insert(recommendations).values({ userId, kind, input: season, result: { items } })
     return NextResponse.json({ season, items, cached: false })
   } catch (e) {
+    await db.insert(recommendations)
+      .values({ userId, kind, input: season, result: { items: [], failed: true } })
+      .catch(() => { /* a negatív cache best-effort */ })
     return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 502 })
   }
 }
