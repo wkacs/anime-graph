@@ -9,6 +9,7 @@ import TonightPicker from '@/components/TonightPicker'
 import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import type { FeedItem } from '@/lib/feed'
 
 type MineItem = {
   animeId: number
@@ -51,6 +52,7 @@ export default function NewsPage() {
   const [error, setError] = useState('')
   const [added, setAdded] = useState<Set<number>>(new Set())
   const [digest, setDigest] = useState<string | null>(null)
+  const [feed, setFeed] = useState<FeedItem[]>([])
 
   useEffect(() => {
     fetch('/api/news')
@@ -64,6 +66,10 @@ export default function NewsPage() {
       .then((r) => r.json())
       .then((j) => setDigest(j.digest ?? null))
       .catch(() => { /* digest nélkül is él az oldal */ })
+    fetch('/api/feed')
+      .then((r) => r.json())
+      .then((j) => setFeed(j.items ?? []))
+      .catch(() => { /* feed nélkül is él az oldal */ })
   }, [])
 
   async function addToPlanned(anilistId: number) {
@@ -138,6 +144,31 @@ export default function NewsPage() {
           <span className="label-mono mr-2">✦ ma</span>
           {digest}
         </motion.p>
+      )}
+
+      {feed.length > 0 && (
+        <section>
+          <p className="label-mono mb-3">Társaság</p>
+          <div className="glass rounded-3xl p-4 flex flex-col gap-2.5">
+            {feed.slice(0, 12).map((f) => (
+              <div key={`${f.kind}-${f.userId}-${f.animeId}-${f.at}`} className="flex items-center gap-3 text-sm">
+                <span className="w-7 h-7 shrink-0 rounded-full bg-white/8 grid place-items-center font-mono text-[11px] uppercase text-text-1">
+                  {f.username.slice(0, 2)}
+                </span>
+                <p className="min-w-0 flex-1 text-text-2 truncate">
+                  <span className="text-text-1 font-medium">{f.username}</span>{' '}
+                  {f.kind === 'added' && <>hozzáadta: </>}
+                  {f.kind === 'opinion' && <>véleményt írt: </>}
+                  {f.kind === 'episodes' && <>{f.mediaType === 'MANGA' ? 'olvasott' : 'nézett'} ({f.count > 1 ? `${f.count} rész` : f.detail}): </>}
+                  {f.kind === 'favchar' && <>kedvence lett: {f.detail} — </>}
+                  <Link href={`/anime/preview/${f.anilistId}`} className="text-text-1 hover:underline">{f.title}</Link>
+                  {f.kind === 'opinion' && f.detail && <span className="text-text-3"> — „{f.detail}”</span>}
+                </p>
+                <span className="label-mono shrink-0">{new Date(f.at).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {data.mine.length > 0 && (
