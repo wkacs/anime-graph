@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import PushToggle from '@/components/PushToggle'
 
 const CONFIG_KEY = 'anime-graph-config'
 
@@ -151,6 +152,12 @@ export default function BeallitasokPage() {
           </button>
           {hierarchySaved && <span className="label-mono text-[color:var(--status-watching)]">✓ mentve</span>}
         </div>
+      </section>
+
+      <section className="glass rounded-3xl p-6">
+        <p className="label-mono mb-1">Értesítések</p>
+        <p className="text-sm text-text-2 mb-3">Push, amikor egy követett animéd új része adásba kerül.</p>
+        <PushToggle />
       </section>
 
       <section className="glass rounded-3xl p-6">

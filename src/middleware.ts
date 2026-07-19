@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/auth'
 
 // /api/cron a saját CRON_SECRET-jével véd; /p + /api/public token-alapú megosztott nézet
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/cron', '/p/', '/api/public/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
+const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/cron', '/p/', '/api/public/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/sw.js']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
