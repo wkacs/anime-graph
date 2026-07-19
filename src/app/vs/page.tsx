@@ -3,7 +3,9 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { CompareResult } from '@/lib/compare'
 
-type Result = CompareResult & { username: string }
+type Result = CompareResult & { username: string; otherUserId?: number | null }
+
+type DuoPick = { anilistId: number; title: string; coverUrl: string | null; reason: string }
 
 export default function VsPage() {
   const [username, setUsername] = useState('')
@@ -12,12 +14,17 @@ export default function VsPage() {
   const [error, setError] = useState('')
   const [result, setResult] = useState<Result | null>(null)
   const [added, setAdded] = useState<Set<number>>(new Set())
+  const [duo, setDuo] = useState<DuoPick[] | null>(null)
+  const [duoLoading, setDuoLoading] = useState(false)
+  const [duoError, setDuoError] = useState('')
 
   async function run() {
     if (!username.trim()) return
     setLoading(true)
     setError('')
     setResult(null)
+    setDuo(null)
+    setDuoError('')
     const res = await fetch('/api/compare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -31,6 +38,19 @@ export default function VsPage() {
     setLoading(false)
     if (!res.ok) { setError(json.error ?? 'Hiba történt'); return }
     setResult(json)
+  }
+
+  async function runDuo() {
+    if (!result?.otherUserId) return
+    setDuoLoading(true); setDuoError(''); setDuo(null)
+    const res = await fetch('/api/recommend/duo', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otherUserId: result.otherUserId }),
+    })
+    const json = await res.json()
+    setDuoLoading(false)
+    if (!res.ok) { setDuoError(json.error ?? 'Hiba történt'); return }
+    setDuo(json.picks ?? [])
   }
 
   async function addToPlanned(anilistId: number) {
@@ -97,6 +117,39 @@ export default function VsPage() {
               <p className="label-mono mt-1">{result.username} listája</p>
             </div>
           </div>
+
+          {mode === 'internal' && result.otherUserId != null && (
+            <section>
+              <div className="flex items-center justify-between mb-2">
+                <p className="label-mono">Mit nézzünk ketten?</p>
+                <button onClick={runDuo} disabled={duoLoading} className="btn-solid px-4 py-2 text-sm">
+                  {duoLoading ? 'AI gondolkodik…' : duo ? 'Újra' : 'AI-ajánlás közös estére'}
+                </button>
+              </div>
+              {duoError && <p className="text-sm text-[color:var(--status-dropped)]">{duoError}</p>}
+              {duo && (
+                <ul className="flex flex-col gap-2">
+                  {duo.map((p) => (
+                    <li key={p.anilistId} className="glass rounded-2xl p-3 flex gap-3 items-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {p.coverUrl && <img src={p.coverUrl} alt="" className="w-10 rounded-lg" />}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{p.title}</p>
+                        <p className="text-xs text-text-2">{p.reason}</p>
+                      </div>
+                      <button
+                        onClick={() => addToPlanned(p.anilistId)}
+                        disabled={added.has(p.anilistId)}
+                        className="btn-ghost border border-white/10 px-2.5 py-1 text-xs shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                      >
+                        {added.has(p.anilistId) ? '✓' : '+ Terv'}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
           {result.commonFavorites.length > 0 && (
             <section>

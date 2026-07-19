@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
 
   let theirs: TheirEntry[]
   let displayName: string
+  let otherUserId: number | null = null
 
   if (internalUsername) {
     // belső mód: regisztrált user listája a DB-ből (csak lista-szintű adatok,
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
       score: r.myScore,
     }))
     displayName = internalUsername
+    otherUserId = other.id
   } else {
     let entries
     try {
@@ -67,5 +69,5 @@ export async function POST(req: NextRequest) {
     myScore: r.myScore,
   }))
 
-  return NextResponse.json({ username: displayName, ...compareLists(mine, theirs) })
+  return NextResponse.json({ username: displayName, otherUserId, ...compareLists(mine, theirs) })
 }
