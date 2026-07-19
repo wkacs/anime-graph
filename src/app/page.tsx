@@ -57,6 +57,8 @@ type WatchItem = {
   watchedEpisodes: number
 }
 
+type UpcomingItem = SeasonItem & { tasteScore: number; tasteReason: string }
+
 export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
   const [error, setError] = useState('')
@@ -65,6 +67,8 @@ export default function NewsPage() {
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [watchlist, setWatchlist] = useState<WatchItem[]>([])
   const [wlUsers, setWlUsers] = useState<Record<number, string>>({})
+  const [upcoming, setUpcoming] = useState<UpcomingItem[]>([])
+  const [upcomingSeason, setUpcomingSeason] = useState<{ season: string; year: number } | null>(null)
 
   useEffect(() => {
     fetch('/api/news')
@@ -86,6 +90,10 @@ export default function NewsPage() {
       .then((r) => r.json())
       .then((j) => { setWatchlist(j.items ?? []); setWlUsers(j.usernames ?? {}) })
       .catch(() => { /* watchlist nélkül is él az oldal */ })
+    fetch('/api/news/upcoming')
+      .then((r) => r.json())
+      .then((j) => { setUpcoming(j.items ?? []); setUpcomingSeason(j.season ?? null) })
+      .catch(() => { /* enélkül is él az oldal */ })
   }, [])
 
   async function addToPlanned(anilistId: number) {
@@ -352,6 +360,42 @@ export default function NewsPage() {
           ))}
         </div>
       </section>
+
+      {upcoming.length > 0 && upcomingSeason && (
+        <section>
+          <p className="label-mono mb-3">
+            Következő szezon — neked · {upcomingSeason.year} {SEASON_LABELS[upcomingSeason.season] ?? upcomingSeason.season}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {upcoming.map((s) => (
+              <MediaCard
+                key={s.anilistId}
+                title={s.title}
+                coverUrl={s.coverUrl}
+                genres={s.genres}
+                description={s.tasteReason}
+                badge={
+                  <span className="glass rounded-full px-2 py-0.5 font-mono text-sm font-semibold tabular-nums"
+                    style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}>
+                    {s.tasteScore}
+                  </span>
+                }
+                footer={s.owned ? (
+                  <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
+                ) : (
+                  <button
+                    onClick={() => addToPlanned(s.anilistId)}
+                    disabled={added.has(s.anilistId)}
+                    className="btn-ghost border border-white/10 px-2.5 py-1 text-xs disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                  >
+                    {added.has(s.anilistId) ? '✓' : '+ Tervezem'}
+                  </button>
+                )}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   )
 }

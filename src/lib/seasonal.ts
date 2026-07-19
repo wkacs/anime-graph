@@ -15,6 +15,16 @@ export function currentSeason(now: Date): { season: string; year: number } {
   return { season, year: now.getFullYear() }
 }
 
+const SEASON_ORDER = ['WINTER', 'SPRING', 'SUMMER', 'FALL']
+
+export function nextSeason(now: Date): { season: string; year: number } {
+  const cur = currentSeason(now)
+  const i = SEASON_ORDER.indexOf(cur.season)
+  return i === SEASON_ORDER.length - 1
+    ? { season: SEASON_ORDER[0], year: cur.year + 1 }
+    : { season: SEASON_ORDER[i + 1], year: cur.year }
+}
+
 export const seasonScoresSchema = z.object({
   scores: z.array(z.object({
     anilistId: z.number().int(),

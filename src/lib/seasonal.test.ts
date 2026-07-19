@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { currentSeason, parseSeasonScores, buildSeasonMessages, SEASON_LABELS } from './seasonal'
+import { currentSeason, nextSeason, parseSeasonScores, buildSeasonMessages, SEASON_LABELS } from './seasonal'
+
+describe('nextSeason', () => {
+  it('évhatárt is kezel', () => {
+    expect(nextSeason(new Date('2026-07-19'))).toEqual({ season: 'FALL', year: 2026 })
+    expect(nextSeason(new Date('2026-11-10'))).toEqual({ season: 'WINTER', year: 2027 })
+  })
+})
 
 describe('currentSeason', () => {
   it('maps months to AniList seasons', () => {
