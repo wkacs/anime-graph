@@ -1,36 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime } from '@/db/schema'
+import { anime, users } from '@/db/schema'
 import { fetchUserList } from '@/lib/anilist'
 import { compareLists, type TheirEntry } from '@/lib/compare'
 import { requireUserId } from '@/lib/session'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const username = String(body?.username ?? '').trim()
-  if (!username) return NextResponse.json({ error: 'Felhasználónév kötelező' }, { status: 400 })
-
-  let entries
-  try {
-    entries = await fetchUserList(username)
-  } catch (e) {
-    return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
-  }
-  if (!entries.length) {
-    return NextResponse.json({ error: 'Üres vagy privát lista ezen a néven' }, { status: 404 })
+  const internalUsername = String(body?.internalUsername ?? '').trim()
+  if (!username && !internalUsername) {
+    return NextResponse.json({ error: 'Felhasználónév kötelező' }, { status: 400 })
   }
 
-  const theirs: TheirEntry[] = entries.map((e) => ({
-    anilistId: e.media.id,
-    title: e.media.title.romaji,
-    coverUrl: e.media.coverImage?.large ?? null,
-    score: e.score && e.score >= 1 ? Math.round(e.score) : null,
-  }))
+  let theirs: TheirEntry[]
+  let displayName: string
 
-  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
+  if (internalUsername) {
+    // belső mód: regisztrált user listája a DB-ből (csak lista-szintű adatok,
+    // vélemény/taste_memory SOSEM kerül a válaszba)
+    const [other] = await db.select().from(users).where(eq(users.username, internalUsername))
+    if (!other) return NextResponse.json({ error: 'Nincs ilyen felhasználó' }, { status: 404 })
+    if (other.id === userId) {
+      return NextResponse.json({ error: 'Saját magaddal nem megy az összehasonlítás' }, { status: 400 })
+    }
+    const otherRows = await db.select().from(anime)
+      .where(and(eq(anime.userId, other.id), eq(anime.mediaType, 'ANIME')))
+    if (!otherRows.length) {
+      return NextResponse.json({ error: 'Ennek a felhasználónak még üres a listája' }, { status: 404 })
+    }
+    theirs = otherRows.map((r) => ({
+      anilistId: r.anilistId,
+      title: r.titleRomaji,
+      coverUrl: r.coverUrl,
+      score: r.myScore,
+    }))
+    displayName = internalUsername
+  } else {
+    let entries
+    try {
+      entries = await fetchUserList(username)
+    } catch (e) {
+      return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
+    }
+    if (!entries.length) {
+      return NextResponse.json({ error: 'Üres vagy privát lista ezen a néven' }, { status: 404 })
+    }
+    theirs = entries.map((e) => ({
+      anilistId: e.media.id,
+      title: e.media.title.romaji,
+      coverUrl: e.media.coverImage?.large ?? null,
+      score: e.score && e.score >= 1 ? Math.round(e.score) : null,
+    }))
+    displayName = username
+  }
+
+  const rows = await db.select().from(anime)
+    .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   const mine = rows.map((r) => ({
     anilistId: r.anilistId,
     title: r.titleRomaji,
@@ -38,5 +67,5 @@ export async function POST(req: NextRequest) {
     myScore: r.myScore,
   }))
 
-  return NextResponse.json({ username, ...compareLists(mine, theirs) })
+  return NextResponse.json({ username: displayName, ...compareLists(mine, theirs) })
 }

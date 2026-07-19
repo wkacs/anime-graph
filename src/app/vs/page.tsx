@@ -7,6 +7,7 @@ type Result = CompareResult & { username: string }
 
 export default function VsPage() {
   const [username, setUsername] = useState('')
+  const [mode, setMode] = useState<'anilist' | 'internal'>('anilist')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<Result | null>(null)
@@ -20,7 +21,11 @@ export default function VsPage() {
     const res = await fetch('/api/compare', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username.trim() }),
+      body: JSON.stringify(
+        mode === 'internal'
+          ? { internalUsername: username.trim() }
+          : { username: username.trim() },
+      ),
     })
     const json = await res.json()
     setLoading(false)
@@ -42,16 +47,31 @@ export default function VsPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">VS — ízlés-összehasonlítás</h1>
         <p className="text-sm text-text-2 mt-1">
-          Írd be egy barátod AniList-nevét (publikus listával), és megnézzük, mennyire passzoltok.
+          {mode === 'anilist'
+            ? 'Írd be egy barátod AniList-nevét (publikus listával), és megnézzük, mennyire passzoltok.'
+            : 'Írd be egy itteni regisztrált felhasználó nevét, és összevetjük a listáitokat.'}
         </p>
       </div>
 
       <div className="glass rounded-3xl p-5 flex flex-wrap items-center gap-2">
+        <div className="flex rounded-full border border-white/10 overflow-hidden">
+          {([['anilist', 'AniList user'], ['internal', 'Belső user']] as const).map(([m, label]) => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setError(''); setResult(null) }}
+              className={`px-3 py-1.5 text-xs transition-colors ${
+                mode === m ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') run() }}
-          placeholder="AniList felhasználónév"
+          placeholder={mode === 'anilist' ? 'AniList felhasználónév' : 'Belső felhasználónév'}
           className="field flex-1 min-w-48 rounded-full px-4 py-2.5 text-sm"
         />
         <button onClick={run} disabled={loading || !username.trim()} className="btn-solid px-5 py-2.5 text-sm">
