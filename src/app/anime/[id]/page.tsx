@@ -33,6 +33,7 @@ export default function AnimePage() {
   const [themes, setThemes] = useState<AnimeTheme[]>([])
   const [activeTheme, setActiveTheme] = useState<AnimeTheme | null>(null)
   const [streamLinks, setStreamLinks] = useState<{ site: string; url: string }[]>([])
+  const [sharedAdded, setSharedAdded] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/anime/${id}`)
@@ -259,6 +260,20 @@ export default function AnimePage() {
               ↻ Újranézés indítása
             </button>
           )}
+          <button
+            onClick={async () => {
+              const res = await fetch('/api/watchlist', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ anilistId: anime.anilistId, title: anime.titleRomaji, coverUrl: anime.coverUrl, mediaType: anime.mediaType }),
+              })
+              if (res.ok) setSharedAdded(true)
+            }}
+            disabled={sharedAdded}
+            title="Fel a közös „együtt nézzük” listára"
+            className="btn-ghost border border-white/10 px-3.5 py-1.5 text-sm disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+          >
+            {sharedAdded ? '✓ Közösben' : '+ Közösbe'}
+          </button>
         </section>
 
         {/* description */}

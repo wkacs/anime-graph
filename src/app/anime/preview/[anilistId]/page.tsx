@@ -65,7 +65,10 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
             ))}
           </div>
           <div className="mt-2">
-            <PreviewAddButtons anilistId={anilistId} />
+            <PreviewAddButtons
+              anilistId={anilistId}
+              watchlistMeta={{ title: media.title.romaji, coverUrl: media.coverImage?.large ?? null, mediaType: media.type ?? 'ANIME' }}
+            />
           </div>
         </div>
       </div>

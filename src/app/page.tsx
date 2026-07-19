@@ -47,12 +47,24 @@ type NewsData = {
   seasonItems: SeasonItem[]
 }
 
+type WatchItem = {
+  id: number
+  anilistId: number
+  mediaType: string
+  title: string
+  coverUrl: string | null
+  addedBy: number
+  watchedEpisodes: number
+}
+
 export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
   const [error, setError] = useState('')
   const [added, setAdded] = useState<Set<number>>(new Set())
   const [digest, setDigest] = useState<string | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
+  const [watchlist, setWatchlist] = useState<WatchItem[]>([])
+  const [wlUsers, setWlUsers] = useState<Record<number, string>>({})
 
   useEffect(() => {
     fetch('/api/news')
@@ -70,6 +82,10 @@ export default function NewsPage() {
       .then((r) => r.json())
       .then((j) => setFeed(j.items ?? []))
       .catch(() => { /* feed nélkül is él az oldal */ })
+    fetch('/api/watchlist')
+      .then((r) => r.json())
+      .then((j) => { setWatchlist(j.items ?? []); setWlUsers(j.usernames ?? {}) })
+      .catch(() => { /* watchlist nélkül is él az oldal */ })
   }, [])
 
   async function addToPlanned(anilistId: number) {
@@ -146,9 +162,10 @@ export default function NewsPage() {
         </motion.p>
       )}
 
-      {feed.length > 0 && (
+      {(feed.length > 0 || watchlist.length > 0) && (
         <section>
           <p className="label-mono mb-3">Társaság</p>
+          {feed.length > 0 && (
           <div className="glass rounded-3xl p-4 flex flex-col gap-2.5">
             {feed.slice(0, 12).map((f) => (
               <div key={`${f.kind}-${f.userId}-${f.animeId}-${f.at}`} className="flex items-center gap-3 text-sm">
@@ -168,6 +185,38 @@ export default function NewsPage() {
               </div>
             ))}
           </div>
+          )}
+          {watchlist.length > 0 && (
+            <div className="mt-4">
+              <p className="label-mono mb-2">Közös lista</p>
+              <ul className="flex flex-col gap-2">
+                {watchlist.map((w) => (
+                  <li key={w.id} className="glass rounded-2xl p-2.5 flex items-center gap-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {w.coverUrl && <img src={w.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/anime/preview/${w.anilistId}`} className="text-sm font-medium text-text-1 truncate block hover:underline">{w.title}</Link>
+                      <p className="label-mono">{wlUsers[w.addedBy] ?? '?'} tette fel · együtt: {w.watchedEpisodes} rész</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const res = await fetch('/api/watchlist', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: w.id, delta: 1 }) })
+                        if (res.ok) setWatchlist((l) => l.map((x) => (x.id === w.id ? { ...x, watchedEpisodes: x.watchedEpisodes + 1 } : x)))
+                      }}
+                      className="btn-ghost border border-white/10 px-2 py-0.5 text-xs" title="Együtt megnéztünk egy részt"
+                    >+1</button>
+                    <button
+                      onClick={async () => {
+                        const res = await fetch('/api/watchlist', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: w.id }) })
+                        if (res.ok) setWatchlist((l) => l.filter((x) => x.id !== w.id))
+                      }}
+                      className="btn-ghost px-2 py-0.5 text-xs text-text-3" title="Levétel"
+                    >✕</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
