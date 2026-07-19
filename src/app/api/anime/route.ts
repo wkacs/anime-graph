@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, tasteMemory } from '@/db/schema'
-import { fetchMedia, mapMedia } from '@/lib/anilist'
+import { anime, animeStaff, tasteMemory } from '@/db/schema'
+import { fetchDirectors, fetchMedia, mapMedia } from '@/lib/anilist'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 
@@ -54,5 +54,14 @@ export async function POST(req: NextRequest) {
   const [row] = await db.insert(anime)
     .values({ ...mapMedia(media), ...userFields, userId })
     .returning()
+  // rendező best-effort mentése — hibája nem akaszthatja meg az add-ot
+  try {
+    const directors = await fetchDirectors(anilistId)
+    if (directors.length) {
+      await db.insert(animeStaff)
+        .values(directors.map((d) => ({ userId, animeId: row.id, staffId: d.staffId, name: d.name, image: d.image, role: d.role })))
+        .onConflictDoNothing()
+    }
+  } catch { /* staff nélkül is él a sor */ }
   return NextResponse.json({ anime: row }, { status: 201 })
 }

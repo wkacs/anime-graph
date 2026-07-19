@@ -388,3 +388,22 @@ export async function fetchRecommendationsFor(anilistId: number): Promise<RecCan
       avgScore: m.averageScore,
     }))
 }
+
+export type StaffEntry = { staffId: number; name: string; image: string | null; role: string }
+
+const STAFF_QUERY = `
+query ($id: Int!) {
+  Media(id: $id) {
+    staff(perPage: 12, sort: RELEVANCE) {
+      edges { role node { id name { full } image { medium } } }
+    }
+  }
+}`
+
+export async function fetchDirectors(anilistId: number): Promise<StaffEntry[]> {
+  type R = { Media: { staff: { edges: { role: string; node: { id: number; name: { full: string }; image: { medium: string | null } | null } }[] } } }
+  const data = await anilistFetch<R>(STAFF_QUERY, { id: anilistId })
+  return data.Media.staff.edges
+    .filter((e) => e.role === 'Director')
+    .map((e) => ({ staffId: e.node.id, name: e.node.name.full, image: e.node.image?.medium ?? null, role: e.role }))
+}
