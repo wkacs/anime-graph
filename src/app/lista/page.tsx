@@ -33,6 +33,9 @@ export default function ListaPage() {
 
   // törlés utáni undo-toast (a detail-oldal teszi be a sessionStorage-ba)
   const [undoBundle, setUndoBundle] = useState<{ anime: { titleRomaji: string } } | null>(null)
+  const [aiAnswer, setAiAnswer] = useState<string | null>(null)
+  const [aiMatches, setAiMatches] = useState<Set<number> | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
   useEffect(() => {
     const raw = sessionStorage.getItem('anime-graph-undo')
     if (!raw) return
@@ -58,14 +61,31 @@ export default function ListaPage() {
     else { setSortKey(key); setSortDir(1) }
   }
 
+  async function runNlSearch() {
+    const query = q.trim()
+    if (!query) return
+    setAiLoading(true); setAiAnswer(null); setAiMatches(null)
+    const res = await fetch('/api/search/nl', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    })
+    const json = await res.json()
+    setAiLoading(false)
+    if (!res.ok) { setAiAnswer(json.error ?? 'Hiba történt'); return }
+    setAiAnswer(json.answer)
+    setAiMatches(new Set(json.matchIds))
+  }
+
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
     return filterByMedia(list, mediaMode)
       .filter((a) => filter === 'all' || a.status === filter)
-      .filter((a) =>
-        !needle ||
-        a.titleRomaji.toLowerCase().includes(needle) ||
-        (a.titleEnglish ?? '').toLowerCase().includes(needle))
+      // AI-találat aktív: csak a matchelt sorok, a szöveges szűrő helyett
+      .filter((a) => (aiMatches != null
+        ? aiMatches.has(a.id)
+        : !needle ||
+          a.titleRomaji.toLowerCase().includes(needle) ||
+          (a.titleEnglish ?? '').toLowerCase().includes(needle)))
       .sort((a, b) => {
         const av = a[sortKey], bv = b[sortKey]
         if (av == null && bv == null) return 0
@@ -73,7 +93,7 @@ export default function ListaPage() {
         if (bv == null) return -1
         return (av < bv ? -1 : av > bv ? 1 : 0) * sortDir
       })
-  }, [list, q, filter, sortKey, sortDir, mediaMode])
+  }, [list, q, filter, sortKey, sortDir, mediaMode, aiMatches])
 
   const Th = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
     <th className={`px-3 py-2.5 text-left ${className}`}>
@@ -119,10 +139,29 @@ export default function ListaPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && e.shiftKey) runNlSearch() }}
           placeholder="Keresés…"
           className="field rounded-full px-4 py-2 text-sm w-52"
         />
+        <button
+          onClick={runNlSearch}
+          disabled={aiLoading || !q.trim()}
+          title="AI-keresés a listádban (Shift+Enter)"
+          className="btn-ghost border border-white/10 rounded-full px-3 py-2 text-xs disabled:opacity-40"
+        >
+          {aiLoading ? '…' : '✨ AI'}
+        </button>
       </div>
+
+      {aiAnswer && (
+        <p className="glass rounded-2xl px-4 py-3 text-sm text-text-1 mb-5">
+          <span className="label-mono mr-2">✨ AI</span>{aiAnswer}
+          <button
+            onClick={() => { setAiAnswer(null); setAiMatches(null) }}
+            className="ml-2 text-text-3 text-xs hover:text-text-1"
+          >✕</button>
+        </p>
+      )}
 
       <div className="glass rounded-3xl overflow-hidden">
         <table className="w-full text-sm">
