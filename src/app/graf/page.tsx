@@ -6,8 +6,8 @@ import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import RecommendMorph from '@/components/RecommendMorph'
 import {
-  buildBubbles, buildGenreDetail, buildGraph, buildTimeline, filterByMedia,
-  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig, type GraphNode, type MediaMode,
+  buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildTimeline, filterByMedia,
+  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type FavChar, type GraphConfig, type GraphNode, type MediaMode,
 } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
@@ -16,6 +16,7 @@ const CONFIG_KEY = 'anime-graph-config'
 const VIEW_KEY = 'anime-graph-view'
 const HINT_KEY = 'anime-graph-hint-seen'
 const MEDIA_KEY = 'anime-graph-media'
+const CHARS_KEY = 'anime-graph-chars'
 
 const MEDIA_MODES: { value: MediaMode; label: string }[] = [
   { value: 'ANIME', label: 'Anime' },
@@ -38,6 +39,8 @@ export default function GrafPage() {
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
+  const [showChars, setShowChars] = useState(false)
+  const [favChars, setFavChars] = useState<FavChar[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -46,6 +49,7 @@ export default function GrafPage() {
     setAdvanced(localStorage.getItem(VIEW_KEY) === 'advanced')
     const savedMedia = localStorage.getItem(MEDIA_KEY)
     if (savedMedia === 'MANGA' || savedMedia === 'ALL') setMediaMode(savedMedia)
+    setShowChars(localStorage.getItem(CHARS_KEY) === '1')
     setShowHint(!localStorage.getItem(HINT_KEY))
     if (saved) { setLoaded(true); return }
     fetch('/api/settings')
@@ -94,6 +98,15 @@ export default function GrafPage() {
 
   useEffect(() => { refresh() }, [refresh])
 
+  // kedvenc karakterek a réteghez — csak bekapcsolt toggle-nál töltjük
+  useEffect(() => {
+    if (!showChars || favChars.length) return
+    fetch('/api/characters/favorites')
+      .then((r) => (r.ok ? r.json() : { favorites: [] }))
+      .then((j) => setFavChars(j.favorites ?? []))
+      .catch(() => { /* réteg nélkül is él a gráf */ })
+  }, [showChars, favChars.length])
+
   const timelineMode = flythrough !== 0
 
   // időutazás: csak az adott év végéig megnézett/felvett animék
@@ -114,11 +127,19 @@ export default function GrafPage() {
     })), [animeList, yearCutoff, mediaMode])
 
   const graph = useMemo(() => {
-    if (timelineMode) return buildTimeline(rows)
-    if (advanced) return buildGraph(rows, config)
-    if (focusGenre) return buildGenreDetail(rows, focusGenre)
-    return buildBubbles(rows)
-  }, [rows, config, timelineMode, advanced, focusGenre])
+    const base =
+      timelineMode ? buildTimeline(rows)
+      : advanced ? buildGraph(rows, config)
+      : focusGenre ? buildGenreDetail(rows, focusGenre)
+      : buildBubbles(rows)
+    if (!showChars || timelineMode) return base
+    // karakter-réteg: csak a most látható anime-node-okhoz kötve
+    const visibleIds = new Set(
+      base.nodes.filter((n) => n.type === 'anime' && n.animeId != null).map((n) => n.animeId!),
+    )
+    const layer = buildCharacterLayer(favChars, visibleIds)
+    return { nodes: [...base.nodes, ...layer.nodes], links: [...base.links, ...layer.links] }
+  }, [rows, config, timelineMode, advanced, focusGenre, showChars, favChars])
 
   const animeNodeCount = useMemo(
     () => graph.nodes.filter((n) => n.type === 'anime').length,
@@ -219,6 +240,21 @@ export default function GrafPage() {
         >
           {timelineMode ? '✕ Idővonal' : 'Idővonal'}
         </button>
+        {!timelineMode && (
+          <button
+            onClick={() => {
+              const next = !showChars
+              setShowChars(next)
+              localStorage.setItem(CHARS_KEY, next ? '1' : '0')
+            }}
+            title="Kedvenc karakterek a gráfban, azonos seiyuu-nál keresztéllel"
+            className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
+              showChars ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
+            }`}
+          >
+            ♥ Karakterek
+          </button>
+        )}
       </div>
 
       <div className="fixed top-20 right-4 z-20">

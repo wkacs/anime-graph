@@ -1,10 +1,32 @@
 import { describe, it, expect } from 'vitest'
-import { buildGraph, filterByMedia, scoreBand, type GraphAnime } from './graph-builder'
+import { buildCharacterLayer, buildGraph, filterByMedia, scoreBand, type GraphAnime } from './graph-builder'
 
 const mk = (over: Partial<GraphAnime>): GraphAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
   genres: ['Action'], studio: 'MAPPA', year: 2020, status: 'completed',
   myScore: 8, relations: [], ...over,
+})
+
+describe('buildCharacterLayer', () => {
+  const favs = [
+    { charId: 1, name: 'Lelouch', image: null, vaId: 95270, vaName: 'Fukuyama Jun', animeId: 10 },
+    { charId: 2, name: 'Ichigo', image: null, vaId: 95270, vaName: 'Fukuyama Jun', animeId: 20 },
+    { charId: 3, name: 'Levi', image: null, vaId: 95100, vaName: 'Kamiya Hiroshi', animeId: 30 },
+  ]
+  it('char-node + él a saját animéhez, csak látható animékre', () => {
+    const { nodes, links } = buildCharacterLayer(favs, new Set([10, 20]))
+    expect(nodes.map((n) => n.id)).toEqual(['char:1', 'char:2'])
+    expect(links).toContainEqual({ source: 'anime:10', target: 'char:1', kind: 'char' })
+  })
+  it('azonos vaId → seiyuu-keresztél egyszer', () => {
+    const { links } = buildCharacterLayer(favs, new Set([10, 20, 30]))
+    const seiyuu = links.filter((l) => l.kind === 'seiyuu')
+    expect(seiyuu).toEqual([{ source: 'char:1', target: 'char:2', kind: 'seiyuu' }])
+  })
+  it('vaId nélkül nincs keresztél', () => {
+    const { links } = buildCharacterLayer([{ ...favs[0], vaId: null }], new Set([10]))
+    expect(links.filter((l) => l.kind === 'seiyuu')).toHaveLength(0)
+  })
 })
 
 describe('filterByMedia', () => {

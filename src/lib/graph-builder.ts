@@ -48,8 +48,10 @@ export type GraphAnime = {
 
 export type GraphNode = {
   id: string
-  type: 'dim' | 'anime'
+  type: 'dim' | 'anime' | 'char'
   label: string
+  // char-node: másodlagos felirat (seiyuu neve) a tooltiphez
+  sub?: string
   img?: string
   val: number
   status?: string
@@ -66,7 +68,7 @@ export type GraphNode = {
   covers?: string[]
 }
 
-export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' | 'vibe' }
+export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' | 'vibe' | 'char' | 'seiyuu' }
 
 const STATUS_LABELS: Record<string, string> = {
   watching: 'Nézem',
@@ -191,6 +193,48 @@ export function buildGenreDetail(rows: GraphAnime[], genre: string): { nodes: Gr
     }
   }
   links.push(...vibeLinks(subset))
+  return { nodes, links }
+}
+
+export type FavChar = {
+  charId: number
+  name: string
+  image: string | null
+  vaId: number | null
+  vaName: string | null
+  animeId: number
+}
+
+// kedvenc karakterek a látható anime-node-jaikhoz kötve + same-seiyuu keresztélek
+export function buildCharacterLayer(favs: FavChar[], visibleAnimeIds: Set<number>): { nodes: GraphNode[]; links: GraphLink[] } {
+  const visible = favs.filter((f) => visibleAnimeIds.has(f.animeId))
+  const nodes: GraphNode[] = visible.map((f) => ({
+    id: `char:${f.charId}`,
+    type: 'char',
+    label: f.name,
+    sub: f.vaName ?? undefined,
+    img: f.image ?? undefined,
+    val: 3,
+  }))
+  const links: GraphLink[] = visible.map((f) => ({
+    source: `anime:${f.animeId}`, target: `char:${f.charId}`, kind: 'char' as const,
+  }))
+  const byVa = new Map<number, FavChar[]>()
+  for (const f of visible) {
+    if (f.vaId == null) continue
+    const list = byVa.get(f.vaId) ?? []
+    list.push(f)
+    byVa.set(f.vaId, list)
+  }
+  for (const group of byVa.values()) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const [lo, hi] = group[i].charId < group[j].charId
+          ? [group[i].charId, group[j].charId] : [group[j].charId, group[i].charId]
+        links.push({ source: `char:${lo}`, target: `char:${hi}`, kind: 'seiyuu' })
+      }
+    }
+  }
   return { nodes, links }
 }
 

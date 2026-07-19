@@ -141,6 +141,30 @@ function animeObject(node: GraphNode, mode: NodeMode): THREE.Object3D {
   return group
 }
 
+// favorite character: small portrait sprite + name, CV in a fainter line below
+function charObject(node: GraphNode): THREE.Object3D {
+  const group = new THREE.Group()
+  const dot = new THREE.Mesh(DOT_GEO, DIM_MAT)
+  group.add(dot)
+  if (node.img) {
+    const portrait = new THREE.Sprite(coverMaterial(node.img, true))
+    portrait.scale.set(5, 6.9, 1)
+    portrait.position.set(0, 5.4, 0)
+    group.add(portrait)
+  }
+  const name = new SpriteText(truncate(node.label, 20), 2.2, '#d9d9df')
+  name.fontFace = 'Instrument Sans, Arial'
+  name.position.set(0, -3.6, 0)
+  group.add(name)
+  if (node.sub) {
+    const cv = new SpriteText(`CV: ${truncate(node.sub, 22)}`, 1.7, '#8a8f98')
+    cv.fontFace = 'Instrument Sans, Arial'
+    cv.position.set(0, -6.2, 0)
+    group.add(cv)
+  }
+  return group
+}
+
 // timeline year marker: big mono year, no dot
 function timeObject(node: GraphNode): THREE.Object3D {
   const label = new SpriteText(node.label, 7, 'rgba(250,250,250,0.55)')
@@ -339,17 +363,25 @@ export default function Graph3D({
   // stable prop identities: the underlying lib re-applies changed props on every
   // React re-render, so inline closures would rebuild all node objects constantly
   const nodeThreeObject = useCallback(
-    (n: GraphNode) => (n.type === 'anime' ? animeObject(n, nodeMode) : dimObject(n)),
+    (n: GraphNode) =>
+      n.type === 'anime' ? animeObject(n, nodeMode)
+      : n.type === 'char' ? charObject(n)
+      : dimObject(n),
     [nodeMode],
   )
   const nodeLabel = useCallback(() => '', [])
   const linkColor = useCallback(
     (l: GraphLink) =>
-      l.kind === 'relation' ? '#ffffff' : l.kind === 'vibe' ? '#5c5c66' : '#8f8f96',
+      l.kind === 'relation' ? '#ffffff'
+      : l.kind === 'vibe' || l.kind === 'seiyuu' ? '#5c5c66'
+      : '#8f8f96',
     [],
   )
   const linkLineDash = useCallback(
-    (l: GraphLink) => (l.kind === 'relation' ? [3, 2] : l.kind === 'vibe' ? [1.5, 3.5] : null),
+    (l: GraphLink) =>
+      l.kind === 'relation' ? [3, 2]
+      : l.kind === 'vibe' || l.kind === 'seiyuu' ? [1.5, 3.5]
+      : null,
     [],
   )
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
