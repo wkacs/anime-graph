@@ -102,8 +102,15 @@ query ($id: Int!) {
   }
 }`
 
-export async function fetchMedia(anilistId: number): Promise<AnilistMedia> {
-  const data = await anilistFetch<{ Media: AnilistMedia }>(MEDIA_QUERY, { id: anilistId })
+const MEDIA_QUERY_ANY = `
+query ($id: Int!) {
+  Media(id: $id) {${MEDIA_FIELDS}
+  }
+}`
+
+// any=true: típus-szűrő nélkül (manga-id-ra is működik)
+export async function fetchMedia(anilistId: number, any = false): Promise<AnilistMedia> {
+  const data = await anilistFetch<{ Media: AnilistMedia }>(any ? MEDIA_QUERY_ANY : MEDIA_QUERY, { id: anilistId })
   return data.Media
 }
 
