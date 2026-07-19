@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildCharacterLayer, buildGraph, filterByMedia, scoreBand, type GraphAnime } from './graph-builder'
+import { buildCharacterLayer, buildGraph, buildStaffLayer, filterByMedia, scoreBand, type GraphAnime } from './graph-builder'
 
 const mk = (over: Partial<GraphAnime>): GraphAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
@@ -96,5 +96,26 @@ describe('buildGraph', () => {
   it('anime with no genre falls into Ismeretlen', () => {
     const g = buildGraph([mk({ genres: [] })], { levels: ['genre'], crossLinks: false })
     expect(g.nodes.some((n) => n.id === 'dim:genre:Ismeretlen')).toBe(true)
+  })
+})
+
+describe('buildStaffLayer', () => {
+  const rows = [
+    { staffId: 100, name: 'Rendező A', image: null, animeId: 1 },
+    { staffId: 100, name: 'Rendező A', image: null, animeId: 2 },
+    { staffId: 200, name: 'Rendező B', image: null, animeId: 3 },
+  ]
+
+  it('egy staff-node több animéhez kötve (a közös node maga a kereszt-kapcsolat)', () => {
+    const { nodes, links } = buildStaffLayer(rows, new Set([1, 2, 3]))
+    expect(nodes).toHaveLength(2)
+    expect(links.filter((l) => l.source === 'anime:1' || l.source === 'anime:2')).toHaveLength(2)
+    expect(links.every((l) => l.kind === 'char')).toBe(true)
+  })
+
+  it('nem látható animék staffja kimarad, árva node sincs', () => {
+    const { nodes, links } = buildStaffLayer(rows, new Set([3]))
+    expect(nodes.map((n) => n.id)).toEqual(['staff:200'])
+    expect(links).toHaveLength(1)
   })
 })

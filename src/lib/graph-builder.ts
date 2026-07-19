@@ -238,6 +238,24 @@ export function buildCharacterLayer(favs: FavChar[], visibleAnimeIds: Set<number
   return { nodes, links }
 }
 
+export type StaffRow = { staffId: number; name: string; image: string | null; animeId: number }
+
+// rendezők a látható animéikhez kötve; ugyanaz a rendező több animénél = közös node,
+// ami maga adja a kereszt-kapcsolatot (külön él nem kell)
+export function buildStaffLayer(rows: StaffRow[], visibleAnimeIds: Set<number>): { nodes: GraphNode[]; links: GraphLink[] } {
+  const visible = rows.filter((r) => visibleAnimeIds.has(r.animeId))
+  const nodes = new Map<string, GraphNode>()
+  const links: GraphLink[] = []
+  for (const r of visible) {
+    const id = `staff:${r.staffId}`
+    if (!nodes.has(id)) {
+      nodes.set(id, { id, type: 'char', label: r.name, sub: 'rendező', img: r.image ?? undefined, val: 3 })
+    }
+    links.push({ source: `anime:${r.animeId}`, target: id, kind: 'char' })
+  }
+  return { nodes: [...nodes.values()], links }
+}
+
 export type TimelineAnime = GraphAnime & { watchedAt: string | null; createdAt: string }
 
 const SPACING = 42

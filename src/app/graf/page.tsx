@@ -6,8 +6,8 @@ import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import RecommendMorph from '@/components/RecommendMorph'
 import {
-  buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildTimeline, filterByMedia,
-  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type FavChar, type GraphConfig, type GraphNode, type MediaMode,
+  buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildStaffLayer, buildTimeline, filterByMedia,
+  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type FavChar, type GraphConfig, type GraphNode, type MediaMode, type StaffRow,
 } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
@@ -17,6 +17,7 @@ const VIEW_KEY = 'anime-graph-view'
 const HINT_KEY = 'anime-graph-hint-seen'
 const MEDIA_KEY = 'anime-graph-media'
 const CHARS_KEY = 'anime-graph-chars'
+const STAFF_KEY = 'anime-graph-staff'
 
 const MEDIA_MODES: { value: MediaMode; label: string }[] = [
   { value: 'ANIME', label: 'Anime' },
@@ -41,6 +42,8 @@ export default function GrafPage() {
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
   const [showChars, setShowChars] = useState(false)
   const [favChars, setFavChars] = useState<FavChar[]>([])
+  const [showStaff, setShowStaff] = useState(false)
+  const [staffRows, setStaffRows] = useState<StaffRow[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -50,6 +53,7 @@ export default function GrafPage() {
     const savedMedia = localStorage.getItem(MEDIA_KEY)
     if (savedMedia === 'MANGA' || savedMedia === 'ALL') setMediaMode(savedMedia)
     setShowChars(localStorage.getItem(CHARS_KEY) === '1')
+    setShowStaff(localStorage.getItem(STAFF_KEY) === '1')
     setShowHint(!localStorage.getItem(HINT_KEY))
     if (saved) { setLoaded(true); return }
     fetch('/api/settings')
@@ -107,6 +111,15 @@ export default function GrafPage() {
       .catch(() => { /* réteg nélkül is él a gráf */ })
   }, [showChars, favChars.length])
 
+  // rendezők a stáb-réteghez — csak bekapcsolt toggle-nál töltjük
+  useEffect(() => {
+    if (!showStaff || staffRows.length) return
+    fetch('/api/staff')
+      .then((r) => (r.ok ? r.json() : { staff: [] }))
+      .then((j) => setStaffRows(j.staff ?? []))
+      .catch(() => { /* réteg nélkül is él a gráf */ })
+  }, [showStaff, staffRows.length])
+
   const timelineMode = flythrough !== 0
 
   // időutazás: csak az adott év végéig megnézett/felvett animék
@@ -132,14 +145,22 @@ export default function GrafPage() {
       : advanced ? buildGraph(rows, config)
       : focusGenre ? buildGenreDetail(rows, focusGenre)
       : buildBubbles(rows)
-    if (!showChars || timelineMode) return base
-    // karakter-réteg: csak a most látható anime-node-okhoz kötve
+    if ((!showChars && !showStaff) || timelineMode) return base
+    // karakter/stáb-réteg: csak a most látható anime-node-okhoz kötve
     const visibleIds = new Set(
       base.nodes.filter((n) => n.type === 'anime' && n.animeId != null).map((n) => n.animeId!),
     )
-    const layer = buildCharacterLayer(favChars, visibleIds)
-    return { nodes: [...base.nodes, ...layer.nodes], links: [...base.links, ...layer.links] }
-  }, [rows, config, timelineMode, advanced, focusGenre, showChars, favChars])
+    let merged = base
+    if (showChars) {
+      const layer = buildCharacterLayer(favChars, visibleIds)
+      merged = { nodes: [...merged.nodes, ...layer.nodes], links: [...merged.links, ...layer.links] }
+    }
+    if (showStaff) {
+      const layer = buildStaffLayer(staffRows, visibleIds)
+      merged = { nodes: [...merged.nodes, ...layer.nodes], links: [...merged.links, ...layer.links] }
+    }
+    return merged
+  }, [rows, config, timelineMode, advanced, focusGenre, showChars, favChars, showStaff, staffRows])
 
   const animeNodeCount = useMemo(
     () => graph.nodes.filter((n) => n.type === 'anime').length,
@@ -253,6 +274,21 @@ export default function GrafPage() {
             }`}
           >
             ♥ Karakterek
+          </button>
+        )}
+        {!timelineMode && (
+          <button
+            onClick={() => {
+              const next = !showStaff
+              setShowStaff(next)
+              localStorage.setItem(STAFF_KEY, next ? '1' : '0')
+            }}
+            title="Rendezők a gráfban — közös rendező összeköti az animéidet"
+            className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
+              showStaff ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
+            }`}
+          >
+            🎬 Stáb
           </button>
         )}
       </div>
