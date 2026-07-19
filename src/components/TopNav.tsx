@@ -6,6 +6,7 @@ const TABS: { href: string; label: string; soon?: boolean }[] = [
   { href: '/', label: 'News' },
   { href: '/graf', label: 'Gráf' },
   { href: '/lista', label: 'Lista' },
+  { href: '/bongeszo', label: 'Böngésző' },
   { href: '/vibe', label: 'Vibe' },
   { href: '/stats', label: 'Stats' },
   { href: '/vs', label: 'VS' },

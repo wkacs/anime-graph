@@ -249,6 +249,57 @@ export async function fetchSeason(season: string, seasonYear: number): Promise<S
   }))
 }
 
+export type BrowseMedia = {
+  anilistId: number
+  title: string
+  coverUrl: string | null
+  genres: string[]
+  avgScore: number | null
+  format: string | null
+  year: number | null
+  description: string | null
+}
+
+const BROWSE_QUERY = `
+query ($type: MediaType!, $sort: [MediaSort], $page: Int!, $perPage: Int!, $search: String,
+       $genre: String, $format: MediaFormat, $minScore: Int, $seasonYear: Int,
+       $startDateGreater: FuzzyDateInt, $startDateLesser: FuzzyDateInt) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { total }
+    media(type: $type, sort: $sort, search: $search, genre: $genre, format: $format,
+          averageScore_greater: $minScore, seasonYear: $seasonYear,
+          startDate_greater: $startDateGreater, startDate_lesser: $startDateLesser) {
+      id
+      title { romaji }
+      coverImage { large }
+      genres
+      averageScore
+      format
+      seasonYear
+      startDate { year }
+      description
+    }
+  }
+}`
+
+export async function fetchBrowse(variables: Record<string, unknown>): Promise<{ total: number; media: BrowseMedia[] }> {
+  type R = { Page: { pageInfo: { total: number }; media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; format: string | null; seasonYear: number | null; startDate: { year: number | null } | null; description: string | null }[] } }
+  const data = await anilistFetch<R>(BROWSE_QUERY, variables)
+  return {
+    total: data.Page.pageInfo.total,
+    media: data.Page.media.map((m) => ({
+      anilistId: m.id,
+      title: m.title.romaji,
+      coverUrl: m.coverImage?.large ?? null,
+      genres: m.genres,
+      avgScore: m.averageScore,
+      format: m.format,
+      year: m.seasonYear ?? m.startDate?.year ?? null,
+      description: m.description,
+    })),
+  }
+}
+
 export type AiringInfo = { anilistId: number; airingAt: number; nextEpisode: number }
 
 const AIRING_QUERY = `
