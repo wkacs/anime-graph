@@ -256,6 +256,43 @@ export async function fetchSeason(season: string, seasonYear: number): Promise<S
   }))
 }
 
+export type CharacterEntry = {
+  charId: number
+  name: string
+  image: string | null
+  role: string
+  vaId: number | null
+  vaName: string | null
+  vaImage: string | null
+}
+
+const CHARACTERS_QUERY = `
+query ($id: Int!) {
+  Media(id: $id) {
+    characters(role_in: [MAIN, SUPPORTING], perPage: 12, sort: [ROLE, RELEVANCE]) {
+      edges {
+        role
+        node { id name { full } image { medium } }
+        voiceActors(language: JAPANESE, sort: RELEVANCE) { id name { full } image { medium } }
+      }
+    }
+  }
+}`
+
+export async function fetchCharacters(anilistId: number): Promise<CharacterEntry[]> {
+  type R = { Media: { characters: { edges: { role: string; node: { id: number; name: { full: string }; image: { medium: string | null } | null }; voiceActors: { id: number; name: { full: string }; image: { medium: string | null } | null }[] }[] } } }
+  const data = await anilistFetch<R>(CHARACTERS_QUERY, { id: anilistId })
+  return data.Media.characters.edges.map((e) => ({
+    charId: e.node.id,
+    name: e.node.name.full,
+    image: e.node.image?.medium ?? null,
+    role: e.role,
+    vaId: e.voiceActors[0]?.id ?? null,
+    vaName: e.voiceActors[0]?.name.full ?? null,
+    vaImage: e.voiceActors[0]?.image?.medium ?? null,
+  }))
+}
+
 export type BrowseMedia = {
   anilistId: number
   title: string

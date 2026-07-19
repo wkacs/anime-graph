@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import CharacterGrid from '@/components/CharacterGrid'
 import { stripHtml } from '@/lib/description'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { AnimeTheme } from '@/lib/themes'
@@ -267,6 +268,9 @@ export default function AnimePage() {
             <p className="text-sm text-text-1 leading-relaxed">{stripHtml(anime.description)}</p>
           </section>
         )}
+
+        {/* characters */}
+        <CharacterGrid anilistId={anime.anilistId} animeId={anime.id} />
 
         {/* opinion */}
         <section className="glass rounded-3xl p-5">
