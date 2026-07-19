@@ -27,7 +27,8 @@ async function cachedSeasonScores(userId: number, input: { season: string; year:
 export async function GET() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
+  const rows = await db.select().from(anime)
+    .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   const season = currentSeason(new Date())
 
   const followedIds = rows
@@ -49,6 +50,8 @@ export async function GET() {
         anilistId: row.anilistId,
         title: row.titleRomaji,
         coverUrl: row.coverUrl,
+        genres: row.genres,
+        description: row.description,
         status: row.status,
         progress: row.progress,
         episodes: row.episodes,

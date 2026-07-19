@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Countdown from '@/components/Countdown'
+import MediaCard from '@/components/MediaCard'
 import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
 import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
@@ -14,6 +15,8 @@ type MineItem = {
   anilistId: number
   title: string
   coverUrl: string | null
+  genres: string[]
+  description: string | null
   status: string
   progress: number
   episodes: number | null
@@ -29,6 +32,7 @@ type SeasonItem = {
   avgScore: number | null
   episodes: number | null
   format: string | null
+  description: string | null
   airingAt: number | null
   nextEpisode: number | null
   owned: boolean
@@ -139,42 +143,46 @@ export default function NewsPage() {
       {data.mine.length > 0 && (
         <section>
           <p className="label-mono mb-3">Amit követsz — következő rész</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {data.mine.map((m, i) => (
               <motion.div
                 key={m.animeId}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: Math.min(i * 0.05, 0.3) }}
+                className="h-full"
               >
-                <div className="glass rounded-2xl p-3 flex gap-3 hover:bg-white/8 transition-colors h-full relative">
-                  <Link href={`/anime/${m.animeId}`} className="absolute inset-0" aria-label={m.title} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {m.coverUrl && <img src={m.coverUrl} alt="" className="w-12 rounded-lg object-cover self-start" />}
-                  <div className="min-w-0 flex flex-col flex-1">
-                    <p className="text-[13px] font-medium leading-tight line-clamp-2">{m.title}</p>
-                    <p className="label-mono mt-1 flex items-center gap-1.5">
-                      <span
-                        className={`inline-block w-1.5 h-1.5 rounded-full ${m.status === 'watching' ? 'animate-pulse' : ''}`}
-                        style={{ background: STATUS_CSS_VARS[m.status] ?? 'white' }}
-                      />
-                      {STATUS_LABELS[m.status] ?? m.status}
-                      <span className="text-text-3">· {m.progress}{m.episodes ? `/${m.episodes}` : ''} rész</span>
-                    </p>
-                    <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-                      <p className="font-mono text-sm text-text-1">
-                        EP {m.nextEpisode} · <Countdown airingAt={m.airingAt} />
+                <MediaCard
+                  title={m.title}
+                  coverUrl={m.coverUrl}
+                  genres={m.genres}
+                  description={m.description}
+                  href={`/anime/${m.animeId}`}
+                  badge={
+                    <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">
+                      EP {m.nextEpisode} · <Countdown airingAt={m.airingAt} />
+                    </span>
+                  }
+                  footer={
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="label-mono flex items-center gap-1.5">
+                        <span
+                          className={`inline-block w-1.5 h-1.5 rounded-full ${m.status === 'watching' ? 'animate-pulse' : ''}`}
+                          style={{ background: STATUS_CSS_VARS[m.status] ?? 'white' }}
+                        />
+                        {STATUS_LABELS[m.status] ?? m.status}
+                        <span className="text-text-3">· {m.progress}{m.episodes ? `/${m.episodes}` : ''}</span>
                       </p>
                       <button
                         onClick={() => bumpProgress(m)}
                         title="Megnéztem egy részt"
-                        className="btn-ghost relative z-10 border border-white/10 px-2 py-0.5 text-xs whitespace-nowrap"
+                        className="btn-ghost border border-white/10 px-2 py-0.5 text-xs whitespace-nowrap"
                       >
                         +1
                       </button>
                     </div>
-                  </div>
-                </div>
+                  }
+                />
               </motion.div>
             ))}
           </div>
@@ -214,56 +222,52 @@ export default function NewsPage() {
         <div className="flex items-baseline justify-between mb-3">
           <p className="label-mono">A szezon</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {data.seasonItems.map((s, i) => (
             <motion.article
               key={s.anilistId}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: Math.min(i * 0.03, 0.4) }}
-              className="glass rounded-3xl p-4 flex gap-4"
+              className="h-full"
             >
-              {s.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.coverUrl} alt="" className="w-16 rounded-xl object-cover self-start" />
-              ) : (
-                <div className="w-16 aspect-[2/3] rounded-xl bg-white/5 self-start" />
-              )}
-              <div className="flex-1 min-w-0 flex flex-col">
-                <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-sm font-medium leading-tight">{s.title}</h2>
-                  {s.tasteScore != null && (
-                    <span
-                      className="font-mono text-sm font-semibold tabular-nums shrink-0"
-                      title={s.tasteReason ?? undefined}
-                      style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}
-                    >
-                      {s.tasteScore}
-                    </span>
-                  )}
-                </div>
-                <p className="label-mono mt-0.5">{s.genres.slice(0, 3).join(' · ')}</p>
-                <div className="mt-auto pt-2 flex items-center justify-between gap-2">
-                  <p className="font-mono text-[13px] text-text-1">
-                    {s.airingAt != null ? (
-                      <>EP {s.nextEpisode} · <Countdown airingAt={s.airingAt} /></>
+              <MediaCard
+                title={s.title}
+                coverUrl={s.coverUrl}
+                genres={s.genres}
+                description={s.description}
+                badge={s.tasteScore != null ? (
+                  <span
+                    className="glass rounded-full px-2 py-0.5 font-mono text-sm font-semibold tabular-nums"
+                    title={s.tasteReason ?? undefined}
+                    style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}
+                  >
+                    {s.tasteScore}
+                  </span>
+                ) : undefined}
+                footer={
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-mono text-[12px] text-text-1">
+                      {s.airingAt != null ? (
+                        <>EP {s.nextEpisode} · <Countdown airingAt={s.airingAt} /></>
+                      ) : (
+                        <span className="text-text-3">nincs adásban</span>
+                      )}
+                    </p>
+                    {s.owned ? (
+                      <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
                     ) : (
-                      <span className="text-text-3">nincs adásban</span>
+                      <button
+                        onClick={() => addToPlanned(s.anilistId)}
+                        disabled={added.has(s.anilistId)}
+                        className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                      >
+                        {added.has(s.anilistId) ? '✓' : '+ Tervezem'}
+                      </button>
                     )}
-                  </p>
-                  {s.owned ? (
-                    <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
-                  ) : (
-                    <button
-                      onClick={() => addToPlanned(s.anilistId)}
-                      disabled={added.has(s.anilistId)}
-                      className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap disabled:text-[color:var(--status-watching)] disabled:border-transparent"
-                    >
-                      {added.has(s.anilistId) ? '✓' : '+ Tervezem'}
-                    </button>
-                  )}
-                </div>
-              </div>
+                  </div>
+                }
+              />
             </motion.article>
           ))}
         </div>

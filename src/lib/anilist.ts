@@ -210,6 +210,7 @@ query ($id: Int!) {
 export type SeasonMedia = RecCandidate & {
   episodes: number | null
   format: string | null
+  description: string | null
   airingAt: number | null // unix seconds of the next episode, null if not airing
   nextEpisode: number | null
 }
@@ -225,13 +226,14 @@ query ($season: MediaSeason!, $seasonYear: Int!) {
       averageScore
       episodes
       format
+      description
       nextAiringEpisode { airingAt episode }
     }
   }
 }`
 
 export async function fetchSeason(season: string, seasonYear: number): Promise<SeasonMedia[]> {
-  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; episodes: number | null; format: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null }[] } }
+  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; episodes: number | null; format: string | null; description: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null }[] } }
   const data = await anilistFetch<R>(SEASON_QUERY, { season, seasonYear })
   return data.Page.media.map((m) => ({
     anilistId: m.id,
@@ -241,6 +243,7 @@ export async function fetchSeason(season: string, seasonYear: number): Promise<S
     avgScore: m.averageScore,
     episodes: m.episodes,
     format: m.format,
+    description: m.description,
     airingAt: m.nextAiringEpisode?.airingAt ?? null,
     nextEpisode: m.nextAiringEpisode?.episode ?? null,
   }))
