@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import WrappedCard from '@/components/WrappedCard'
 import { buildHeatmapCells, type HeatCell } from '@/lib/heatmap'
 import { monthlyEvolution } from '@/lib/evolution'
@@ -235,7 +236,10 @@ export default function StatsPage() {
     <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
-        <WrappedCard list={list} />
+        <div className="flex items-center gap-2">
+          <Link href="/wrapped" className="btn-solid px-4 py-2 text-sm">✨ Éves Wrapped →</Link>
+          <WrappedCard list={list} />
+        </div>
       </div>
 
       {profile && (
