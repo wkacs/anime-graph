@@ -19,7 +19,9 @@ export default function TonightPicker() {
 
   useEffect(() => {
     if (!open || rows.length) return
-    fetch('/api/anime').then((r) => r.json()).then((j) => setRows(j.anime ?? []))
+    fetch('/api/anime').then((r) => r.json()).then((j) =>
+      setRows(((j.anime ?? []) as (TonightAnime & { mediaType?: string })[])
+        .filter((a) => a.mediaType !== 'MANGA')))
   }, [open, rows.length])
 
   function roll(m: TonightMood) {

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
+import { filterByMedia, type MediaMode } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
 
@@ -9,10 +10,17 @@ type SortKey = 'titleRomaji' | 'year' | 'studio' | 'status' | 'myScore'
 
 const FILTERS = ['all', 'watching', 'completed', 'planned', 'dropped'] as const
 
+const MEDIA_MODES: { value: MediaMode; label: string }[] = [
+  { value: 'ANIME', label: 'Anime' },
+  { value: 'MANGA', label: 'Manga' },
+  { value: 'ALL', label: 'Mind' },
+]
+
 export default function ListaPage() {
   const [list, setList] = useState<ApiAnime[]>([])
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all')
+  const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
   const [sortKey, setSortKey] = useState<SortKey>('titleRomaji')
   const [sortDir, setSortDir] = useState<1 | -1>(1)
   const router = useRouter()
@@ -52,7 +60,7 @@ export default function ListaPage() {
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return list
+    return filterByMedia(list, mediaMode)
       .filter((a) => filter === 'all' || a.status === filter)
       .filter((a) =>
         !needle ||
@@ -65,7 +73,7 @@ export default function ListaPage() {
         if (bv == null) return -1
         return (av < bv ? -1 : av > bv ? 1 : 0) * sortDir
       })
-  }, [list, q, filter, sortKey, sortDir])
+  }, [list, q, filter, sortKey, sortDir, mediaMode])
 
   const Th = ({ k, children, className = '' }: { k: SortKey; children: React.ReactNode; className?: string }) => (
     <th className={`px-3 py-2.5 text-left ${className}`}>
@@ -82,6 +90,19 @@ export default function ListaPage() {
         <AddAnimeSearch onAdded={() => reload()} />
       </div>
       <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="flex rounded-full border border-white/10 overflow-hidden">
+          {MEDIA_MODES.map((m) => (
+            <button
+              key={m.value}
+              onClick={() => setMediaMode(m.value)}
+              className={`px-3 py-1.5 text-xs transition-colors ${
+                mediaMode === m.value ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-1">
           {FILTERS.map((f) => (
             <button
@@ -156,7 +177,7 @@ export default function ListaPage() {
           </tbody>
         </table>
       </div>
-      <p className="label-mono mt-3 text-right">{rows.length} / {list.length} anime</p>
+      <p className="label-mono mt-3 text-right">{rows.length} / {list.length} cím</p>
 
       {undoBundle && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass-strong rounded-2xl px-5 py-3 flex items-center gap-4 text-sm">

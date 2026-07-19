@@ -13,7 +13,12 @@ export async function POST(req: NextRequest) {
 
   let entries
   try {
-    entries = await fetchUserList(username)
+    // anime + manga lista együtt (a manga-hívás hibája nem dönti be az importot)
+    const [animeList, mangaList] = await Promise.all([
+      fetchUserList(username),
+      fetchUserList(username, 'MANGA').catch(() => []),
+    ])
+    entries = [...animeList, ...mangaList]
   } catch (e) {
     return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
   }

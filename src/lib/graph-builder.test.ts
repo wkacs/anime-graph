@@ -1,10 +1,19 @@
 import { describe, it, expect } from 'vitest'
-import { buildGraph, scoreBand, type GraphAnime } from './graph-builder'
+import { buildGraph, filterByMedia, scoreBand, type GraphAnime } from './graph-builder'
 
 const mk = (over: Partial<GraphAnime>): GraphAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
   genres: ['Action'], studio: 'MAPPA', year: 2020, status: 'completed',
   myScore: 8, relations: [], ...over,
+})
+
+describe('filterByMedia', () => {
+  it('szűr mediaType-ra, ALL mindent visszaad', () => {
+    const rows = [{ mediaType: 'ANIME' }, { mediaType: 'MANGA' }, { mediaType: 'ANIME' }]
+    expect(filterByMedia(rows, 'ANIME')).toHaveLength(2)
+    expect(filterByMedia(rows, 'MANGA')).toHaveLength(1)
+    expect(filterByMedia(rows, 'ALL')).toHaveLength(3)
+  })
 })
 
 describe('scoreBand', () => {

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ anime: existing[0] })
   }
-  const media = await fetchMedia(anilistId)
+  const media = await fetchMedia(anilistId, true) // típus-szűrő nélkül: manga-id-ra is működik
   const [row] = await db.insert(anime)
     .values({ ...mapMedia(media), ...userFields, userId })
     .returning()

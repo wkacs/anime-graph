@@ -5,7 +5,7 @@ import { buildVibeMessages, parseVibe, type VibeOwnAnime } from '@/lib/vibe'
 import { searchAnime } from '@/lib/anilist'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { glmChat } from '@/lib/glm'
 
 // GLM only names new titles — attach real AniList data so the cards are
@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Írj be egy kérést vagy válassz animét' }, { status: 400 })
   }
 
-  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
+  const rows = await db.select().from(anime)
+    .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   if (!rows.length) return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
   const factRows = await db.select().from(tasteMemory).where(eq(tasteMemory.userId, userId))
 

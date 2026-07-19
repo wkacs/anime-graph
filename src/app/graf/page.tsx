@@ -6,8 +6,8 @@ import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import RecommendMorph from '@/components/RecommendMorph'
 import {
-  buildBubbles, buildGenreDetail, buildGraph, buildTimeline,
-  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig, type GraphNode,
+  buildBubbles, buildGenreDetail, buildGraph, buildTimeline, filterByMedia,
+  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type GraphConfig, type GraphNode, type MediaMode,
 } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
@@ -15,6 +15,13 @@ import type { ApiAnime, ApiFact } from '@/lib/types'
 const CONFIG_KEY = 'anime-graph-config'
 const VIEW_KEY = 'anime-graph-view'
 const HINT_KEY = 'anime-graph-hint-seen'
+const MEDIA_KEY = 'anime-graph-media'
+
+const MEDIA_MODES: { value: MediaMode; label: string }[] = [
+  { value: 'ANIME', label: 'Anime' },
+  { value: 'MANGA', label: 'Manga' },
+  { value: 'ALL', label: 'Mind' },
+]
 
 export default function GrafPage() {
   const [animeList, setAnimeList] = useState<ApiAnime[]>([])
@@ -30,12 +37,15 @@ export default function GrafPage() {
   const [showHint, setShowHint] = useState(false)
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
+  const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
   const router = useRouter()
 
   useEffect(() => {
     const saved = localStorage.getItem(CONFIG_KEY)
     if (saved) try { setConfig(JSON.parse(saved)) } catch { /* keep default */ }
     setAdvanced(localStorage.getItem(VIEW_KEY) === 'advanced')
+    const savedMedia = localStorage.getItem(MEDIA_KEY)
+    if (savedMedia === 'MANGA' || savedMedia === 'ALL') setMediaMode(savedMedia)
     setShowHint(!localStorage.getItem(HINT_KEY))
     if (saved) { setLoaded(true); return }
     fetch('/api/settings')
@@ -94,14 +104,14 @@ export default function GrafPage() {
   )
   const maxYear = new Date().getFullYear()
 
-  const rows = useMemo(() => animeList
+  const rows = useMemo(() => filterByMedia(animeList, mediaMode)
     .filter((a) => yearCutoff == null || watchYear(a) <= yearCutoff)
     .map((a) => ({
       id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
       coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
       status: a.status, myScore: a.myScore, relations: a.relations,
       tags: a.tags, watchedAt: a.watchedAt, createdAt: a.createdAt,
-    })), [animeList, yearCutoff])
+    })), [animeList, yearCutoff, mediaMode])
 
   const graph = useMemo(() => {
     if (timelineMode) return buildTimeline(rows)
@@ -175,6 +185,24 @@ export default function GrafPage() {
 
       <div className="fixed bottom-4 left-4 z-20 flex items-end gap-2">
         {advanced && !timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
+        <div className="glass rounded-full p-1 flex">
+          {MEDIA_MODES.map((m) => (
+            <button
+              key={m.value}
+              onClick={() => {
+                setMediaMode(m.value)
+                localStorage.setItem(MEDIA_KEY, m.value)
+                setFocusGenre(null)
+                setFitKey(Date.now())
+              }}
+              className={`rounded-full px-3 py-1.5 label-mono transition-colors ${
+                mediaMode === m.value ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
         {!timelineMode && (
           <button
             onClick={() => setView(!advanced)}

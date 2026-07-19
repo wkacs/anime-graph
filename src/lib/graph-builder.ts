@@ -26,6 +26,12 @@ export const DIM_LABELS: Record<Dimension, string> = {
   status: 'Státusz',
 }
 
+export type MediaMode = 'ANIME' | 'MANGA' | 'ALL'
+
+export function filterByMedia<T extends { mediaType: string }>(rows: T[], mode: MediaMode): T[] {
+  return mode === 'ALL' ? rows : rows.filter((r) => r.mediaType === mode)
+}
+
 export type GraphAnime = {
   id: number
   anilistId: number

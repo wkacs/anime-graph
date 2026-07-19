@@ -47,9 +47,9 @@ export async function anilistFetch<T>(query: string, variables: Record<string, u
 }
 
 const SEARCH_QUERY = `
-query ($search: String!) {
+query ($search: String!, $type: MediaType!) {
   Page(perPage: 10) {
-    media(search: $search, type: ANIME) {
+    media(search: $search, type: $type) {
       id
       title { romaji english }
       coverImage { large }
@@ -60,9 +60,9 @@ query ($search: String!) {
   }
 }`
 
-export async function searchAnime(q: string): Promise<SearchResult[]> {
+export async function searchAnime(q: string, type: 'ANIME' | 'MANGA' = 'ANIME'): Promise<SearchResult[]> {
   type R = { Page: { media: { id: number; title: { romaji: string; english: string | null }; coverImage: { large: string | null } | null; seasonYear: number | null; format: string | null; genres: string[] }[] } }
-  const data = await anilistFetch<R>(SEARCH_QUERY, { search: q })
+  const data = await anilistFetch<R>(SEARCH_QUERY, { search: q, type })
   return data.Page.media.map((m) => ({
     anilistId: m.id,
     titleRomaji: m.title.romaji,
@@ -152,8 +152,8 @@ export type AnilistListEntry = {
 }
 
 const LIST_QUERY = `
-query ($userName: String!) {
-  MediaListCollection(userName: $userName, type: ANIME) {
+query ($userName: String!, $type: MediaType!) {
+  MediaListCollection(userName: $userName, type: $type) {
     lists {
       entries {
         status
@@ -167,9 +167,9 @@ query ($userName: String!) {
   }
 }`
 
-export async function fetchUserList(userName: string): Promise<AnilistListEntry[]> {
+export async function fetchUserList(userName: string, type: 'ANIME' | 'MANGA' = 'ANIME'): Promise<AnilistListEntry[]> {
   type R = { MediaListCollection: { lists: { entries: AnilistListEntry[] }[] } | null }
-  const data = await anilistFetch<R>(LIST_QUERY, { userName })
+  const data = await anilistFetch<R>(LIST_QUERY, { userName, type })
   if (!data.MediaListCollection) return []
   return data.MediaListCollection.lists.flatMap((l) => l.entries)
 }

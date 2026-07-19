@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { stripHtml } from '@/lib/description'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { AnimeTheme } from '@/lib/themes'
 import type { ApiAnime, ApiFact } from '@/lib/types'
@@ -182,8 +183,10 @@ export default function AnimePage() {
               {[
                 anime.year != null ? String(anime.year) : null,
                 anime.format,
-                anime.episodes != null ? `${anime.episodes} rész` : null,
-                anime.durationMin != null ? `${anime.durationMin} perc` : null,
+                anime.mediaType === 'MANGA'
+                  ? (anime.chapters != null ? `${anime.chapters} fejezet` : anime.volumes != null ? `${anime.volumes} kötet` : null)
+                  : (anime.episodes != null ? `${anime.episodes} rész` : null),
+                anime.mediaType !== 'MANGA' && anime.durationMin != null ? `${anime.durationMin} perc` : null,
                 anime.studio,
                 anime.avgScore != null ? `AniList ${anime.avgScore}%` : null,
                 anime.rewatchCount > 0 ? `↻ ×${anime.rewatchCount} újranézve` : null,
@@ -208,7 +211,7 @@ export default function AnimePage() {
                 </a>
               ))}
               <a
-                href={`https://anilist.co/anime/${anime.anilistId}`}
+                href={`https://anilist.co/${anime.mediaType === 'MANGA' ? 'manga' : 'anime'}/${anime.anilistId}`}
                 target="_blank" rel="noreferrer"
                 className="text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20"
               >AniList ↗</a>
@@ -229,13 +232,13 @@ export default function AnimePage() {
             </select>
           </label>
           <label className="flex items-center gap-2 text-sm text-text-2">
-            Rész
+            {anime.mediaType === 'MANGA' ? 'Fejezet' : 'Rész'}
             <input
               type="number" min={0} value={anime.progress}
               onChange={(e) => patch({ progress: Number(e.target.value) })}
               className="field w-20 px-3 py-1.5 text-sm"
             />
-            <span className="text-text-3">/ {anime.episodes ?? '?'}</span>
+            <span className="text-text-3">/ {(anime.mediaType === 'MANGA' ? anime.chapters : anime.episodes) ?? '?'}</span>
           </label>
           <label className="flex items-center gap-2 text-sm text-text-2">
             Pontom
@@ -256,6 +259,14 @@ export default function AnimePage() {
             </button>
           )}
         </section>
+
+        {/* description */}
+        {anime.description && (
+          <section className="glass rounded-3xl p-5">
+            <p className="label-mono mb-2">Leírás</p>
+            <p className="text-sm text-text-1 leading-relaxed">{stripHtml(anime.description)}</p>
+          </section>
+        )}
 
         {/* opinion */}
         <section className="glass rounded-3xl p-5">

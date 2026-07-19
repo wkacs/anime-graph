@@ -20,6 +20,7 @@ export default function AddAnimeSearch({
   onPickOwn?: (anime: ApiAnime) => void
 }) {
   const [q, setQ] = useState('')
+  const [mediaType, setMediaType] = useState<'ANIME' | 'MANGA'>('ANIME')
   const [results, setResults] = useState<SearchResult[]>([])
   const [busy, setBusy] = useState<number | null>(null)
 
@@ -34,11 +35,11 @@ export default function AddAnimeSearch({
   useEffect(() => {
     if (q.trim().length < 2) { setResults([]); return }
     const t = setTimeout(async () => {
-      const res = await fetch(`/api/anilist/search?q=${encodeURIComponent(q.trim())}`)
+      const res = await fetch(`/api/anilist/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}`)
       if (res.ok) setResults((await res.json()).results)
     }, 400)
     return () => clearTimeout(t)
-  }, [q])
+  }, [q, mediaType])
 
   async function add(anilistId: number, status: string) {
     setBusy(anilistId)
@@ -58,12 +59,27 @@ export default function AddAnimeSearch({
 
   return (
     <div className="w-[min(85vw,20rem)] relative text-sm">
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Anime hozzáadása…"
-        className="field glass w-full rounded-full px-4 py-2.5"
-      />
+      <div className="relative">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={mediaType === 'ANIME' ? 'Anime hozzáadása…' : 'Manga hozzáadása…'}
+          className="field glass w-full rounded-full px-4 py-2.5 pr-24"
+        />
+        <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex rounded-full border border-white/10 overflow-hidden">
+          {(['ANIME', 'MANGA'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setMediaType(t)}
+              className={`px-2 py-1 text-[9px] font-mono uppercase tracking-wide transition-colors ${
+                mediaType === t ? 'bg-white/10 text-text-1' : 'text-text-3 hover:text-text-1'
+              }`}
+            >
+              {t === 'ANIME' ? 'A' : 'M'}
+            </button>
+          ))}
+        </div>
+      </div>
       {(results.length > 0 || ownMatches.length > 0) && (
         <ul className="glass-strong absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
           {ownMatches.length > 0 && (
