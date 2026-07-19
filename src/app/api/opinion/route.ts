@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, opinions, tasteMemory } from '@/db/schema'
+import { anime, opinions, recommendations, tasteMemory } from '@/db/schema'
 import { extractFacts } from '@/lib/extract'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
@@ -55,6 +55,10 @@ export async function POST(req: NextRequest) {
       facts.map((f) => ({ userId, animeId, kind: f.kind, text: f.text, source: 'opinion' })),
     ).returning()
     await db.update(opinions).set({ extractStatus: 'done' }).where(eq(opinions.animeId, animeId))
+    // új ízlés-tények → a korszak-cache elavult
+    await db.delete(recommendations).where(
+      and(eq(recommendations.userId, userId), eq(recommendations.kind, 'taste-eras')),
+    )
     return NextResponse.json({ extractStatus: 'done', facts: inserted })
   } catch (e) {
     await db.update(opinions).set({ extractStatus: 'failed' }).where(eq(opinions.animeId, animeId))

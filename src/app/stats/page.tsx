@@ -2,12 +2,71 @@
 import { useEffect, useMemo, useState } from 'react'
 import WrappedCard from '@/components/WrappedCard'
 import { buildHeatmapCells, type HeatCell } from '@/lib/heatmap'
+import { monthlyEvolution } from '@/lib/evolution'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
 
 const HEAT_ALPHA = [0.05, 0.22, 0.42, 0.65, 0.95]
 
 const STATUS_ORDER = ['completed', 'watching', 'planned', 'dropped'] as const
+
+function ErasBlock() {
+  const [eras, setEras] = useState<{ label: string; summary: string; from: string; to: string }[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    fetch('/api/taste/eras').then((r) => r.json()).then((j) => setEras(j.eras ?? null)).catch(() => {})
+  }, [])
+  async function run() {
+    setLoading(true); setError('')
+    const res = await fetch('/api/taste/eras', { method: 'POST' })
+    const json = await res.json()
+    setLoading(false)
+    if (!res.ok) { setError(json.error ?? 'Hiba történt'); return }
+    setEras(json.eras)
+  }
+  return (
+    <div className="mt-4">
+      <div className="flex items-center justify-between">
+        <p className="label-mono">Korszakaim</p>
+        <button onClick={run} disabled={loading} className="btn-ghost border border-white/10 px-3 py-1.5 text-xs">
+          {loading ? 'AI gondolkodik…' : eras ? 'Frissítés' : 'AI-korszakok'}
+        </button>
+      </div>
+      {error && <p className="text-xs text-[color:var(--status-dropped)] mt-2">{error}</p>}
+      {eras && (
+        <ol className="mt-3 flex flex-col gap-2">
+          {eras.map((e) => (
+            <li key={e.label} className="rounded-2xl bg-white/4 p-3">
+              <p className="text-sm font-medium">{e.label} <span className="label-mono ml-1">{e.from} → {e.to}</span></p>
+              <p className="text-xs text-text-2 mt-1">{e.summary}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  )
+}
+
+function EvolutionSection({ list }: { list: ApiAnime[] }) {
+  const pts = monthlyEvolution(list.map((a) => ({ watchedAt: a.watchedAt, createdAt: a.createdAt, myScore: a.myScore }))).slice(-18)
+  const max = Math.max(...pts.map((p) => p.count), 1)
+  if (pts.length < 2) return null
+  return (
+    <section className="glass rounded-3xl p-5">
+      <p className="label-mono mb-3">Ízlés-evolúció — havi ütem</p>
+      <div className="flex items-end gap-1.5 h-28">
+        {pts.map((p) => (
+          <div key={p.month} className="flex-1 flex flex-col items-center justify-end gap-1 h-full" title={`${p.month}: ${p.count} cím${p.avgScore != null ? `, átlag ${p.avgScore}` : ''}`}>
+            <div className="w-full rounded-t-md bg-white/15" style={{ height: `${(p.count / max) * 100}%` }} />
+            {p.avgScore != null && <span className="font-mono text-[9px] text-text-3">{p.avgScore}</span>}
+          </div>
+        ))}
+      </div>
+      <ErasBlock />
+    </section>
+  )
+}
 
 function StatTile({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
@@ -257,6 +316,8 @@ export default function StatsPage() {
           </ul>
         </section>
       </div>
+
+      <EvolutionSection list={list} />
 
       {heatCells.some((c) => c.count > 0) && (
         <section className="glass rounded-3xl p-5">
