@@ -4,7 +4,7 @@ import { buildBubbles, buildGenreDetail, type GraphAnime } from './graph-builder
 const mk = (over: Partial<GraphAnime>): GraphAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
   genres: ['Action'], studio: 'MAPPA', year: 2020, status: 'completed',
-  myScore: 8, elo: 1200, relations: [], ...over,
+  myScore: 8, relations: [], ...over,
 })
 
 describe('buildBubbles', () => {

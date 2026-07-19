@@ -1,25 +1,26 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, duels, tasteMemory, recommendations } from '@/db/schema'
+import { anime, tasteMemory, recommendations } from '@/db/schema'
 import { fetchRecommendationsFor, type RecCandidate } from '@/lib/anilist'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
 import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
-import { desc, eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 export async function POST() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const rows = await db.select().from(anime).where(eq(anime.userId, userId))
+  const rows = await db.select().from(anime)
+    .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   if (!rows.length) {
     return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
   }
 
-  // top 5 by my score (fallback elo) → pull AniList recommendations for each
+  // top 5 by my score → pull AniList recommendations for each
   const top = [...rows]
-    .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0) || b.elo - a.elo)
+    .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0))
     .slice(0, 5)
   const pools = await Promise.allSettled(top.map((t) => fetchRecommendationsFor(t.anilistId)))
   const candidates: RecCandidate[] = pools
@@ -44,22 +45,8 @@ export async function POST() {
     title: f.animeId != null ? titleById.get(f.animeId) ?? null : null,
   }))
 
-  // duel-derived signals: only meaningful once actual duels happened
-  const duelRows = await db.select().from(duels)
-    .where(eq(duels.userId, userId))
-    .orderBy(desc(duels.createdAt)).limit(8)
   const extras = {
-    eloTop: duelRows.length
-      ? [...rows].sort((a, b) => b.elo - a.elo).slice(0, 5).map((r) => r.titleRomaji)
-      : [],
     dropped: rows.filter((r) => r.status === 'dropped').slice(0, 8).map((r) => r.titleRomaji),
-    recentDuels: duelRows
-      .map((d) => {
-        const w = titleById.get(d.winnerId)
-        const l = titleById.get(d.loserId)
-        return w && l ? `${w} > ${l}` : null
-      })
-      .filter((x): x is string => x !== null),
   }
 
   try {

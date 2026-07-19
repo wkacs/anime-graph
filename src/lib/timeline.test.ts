@@ -4,7 +4,7 @@ import { buildTimeline, type TimelineAnime } from './graph-builder'
 const mk = (over: Partial<TimelineAnime>): TimelineAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
   genres: ['Action'], studio: 'MAPPA', year: 2020, status: 'completed',
-  myScore: 8, elo: 1200, relations: [],
+  myScore: 8, relations: [],
   watchedAt: '2024-03-10T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z',
   ...over,
 })

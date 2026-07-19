@@ -7,13 +7,13 @@ const cand = (id: number, genres: string[], avgScore = 70): RecCandidate => ({
 })
 
 describe('genreWeights', () => {
-  it('weights genres by score above/below neutral 5 and elo offset', () => {
+  it('weights genres by score above/below neutral 5', () => {
     const w = genreWeights([
-      { genres: ['Action'], myScore: 9, elo: 1200 },   // +4
-      { genres: ['Drama'], myScore: 3, elo: 1200 },    // -2
-      { genres: ['Action'], myScore: null, elo: 1400 }, // 0 + 0.5
+      { genres: ['Action'], myScore: 9 },   // +4
+      { genres: ['Drama'], myScore: 3 },    // -2
+      { genres: ['Action'], myScore: null }, // 0
     ])
-    expect(w.get('Action')).toBeCloseTo(4.5)
+    expect(w.get('Action')).toBeCloseTo(4)
     expect(w.get('Drama')).toBeCloseTo(-2)
   })
 })

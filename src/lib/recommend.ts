@@ -18,9 +18,7 @@ Válaszolj KIZÁRÓLAG JSON-nal: {"picks":[{"anilistId":szám,"reason":"indoklá
 Csak a jelöltlistában szereplő anilistId-ket használhatod.`
 
 export type RecommendExtras = {
-  eloTop?: string[]      // duel-rangsor élmezőnye
   dropped?: string[]     // amit félbehagyott — negatív jel
-  recentDuels?: string[] // "A > B" formában
 }
 
 export function buildRecommendMessages(
@@ -36,8 +34,6 @@ export function buildRecommendMessages(
     `- (${f.kind}${f.title ? `, ${f.title}` : ''}) ${f.text}`,
   ).join('\n')
   const extraBlocks = [
-    extras.eloTop?.length ? `Párbaj-rangsorom éle (ezek nyernek nálam fej-fej mellett):\n${extras.eloTop.join(', ')}` : null,
-    extras.recentDuels?.length ? `Friss párbaj-döntéseim:\n${extras.recentDuels.map((d) => `- ${d}`).join('\n')}` : null,
     extras.dropped?.length ? `Ezeket FÉLBEHAGYTAM (kerüld a hasonlókat):\n${extras.dropped.join(', ')}` : null,
   ].filter(Boolean).join('\n\n')
   return [

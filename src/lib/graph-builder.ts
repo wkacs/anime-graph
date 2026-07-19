@@ -5,7 +5,6 @@ export type CoverMode = 'auto' | 'on' | 'off'
 export type GraphConfig = {
   levels: Dimension[]
   crossLinks: boolean
-  sizeBy: 'score' | 'elo'
   // node detail: 'auto' shows covers+names only under the perf threshold
   covers?: CoverMode
 }
@@ -13,7 +12,6 @@ export type GraphConfig = {
 export const DEFAULT_CONFIG: GraphConfig = {
   levels: ['genre', 'studio'],
   crossLinks: true,
-  sizeBy: 'score',
   covers: 'auto',
 }
 
@@ -38,7 +36,6 @@ export type GraphAnime = {
   year: number | null
   status: string
   myScore: number | null
-  elo: number
   relations: { type: string; anilistId: number }[]
   tags?: { name: string; rank: number }[]
 }
@@ -113,7 +110,7 @@ export function buildBubbles(rows: GraphAnime[]): { nodes: GraphNode[]; links: G
     bubble: true,
     covers: [...list]
       .filter((a) => a.coverUrl)
-      .sort((x, y) => (y.myScore ?? 0) - (x.myScore ?? 0) || y.elo - x.elo)
+      .sort((x, y) => (y.myScore ?? 0) - (x.myScore ?? 0))
       .slice(0, 3)
       .map((a) => a.coverUrl!),
   }))
@@ -273,7 +270,7 @@ export function buildGraph(rows: GraphAnime[], cfg: GraphConfig): { nodes: Graph
       type: 'anime',
       label: a.titleRomaji,
       img: a.coverUrl ?? undefined,
-      val: cfg.sizeBy === 'elo' ? a.elo / 150 : (a.myScore ?? 5),
+      val: a.myScore ?? 5,
       status: a.status,
       animeId: a.id,
     })

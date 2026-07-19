@@ -61,7 +61,7 @@ async function drawWrapped(list: ApiAnime[]): Promise<string> {
   // top 5 covers
   const top = [...list]
     .filter((a) => a.coverUrl)
-    .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0) || b.elo - a.elo)
+    .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0))
     .slice(0, 5)
   ctx.fillStyle = 'rgba(250,250,250,0.55)'
   ctx.font = '600 26px Geist Mono, monospace'

@@ -4,7 +4,7 @@ import { buildGraph, scoreBand, type GraphAnime } from './graph-builder'
 const mk = (over: Partial<GraphAnime>): GraphAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
   genres: ['Action'], studio: 'MAPPA', year: 2020, status: 'completed',
-  myScore: 8, elo: 1200, relations: [], ...over,
+  myScore: 8, relations: [], ...over,
 })
 
 describe('scoreBand', () => {
@@ -23,7 +23,7 @@ describe('buildGraph', () => {
       mk({ id: 1, anilistId: 100, studio: 'MAPPA' }),
       mk({ id: 2, anilistId: 200, titleRomaji: 'B', studio: 'Bones' }),
     ]
-    const g = buildGraph(rows, { levels: ['genre', 'studio'], crossLinks: false, sizeBy: 'score' })
+    const g = buildGraph(rows, { levels: ['genre', 'studio'], crossLinks: false })
     const ids = g.nodes.map((n) => n.id).sort()
     expect(ids).toEqual([
       'anime:1', 'anime:2',
@@ -39,14 +39,14 @@ describe('buildGraph', () => {
       mk({ id: 1, genres: ['Action'] }),
       mk({ id: 2, anilistId: 200, genres: ['Drama'] }),
     ]
-    const g = buildGraph(rows, { levels: ['genre', 'studio'], crossLinks: false, sizeBy: 'score' })
+    const g = buildGraph(rows, { levels: ['genre', 'studio'], crossLinks: false })
     const studioNodes = g.nodes.filter((n) => n.dim === 'studio')
     expect(studioNodes.map((n) => n.id).sort()).toEqual(['dim:studio:Action/MAPPA', 'dim:studio:Drama/MAPPA'])
     expect(studioNodes.every((n) => n.label === 'MAPPA')).toBe(true)
   })
 
   it('empty levels → only anime nodes, no chain links', () => {
-    const g = buildGraph([mk({})], { levels: [], crossLinks: false, sizeBy: 'score' })
+    const g = buildGraph([mk({})], { levels: [], crossLinks: false })
     expect(g.nodes).toHaveLength(1)
     expect(g.links).toHaveLength(0)
   })
@@ -57,18 +57,13 @@ describe('buildGraph', () => {
       mk({ id: 2, anilistId: 200, titleRomaji: 'B', relations: [{ type: 'PREQUEL', anilistId: 100 }] }),
       mk({ id: 3, anilistId: 300, titleRomaji: 'C', relations: [{ type: 'SEQUEL', anilistId: 999 }] }),
     ]
-    const g = buildGraph(rows, { levels: [], crossLinks: true, sizeBy: 'score' })
+    const g = buildGraph(rows, { levels: [], crossLinks: true })
     const rel = g.links.filter((l) => l.kind === 'relation')
     expect(rel).toEqual([{ source: 'anime:1', target: 'anime:2', kind: 'relation' }])
   })
 
-  it('sizeBy elo uses elo for node val', () => {
-    const g = buildGraph([mk({ elo: 1500 })], { levels: [], crossLinks: false, sizeBy: 'elo' })
-    expect(g.nodes[0].val).toBeCloseTo(1500 / 150)
-  })
-
   it('anime with no genre falls into Ismeretlen', () => {
-    const g = buildGraph([mk({ genres: [] })], { levels: ['genre'], crossLinks: false, sizeBy: 'score' })
+    const g = buildGraph([mk({ genres: [] })], { levels: ['genre'], crossLinks: false })
     expect(g.nodes.some((n) => n.id === 'dim:genre:Ismeretlen')).toBe(true)
   })
 })

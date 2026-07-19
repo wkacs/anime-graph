@@ -213,9 +213,6 @@ export default function NewsPage() {
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <p className="label-mono">A szezon</p>
-          <Link href="/szezon" className="label-mono hover:text-text-1 transition-colors">
-            Ízlés-pontozás →
-          </Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {data.seasonItems.map((s, i) => (

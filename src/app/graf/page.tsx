@@ -99,7 +99,7 @@ export default function GrafPage() {
     .map((a) => ({
       id: a.id, anilistId: a.anilistId, titleRomaji: a.titleRomaji,
       coverUrl: a.coverUrl, genres: a.genres, studio: a.studio, year: a.year,
-      status: a.status, myScore: a.myScore, elo: a.elo, relations: a.relations,
+      status: a.status, myScore: a.myScore, relations: a.relations,
       tags: a.tags, watchedAt: a.watchedAt, createdAt: a.createdAt,
     })), [animeList, yearCutoff])
 

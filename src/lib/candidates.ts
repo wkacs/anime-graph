@@ -1,14 +1,13 @@
 import type { RecCandidate } from './anilist'
 
 export function genreWeights(
-  rows: { genres: string[]; myScore: number | null; elo: number }[],
+  rows: { genres: string[]; myScore: number | null }[],
 ): Map<string, number> {
   const w = new Map<string, number>()
   for (const r of rows) {
     const scorePart = r.myScore != null ? r.myScore - 5 : 0
-    const eloPart = (r.elo - 1200) / 400
     for (const g of r.genres) {
-      w.set(g, (w.get(g) ?? 0) + scorePart + eloPart)
+      w.set(g, (w.get(g) ?? 0) + scorePart)
     }
   }
   return w

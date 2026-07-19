@@ -28,19 +28,13 @@ describe('buildRecommendMessages', () => {
     expect(msgs[1].content).toContain('FMA:B')
   })
 
-  it('includes elo top, recent duels and dropped titles when provided', () => {
+  it('includes dropped titles when provided', () => {
     const msgs = buildRecommendMessages(
       [{ anilistId: 5, title: 'X', coverUrl: null, genres: [], avgScore: null }],
       [],
       [],
-      {
-        eloTop: ['Steins;Gate', 'FMA:B'],
-        recentDuels: ['Steins;Gate > Frieren'],
-        dropped: ['Rail Wars!'],
-      },
+      { dropped: ['Rail Wars!'] },
     )
-    expect(msgs[1].content).toContain('Párbaj-rangsorom')
-    expect(msgs[1].content).toContain('Steins;Gate > Frieren')
     expect(msgs[1].content).toContain('FÉLBEHAGYTAM')
     expect(msgs[1].content).toContain('Rail Wars!')
   })

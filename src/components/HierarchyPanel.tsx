@@ -76,17 +76,6 @@ export default function HierarchyPanel({
         />
         Sequel/prequel élek
       </label>
-      <label className="flex items-center gap-2 mb-2 text-text-2">
-        Méret:
-        <select
-          value={config.sizeBy}
-          onChange={(e) => onChange({ ...config, sizeBy: e.target.value as GraphConfig['sizeBy'] })}
-          className="field px-2 py-1 text-xs"
-        >
-          <option value="score">Pontszám</option>
-          <option value="elo">Elo</option>
-        </select>
-      </label>
       <label className="flex items-center gap-2 text-text-2" title="Auto: sok animénél kisebb borító, név nélkül (a név hoverre így is látszik). Teljes: mindig nagy borító + név. Csak pöttyök: leggyorsabb.">
         Nézet:
         <select

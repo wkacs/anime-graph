@@ -18,7 +18,7 @@ async function generate(userId: number) {
   for (const a of rows) for (const g of a.genres) genreCounts.set(g, (genreCounts.get(g) ?? 0) + 1)
   const topGenres = [...genreCounts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5).map(([g]) => g)
   const topTitles = [...rows]
-    .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0) || b.elo - a.elo)
+    .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0))
     .slice(0, 5).map((r) => r.titleRomaji)
   const facts = factRows.map((f) => `(${f.kind}) ${f.text}`).slice(0, 60)
 

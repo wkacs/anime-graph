@@ -7,9 +7,7 @@ const TABS: { href: string; label: string; soon?: boolean }[] = [
   { href: '/graf', label: 'Gráf' },
   { href: '/lista', label: 'Lista' },
   { href: '/vibe', label: 'Vibe' },
-  { href: '/duel', label: 'Duel' },
   { href: '/stats', label: 'Stats' },
-  { href: '/szezon', label: 'Szezon' },
   { href: '/vs', label: 'VS' },
 ]
 
