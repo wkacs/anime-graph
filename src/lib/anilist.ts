@@ -217,12 +217,23 @@ query ($id: Int!) {
   }
 }`
 
+export type StreamLink = { site: string; url: string }
+
+type RawExternalLink = { site: string; url: string | null; type: string }
+
+const mapStreaming = (links: RawExternalLink[] | null | undefined): StreamLink[] =>
+  (links ?? [])
+    .filter((l): l is RawExternalLink & { url: string } => l.type === 'STREAMING' && !!l.url)
+    .slice(0, 3)
+    .map((l) => ({ site: l.site, url: l.url }))
+
 export type SeasonMedia = RecCandidate & {
   episodes: number | null
   format: string | null
   description: string | null
   airingAt: number | null // unix seconds of the next episode, null if not airing
   nextEpisode: number | null
+  streaming: StreamLink[]
 }
 
 const SEASON_QUERY = `
@@ -238,12 +249,13 @@ query ($season: MediaSeason!, $seasonYear: Int!) {
       format
       description
       nextAiringEpisode { airingAt episode }
+      externalLinks { site url type }
     }
   }
 }`
 
 export async function fetchSeason(season: string, seasonYear: number): Promise<SeasonMedia[]> {
-  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; episodes: number | null; format: string | null; description: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null }[] } }
+  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; episodes: number | null; format: string | null; description: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null; externalLinks: RawExternalLink[] | null }[] } }
   const data = await anilistFetch<R>(SEASON_QUERY, { season, seasonYear })
   return data.Page.media.map((m) => ({
     anilistId: m.id,
@@ -256,6 +268,7 @@ export async function fetchSeason(season: string, seasonYear: number): Promise<S
     description: m.description,
     airingAt: m.nextAiringEpisode?.airingAt ?? null,
     nextEpisode: m.nextAiringEpisode?.episode ?? null,
+    streaming: mapStreaming(m.externalLinks),
   }))
 }
 
@@ -305,6 +318,7 @@ export type BrowseMedia = {
   format: string | null
   year: number | null
   description: string | null
+  streaming: StreamLink[]
 }
 
 const BROWSE_QUERY = `
@@ -325,12 +339,13 @@ query ($type: MediaType!, $sort: [MediaSort], $page: Int!, $perPage: Int!, $sear
       seasonYear
       startDate { year }
       description
+      externalLinks { site url type }
     }
   }
 }`
 
 export async function fetchBrowse(variables: Record<string, unknown>): Promise<{ total: number; media: BrowseMedia[] }> {
-  type R = { Page: { pageInfo: { total: number }; media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; format: string | null; seasonYear: number | null; startDate: { year: number | null } | null; description: string | null }[] } }
+  type R = { Page: { pageInfo: { total: number }; media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; format: string | null; seasonYear: number | null; startDate: { year: number | null } | null; description: string | null; externalLinks: RawExternalLink[] | null }[] } }
   const data = await anilistFetch<R>(BROWSE_QUERY, variables)
   return {
     total: data.Page.pageInfo.total,
@@ -343,6 +358,7 @@ export async function fetchBrowse(variables: Record<string, unknown>): Promise<{
       format: m.format,
       year: m.seasonYear ?? m.startDate?.year ?? null,
       description: m.description,
+      streaming: mapStreaming(m.externalLinks),
     })),
   }
 }

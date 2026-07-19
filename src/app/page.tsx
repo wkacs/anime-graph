@@ -39,6 +39,7 @@ type SeasonItem = {
   owned: boolean
   tasteScore: number | null
   tasteReason: string | null
+  streaming?: { site: string; url: string }[]
 }
 
 type NewsData = {
@@ -324,6 +325,7 @@ export default function NewsPage() {
                 coverUrl={s.coverUrl}
                 genres={s.genres}
                 description={s.description}
+                streaming={s.streaming}
                 badge={s.tasteScore != null ? (
                   <span
                     className="glass rounded-full px-2 py-0.5 font-mono text-sm font-semibold tabular-nums"
@@ -374,6 +376,7 @@ export default function NewsPage() {
                 coverUrl={s.coverUrl}
                 genres={s.genres}
                 description={s.tasteReason}
+                streaming={s.streaming}
                 badge={
                   <span className="glass rounded-full px-2 py-0.5 font-mono text-sm font-semibold tabular-nums"
                     style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}>

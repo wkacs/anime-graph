@@ -209,6 +209,7 @@ export default function BrowsePage() {
                   coverUrl={m.coverUrl}
                   genres={m.genres}
                   description={m.description}
+                  streaming={m.streaming}
                   href={hrefFor(m)}
                   badge={m.avgScore != null ? (
                     <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">{m.avgScore}</span>
