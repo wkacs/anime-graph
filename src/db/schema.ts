@@ -32,6 +32,10 @@ export const anime = pgTable('anime', {
   episodes: integer('episodes'),
   durationMin: integer('duration_min'),
   format: text('format'),
+  mediaType: text('media_type').notNull().default('ANIME'), // ANIME | MANGA
+  chapters: integer('chapters'),
+  volumes: integer('volumes'),
+  description: text('description'), // AniList description (nyers HTML, strip megjelenítéskor)
   relations: jsonb('relations').$type<RelationEntry[]>().notNull().default([]),
   trailerSite: text('trailer_site'),
   trailerId: text('trailer_id'),
@@ -75,6 +79,22 @@ export const settings = pgTable('settings', {
   value: jsonb('value').notNull(),
 }, (t) => [
   primaryKey({ columns: [t.userId, t.key] }),
+])
+
+export const favoriteCharacters = pgTable('favorite_characters', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
+  charId: integer('char_id').notNull(), // AniList character id
+  name: text('name').notNull(),
+  image: text('image'),
+  vaId: integer('va_id'),
+  vaName: text('va_name'),
+  vaImage: text('va_image'),
+  animeId: integer('anime_id').notNull()
+    .references(() => anime.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('favchar_user_char_unique').on(t.userId, t.charId),
 ])
 
 export const duels = pgTable('duels', {

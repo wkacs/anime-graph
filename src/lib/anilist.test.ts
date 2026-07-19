@@ -3,9 +3,13 @@ import { mapMedia, type AnilistMedia } from './anilist'
 
 const fixture: AnilistMedia = {
   id: 9253,
+  type: 'ANIME',
   title: { romaji: 'Steins;Gate', english: 'Steins;Gate', native: 'シュタインズ・ゲート' },
   coverImage: { large: 'https://img.example/cover.jpg' },
   bannerImage: 'https://img.example/banner.jpg',
+  description: '<b>El Psy Kongroo.</b>',
+  chapters: null,
+  volumes: null,
   genres: ['Sci-Fi', 'Thriller'],
   tags: [{ name: 'Time Travel', rank: 95 }, { name: 'Male Protagonist', rank: 60 }],
   studios: { nodes: [{ name: 'White Fox' }] },
@@ -43,6 +47,21 @@ describe('mapMedia', () => {
     expect(row.relations).toEqual([
       { type: 'SEQUEL', anilistId: 21127, title: 'Steins;Gate 0' },
     ])
+  })
+
+  it('átveszi a mediaType/description/chapters/volumes mezőket', () => {
+    const row = mapMedia({
+      ...fixture,
+      type: 'MANGA',
+      description: '<b>Desc</b>',
+      chapters: 120,
+      volumes: 12,
+      episodes: null,
+    })
+    expect(row.mediaType).toBe('MANGA')
+    expect(row.description).toBe('<b>Desc</b>')
+    expect(row.chapters).toBe(120)
+    expect(row.volumes).toBe(12)
   })
 
   it('tolerates missing optional fields', () => {

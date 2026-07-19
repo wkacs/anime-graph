@@ -4,6 +4,7 @@ const API = 'https://graphql.anilist.co'
 
 export type AnilistMedia = {
   id: number
+  type: string | null
   title: { romaji: string; english: string | null; native: string | null }
   coverImage: { large: string | null } | null
   bannerImage: string | null
@@ -15,6 +16,9 @@ export type AnilistMedia = {
   episodes: number | null
   duration: number | null
   format: string | null
+  description: string | null
+  chapters: number | null
+  volumes: number | null
   averageScore: number | null
   trailer: { id: string; site: string } | null
   relations: { edges: { relationType: string; node: { id: number; type: string; title: { romaji: string } } }[] }
@@ -73,6 +77,7 @@ export async function searchAnime(q: string): Promise<SearchResult[]> {
 // shared media field selection — MEDIA_QUERY, list import and MAL batch all map through mapMedia
 const MEDIA_FIELDS = `
     id
+    type
     title { romaji english native }
     coverImage { large }
     bannerImage
@@ -84,6 +89,9 @@ const MEDIA_FIELDS = `
     episodes
     duration
     format
+    description
+    chapters
+    volumes
     averageScore
     trailer { id site }
     relations { edges { relationType node { id type title { romaji } } } }`
@@ -115,6 +123,10 @@ export function mapMedia(m: AnilistMedia): AnimeInsert {
     episodes: m.episodes,
     durationMin: m.duration,
     format: m.format,
+    mediaType: m.type ?? 'ANIME',
+    chapters: m.chapters,
+    volumes: m.volumes,
+    description: m.description,
     relations: m.relations.edges
       .filter((e) => e.node.type === 'ANIME')
       .map((e) => ({ type: e.relationType, anilistId: e.node.id, title: e.node.title.romaji })),
