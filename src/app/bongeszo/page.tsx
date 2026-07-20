@@ -52,11 +52,9 @@ export default function BrowsePage() {
   const setQuery = useCallback((v: string) => { setPage(0); setSearch(v) }, [])
   const setKind = useCallback((t: 'ANIME' | 'MANGA') => { setPage(0); setType(t) }, [])
 
-  // owned title -> its detail page; otherwise the existing preview page (M2b will
-  // replace these with canonical /anime|manga/[slug] links).
+  // canonical page serves both owned and not-owned (owner controls via overlay)
   function hrefFor(h: TitleHit): string {
-    const ownId = ownIds.get(h.anilistId)
-    return ownId != null ? `/anime/${ownId}` : `/anime/preview/${h.anilistId}`
+    return `/${h.mediaType === 'MANGA' ? 'manga' : 'anime'}/${h.slug}`
   }
 
   async function quickAdd(h: TitleHit, status: string) {

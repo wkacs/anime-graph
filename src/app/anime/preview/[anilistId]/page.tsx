@@ -1,12 +1,12 @@
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { db } from '@/db/client'
-import { anime } from '@/db/schema'
+import { title } from '@/db/schema'
 import { fetchMedia } from '@/lib/anilist'
 import { stripHtml } from '@/lib/description'
-import { requireUserId } from '@/lib/session'
+import { canonicalPath } from '@/lib/catalog-page'
 import PreviewAddButtons from '@/components/PreviewAddButtons'
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,13 +16,12 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
   const anilistId = Number(raw)
   if (!Number.isInteger(anilistId) || anilistId <= 0) notFound()
 
-  const userId = await requireUserId()
-  if (userId) {
-    const [owned] = await db.select({ id: anime.id }).from(anime)
-      .where(and(eq(anime.userId, userId), eq(anime.anilistId, anilistId)))
-    if (owned) redirect(`/anime/${owned.id}`)
-  }
+  // in our catalog -> the canonical page serves it (public sections + owner overlay)
+  const [cat] = await db.select({ mediaType: title.mediaType, slug: title.slug }).from(title)
+    .where(eq(title.anilistId, anilistId)).orderBy(title.mediaType)
+  if (cat) redirect(canonicalPath(cat.mediaType, cat.slug))
 
+  // not synced yet -> AniList fallback preview
   const media = await fetchMedia(anilistId, true).catch(() => null)
   if (!media) notFound()
 
