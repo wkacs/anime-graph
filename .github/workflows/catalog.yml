@@ -1,0 +1,20 @@
+name: catalog
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 03:00 UTC nightly
+  workflow_dispatch: {}
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: node scripts/sync-catalog.mjs --type=ANIME
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - run: node scripts/recompute-scores.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
