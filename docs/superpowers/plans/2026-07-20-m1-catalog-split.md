@@ -362,39 +362,42 @@ export const userTitle = pgTable('user_title', {
 
 // COMPATIBILITY VIEW: same flat column shape the old `anime` table had, so the
 // ~70 read-only call sites keep working. SELECT-ONLY — writes go via anime-write.ts.
+// CRITICAL: `.notNull()` must mirror the OLD `anime` table's nullability exactly,
+// or `$inferSelect` (AnimeSelect) infers every column as `T | null` and ~90 read
+// call sites that expect non-null (titleRomaji: string, genres: string[], …) break.
 export const anime = pgView('anime', {
-  id: integer('id'),
-  userId: integer('user_id'),
-  anilistId: integer('anilist_id'),
-  titleRomaji: text('title_romaji'),
+  id: integer('id').notNull(),
+  userId: integer('user_id').notNull(),
+  anilistId: integer('anilist_id').notNull(),
+  titleRomaji: text('title_romaji').notNull(),
   titleEnglish: text('title_english'),
   titleNative: text('title_native'),
   coverUrl: text('cover_url'),
   bannerUrl: text('banner_url'),
-  genres: text('genres').array(),
-  tags: jsonb('tags').$type<TagEntry[]>(),
+  genres: text('genres').array().notNull(),
+  tags: jsonb('tags').$type<TagEntry[]>().notNull(),
   studio: text('studio'),
   season: text('season'),
   year: integer('year'),
   episodes: integer('episodes'),
   durationMin: integer('duration_min'),
   format: text('format'),
-  mediaType: text('media_type'),
+  mediaType: text('media_type').notNull(),
   chapters: integer('chapters'),
   volumes: integer('volumes'),
   description: text('description'),
-  relations: jsonb('relations').$type<RelationEntry[]>(),
+  relations: jsonb('relations').$type<RelationEntry[]>().notNull(),
   trailerSite: text('trailer_site'),
   trailerId: text('trailer_id'),
   avgScore: integer('avg_score'),
-  status: text('status'),
-  progress: integer('progress'),
+  status: text('status').notNull(),
+  progress: integer('progress').notNull(),
   myScore: integer('my_score'),
-  elo: real('elo'),
-  rewatchCount: integer('rewatch_count'),
+  elo: real('elo').notNull(),
+  rewatchCount: integer('rewatch_count').notNull(),
   watchedAt: timestamp('watched_at'),
-  createdAt: timestamp('created_at'),
-  titleId: integer('title_id'),
+  createdAt: timestamp('created_at').notNull(),
+  titleId: integer('title_id').notNull(),
 }).existing()
 ```
 
@@ -418,10 +421,18 @@ export type AnimeSelect = typeof anime.$inferSelect
 
 > Note: `AnimeInsert` is intentionally removed — nothing should insert into the view. Tasks 5–8 replace its two importers (`import-upsert.ts`, `anime/restore/route.ts`).
 
-- [ ] **Step 4: Typecheck (expect errors only in the write sites we migrate next)**
+- [ ] **Step 4: Typecheck (interim errors expected — read sites MUST be clean)**
 
 Run: `npx tsc --noEmit`
-Expected: errors limited to `AnimeInsert` importers — `src/lib/import-upsert.ts` and `src/app/api/anime/restore/route.ts` (fixed in Tasks 5 & 7). No other file should error, because read sites use the `anime` view with the same column names.
+
+The table→view swap intentionally breaks every WRITE against `anime` and every `AnimeInsert` importer. Those clear progressively in Tasks 6–7; full green is Task 7's gate, not this task's. What Task 3 must achieve: **zero errors in read-only call sites** (the ~70 files that only `db.select().from(anime)`). Remaining errors must be confined to exactly these five files:
+- `src/lib/anilist.ts` — imports `AnimeInsert`, `mapMedia` returns it (fixed Task 6)
+- `src/lib/import-upsert.ts` — imports `AnimeInsert`, `db.insert(anime)` (fixed Task 6)
+- `src/app/api/anime/route.ts` — `db.insert/update(anime)`, `mapMedia` (fixed Task 7)
+- `src/app/api/anime/[id]/route.ts` — `db.update/delete(anime)` (fixed Task 7)
+- `src/app/api/anime/restore/route.ts` — imports `AnimeInsert`, `db.insert(anime)` (fixed Task 7)
+
+Expected: errors ONLY in those five. Any error in a read-only file means the view's `.notNull()` / column set does not match the old `anime` table — fix the view, do not touch the read file.
 
 - [ ] **Step 5: Commit**
 
@@ -687,16 +698,20 @@ git commit -m "feat(anime-write): user_title write-repo over title catalog"
 
 ---
 
-## Task 6: Migrate `import-upsert.ts` to the catalog
+## Task 6: Migrate `import-upsert.ts` + importers + retire `mapMedia`
 
 **Files:**
 - Modify: `src/lib/import-upsert.ts`
+- Modify: `src/lib/anilist.ts` — remove `mapMedia` and its `AnimeInsert` import (superseded by `mapTitle` in `@/lib/catalog`)
+- Modify: `src/lib/anilist.test.ts` — remove the `mapMedia` describe block (its coverage moved to `catalog.test.ts`)
+- Modify: `src/app/api/import/anilist/route.ts` — build `ImportRow` via `mapTitle`
+- Modify: `src/app/api/import/mal/route.ts` — build `ImportRow` via `mapTitle`
 
 **Interfaces:**
-- Consumes: `ensureTitleByFields` from `@/lib/anime-write`, `TitleMetadata` from `@/lib/catalog`.
-- Produces: `upsertImported(userId, metas: TitleMetadata[], userFields: PerRow[]): Promise<{ added: number; updated: number }>` — the importers now pass mapped `TitleMetadata` + the per-row user fields, instead of the old flat `AnimeInsert[]`.
+- Consumes: `ensureTitleByFields` from `@/lib/anime-write`, `mapTitle`/`TitleMetadata` from `@/lib/catalog`.
+- Produces: `upsertImported(userId, rows: ImportRow[]): Promise<{ added: number; updated: number }>` where `ImportRow = { meta: TitleMetadata; user: { status: string; myScore: number | null; progress: number; watchedAt: Date | null } }`.
 
-> Context: callers are `src/app/api/import/anilist/route.ts` and `src/app/api/import/mal/route.ts`. They currently build `AnimeInsert[]`. After this task they build `{ meta: TitleMetadata, user: { status, myScore, progress, watchedAt } }[]`. Their mapping already produces AniList media → adjust to `mapTitle` + split user fields. Update both callers in this task's Step 3.
+> Context: `mapMedia(m): AnimeInsert` in `anilist.ts` is the old metadata mapper; `mapTitle(m): TitleMetadata` (Task 1) replaces it. Both import routes and `api/anime` POST currently call `mapMedia`. This task removes `mapMedia` and repoints the two import routes to `mapTitle`; Task 7 repoints `api/anime` POST (via `ensureTitle`). After this task, `anilist.ts` no longer imports `AnimeInsert`, and tsc errors shrink to the three `api/anime/*` write files (cleared in Task 7).
 
 - [ ] **Step 1: Rewrite `src/lib/import-upsert.ts`**
 
