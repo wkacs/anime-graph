@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, animeStaff, tasteMemory } from '@/db/schema'
-import { fetchDirectors, fetchMedia, mapMedia } from '@/lib/anilist'
+import { fetchDirectors, fetchMedia } from '@/lib/anilist'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
+import { ensureTitle, addUserTitle, updateUserTitle } from '@/lib/anime-write'
 
 // DB-backed GET must not be statically executed at build time
 export const dynamic = 'force-dynamic'
@@ -42,18 +43,16 @@ export async function POST(req: NextRequest) {
   if (existing.length) {
     // már fent van → csak a kért státuszt vesszük át
     if (body?.status && existing[0].status !== status) {
-      const [row] = await db.update(anime)
-        .set({ status, watchedAt: existing[0].watchedAt ?? userFields.watchedAt })
-        .where(eq(anime.id, existing[0].id))
-        .returning()
+      const row = await updateUserTitle(userId, existing[0].id, {
+        status, watchedAt: existing[0].watchedAt ?? userFields.watchedAt,
+      })
       return NextResponse.json({ anime: row })
     }
     return NextResponse.json({ anime: existing[0] })
   }
   const media = await fetchMedia(anilistId, true) // típus-szűrő nélkül: manga-id-ra is működik
-  const [row] = await db.insert(anime)
-    .values({ ...mapMedia(media), ...userFields, userId })
-    .returning()
+  const titleId = await ensureTitle(media)
+  const row = await addUserTitle(userId, titleId, userFields)
   // rendező best-effort mentése — hibája nem akaszthatja meg az add-ot
   try {
     const directors = await fetchDirectors(anilistId)

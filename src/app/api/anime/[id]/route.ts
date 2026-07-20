@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { anime, episodeLog, opinions, tasteMemory } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
+import { updateUserTitle, deleteUserTitle } from '@/lib/anime-write'
 
 const STATUSES = ['watching', 'completed', 'dropped', 'planned'] as const
 
@@ -43,10 +44,9 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   // újranézés: számláló nő, progressz nullázódik, megy a "nézem"-be
   if (body.rewatch === true) {
-    const [row] = await db.update(anime)
-      .set({ rewatchCount: current.rewatchCount + 1, progress: 0, status: 'watching' })
-      .where(eq(anime.id, animeId))
-      .returning()
+    const row = await updateUserTitle(userId, animeId, {
+      rewatchCount: current.rewatchCount + 1, progress: 0, status: 'watching',
+    })
     return NextResponse.json({ anime: row })
   }
 
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     if (logs.length) await db.insert(episodeLog).values(logs)
   }
 
-  const [row] = await db.update(anime).set(patch).where(eq(anime.id, animeId)).returning()
+  const row = await updateUserTitle(userId, animeId, patch)
   return NextResponse.json({ anime: row })
 }
 
@@ -94,6 +94,6 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   if (!row) return NextResponse.json({ ok: true, bundle: null })
   const [opinion] = await db.select().from(opinions).where(eq(opinions.animeId, animeId))
   const facts = await db.select().from(tasteMemory).where(eq(tasteMemory.animeId, animeId))
-  await db.delete(anime).where(eq(anime.id, animeId))
+  await deleteUserTitle(userId, animeId)
   return NextResponse.json({ ok: true, bundle: { anime: row, opinion: opinion ?? null, facts } })
 }
