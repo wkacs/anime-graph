@@ -1,5 +1,3 @@
-import type { AnimeInsert } from '@/db/schema'
-
 const API = 'https://graphql.anilist.co'
 
 export type AnilistMedia = {
@@ -77,7 +75,7 @@ export async function searchAnime(q: string, type: 'ANIME' | 'MANGA' = 'ANIME'):
   }))
 }
 
-// shared media field selection — MEDIA_QUERY, list import and MAL batch all map through mapMedia
+// shared media field selection — MEDIA_QUERY, list import and MAL batch all map through mapTitle
 const MEDIA_FIELDS = `
     id
     type
@@ -115,35 +113,6 @@ query ($id: Int!) {
 export async function fetchMedia(anilistId: number, any = false): Promise<AnilistMedia> {
   const data = await anilistFetch<{ Media: AnilistMedia }>(any ? MEDIA_QUERY_ANY : MEDIA_QUERY, { id: anilistId })
   return data.Media
-}
-
-export function mapMedia(m: AnilistMedia): AnimeInsert {
-  return {
-    anilistId: m.id,
-    titleRomaji: m.title.romaji,
-    titleEnglish: m.title.english,
-    titleNative: m.title.native,
-    coverUrl: m.coverImage?.large ?? null,
-    bannerUrl: m.bannerImage,
-    genres: m.genres ?? [],
-    tags: (m.tags ?? []).map((t) => ({ name: t.name, rank: t.rank })),
-    studio: m.studios.nodes[0]?.name ?? null,
-    season: m.season,
-    year: m.seasonYear,
-    episodes: m.episodes,
-    durationMin: m.duration,
-    format: m.format,
-    mediaType: m.type ?? 'ANIME',
-    chapters: m.chapters,
-    volumes: m.volumes,
-    description: m.description,
-    relations: m.relations.edges
-      .filter((e) => e.node.type === 'ANIME')
-      .map((e) => ({ type: e.relationType, anilistId: e.node.id, title: e.node.title.romaji })),
-    trailerSite: m.trailer?.site ?? null,
-    trailerId: m.trailer?.id ?? null,
-    avgScore: m.averageScore,
-  }
 }
 
 export type AnilistListEntry = {

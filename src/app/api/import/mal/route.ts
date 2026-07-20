@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchByMalIds, mapMedia, type AnilistMedia } from '@/lib/anilist'
+import { fetchByMalIds, type AnilistMedia } from '@/lib/anilist'
+import { mapTitle } from '@/lib/catalog'
 import { parseMalXml } from '@/lib/import'
-import { upsertImported } from '@/lib/import-upsert'
+import { upsertImported, type ImportRow } from '@/lib/import-upsert'
 import { requireUserId } from '@/lib/session'
 
 function chunks<T>(arr: T[], size: number): T[][] {
@@ -33,17 +34,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
   }
 
-  const rows = []
+  const rows: ImportRow[] = []
   let notFound = 0
   for (const e of entries) {
     const media = byMalId.get(e.malId)
     if (!media) { notFound++; continue }
     rows.push({
-      ...mapMedia(media),
-      status: e.status,
-      myScore: e.score,
-      progress: e.progress,
-      watchedAt: e.finishedAt ? new Date(`${e.finishedAt}T00:00:00.000Z`) : null,
+      meta: mapTitle(media),
+      user: {
+        status: e.status,
+        myScore: e.score,
+        progress: e.progress,
+        watchedAt: e.finishedAt ? new Date(`${e.finishedAt}T00:00:00.000Z`) : null,
+      },
     })
   }
   const result = await upsertImported(userId, rows)
