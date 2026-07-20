@@ -1,5 +1,5 @@
 import {
-  pgTable, serial, integer, text, timestamp, jsonb, real,
+  pgTable, pgView, serial, integer, text, timestamp, jsonb, real,
   uniqueIndex, primaryKey,
 } from 'drizzle-orm/pg-core'
 
@@ -13,12 +13,13 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
-// user_id oszlopok default 1-gyel: a multi-tenant váltás előtti adatok
-// az elsőként regisztrált (owner) fiókhoz tartoznak
-export const anime = pgTable('anime', {
+// GLOBAL catalog: one row per AniList title, shared across all users.
+export const title = pgTable('title', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull().default(1),
   anilistId: integer('anilist_id').notNull(),
+  malId: integer('mal_id'),
+  slug: text('slug').notNull(),
+  mediaType: text('media_type').notNull().default('ANIME'), // ANIME | MANGA
   titleRomaji: text('title_romaji').notNull(),
   titleEnglish: text('title_english'),
   titleNative: text('title_native'),
@@ -32,15 +33,30 @@ export const anime = pgTable('anime', {
   episodes: integer('episodes'),
   durationMin: integer('duration_min'),
   format: text('format'),
-  mediaType: text('media_type').notNull().default('ANIME'), // ANIME | MANGA
   chapters: integer('chapters'),
   volumes: integer('volumes'),
-  description: text('description'), // AniList description (nyers HTML, strip megjelenítéskor)
+  description: text('description'),
   relations: jsonb('relations').$type<RelationEntry[]>().notNull().default([]),
   trailerSite: text('trailer_site'),
   trailerId: text('trailer_id'),
-  avgScore: integer('avg_score'),
-  // user-owned fields
+  avgScore: integer('avg_score'),               // AniList average (external)
+  communityScore: real('community_score'),        // our bayesian score, null until computed
+  communityCount: integer('community_count').notNull().default(0),
+  popularity: integer('popularity').notNull().default(0), // # of user_title rows
+  syncedAt: timestamp('synced_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('title_anilist_type_unique').on(t.anilistId, t.mediaType),
+  uniqueIndex('title_slug_unique').on(t.slug),
+])
+
+// PER-USER list. id is preserved from the pre-split `anime` table so the
+// six FK tables (opinions, taste_memory, favorite_characters, duels,
+// episode_log, anime_staff) that reference it stay valid.
+export const userTitle = pgTable('user_title', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().default(1),
+  titleId: integer('title_id').notNull().references(() => title.id, { onDelete: 'cascade' }),
   status: text('status').notNull().default('planned'), // watching | completed | dropped | planned
   progress: integer('progress').notNull().default(0),
   myScore: integer('my_score'),
@@ -49,8 +65,48 @@ export const anime = pgTable('anime', {
   watchedAt: timestamp('watched_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
-  uniqueIndex('anime_user_anilist_unique').on(t.userId, t.anilistId),
+  uniqueIndex('user_title_user_title_unique').on(t.userId, t.titleId),
 ])
+
+// COMPATIBILITY VIEW: same flat column shape the old `anime` table had, so the
+// ~70 read-only call sites keep working. SELECT-ONLY — writes go via anime-write.ts.
+// CRITICAL: `.notNull()` must mirror the OLD `anime` table's nullability exactly,
+// or `$inferSelect` (AnimeSelect) infers every column as `T | null` and ~90 read
+// call sites that expect non-null (titleRomaji: string, genres: string[], …) break.
+export const anime = pgView('anime', {
+  id: integer('id').notNull(),
+  userId: integer('user_id').notNull(),
+  anilistId: integer('anilist_id').notNull(),
+  titleRomaji: text('title_romaji').notNull(),
+  titleEnglish: text('title_english'),
+  titleNative: text('title_native'),
+  coverUrl: text('cover_url'),
+  bannerUrl: text('banner_url'),
+  genres: text('genres').array().notNull(),
+  tags: jsonb('tags').$type<TagEntry[]>().notNull(),
+  studio: text('studio'),
+  season: text('season'),
+  year: integer('year'),
+  episodes: integer('episodes'),
+  durationMin: integer('duration_min'),
+  format: text('format'),
+  mediaType: text('media_type').notNull(),
+  chapters: integer('chapters'),
+  volumes: integer('volumes'),
+  description: text('description'),
+  relations: jsonb('relations').$type<RelationEntry[]>().notNull(),
+  trailerSite: text('trailer_site'),
+  trailerId: text('trailer_id'),
+  avgScore: integer('avg_score'),
+  status: text('status').notNull(),
+  progress: integer('progress').notNull(),
+  myScore: integer('my_score'),
+  elo: real('elo').notNull(),
+  rewatchCount: integer('rewatch_count').notNull(),
+  watchedAt: timestamp('watched_at'),
+  createdAt: timestamp('created_at').notNull(),
+  titleId: integer('title_id').notNull(),
+}).existing()
 
 export const opinions = pgTable('opinions', {
   id: serial('id').primaryKey(),
@@ -171,5 +227,7 @@ export const animeStaff = pgTable('anime_staff', {
   uniqueIndex('anime_staff_unique').on(t.userId, t.animeId, t.staffId),
 ])
 
+export type TitleInsert = typeof title.$inferInsert
+export type UserTitleInsert = typeof userTitle.$inferInsert
+// AnimeSelect stays available for read call sites via the compat view.
 export type AnimeSelect = typeof anime.$inferSelect
-export type AnimeInsert = typeof anime.$inferInsert
