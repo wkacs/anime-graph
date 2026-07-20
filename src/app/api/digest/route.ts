@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory } from '@/db/schema'
 import { fetchAiringFor } from '@/lib/anilist'
-import { currentSeason } from '@/lib/seasonal'
+import { currentSeason, seasonScoreKind } from '@/lib/seasonal'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
@@ -38,13 +38,12 @@ export async function GET() {
 
   const season = currentSeason(new Date())
   const seasonal = await db.select().from(recommendations)
-    .where(and(eq(recommendations.kind, 'seasonal'), eq(recommendations.userId, userId)))
+    .where(and(eq(recommendations.kind, seasonScoreKind(season)), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
-  const topSeason = seasonal[0] && (seasonal[0].input as { season: string }).season === season.season
-    ? ((seasonal[0].result as { items?: { title: string; score: number }[] }).items ?? [])
-        .slice(0, 2).map((i) => `${i.title} (${i.score}/100 ízlés-pont)`)
-    : []
+  // a kulcs már szezon-specifikus, külön input-ellenőrzés nem kell
+  const topSeason = ((seasonal[0]?.result as { items?: { title: string; score: number }[] } | undefined)?.items ?? [])
+    .slice(0, 2).map((i) => `${i.title} (${i.score}/100 ízlés-pont)`)
 
   const facts = (await db.select().from(tasteMemory)
     .where(eq(tasteMemory.userId, userId))

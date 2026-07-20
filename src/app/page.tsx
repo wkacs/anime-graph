@@ -1,12 +1,14 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Countdown from '@/components/Countdown'
 import MediaCard from '@/components/MediaCard'
 import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
+import SeasonFilterBar from '@/components/SeasonFilterBar'
 import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
+import { applySeasonView, seasonFacets, EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { FeedItem } from '@/lib/feed'
@@ -70,6 +72,9 @@ export default function NewsPage() {
   const [wlUsers, setWlUsers] = useState<Record<number, string>>({})
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([])
   const [upcomingSeason, setUpcomingSeason] = useState<{ season: string; year: number } | null>(null)
+  const [scores, setScores] = useState<Map<number, { score: number; reason: string }>>(new Map())
+  const [scoresFailed, setScoresFailed] = useState(false)
+  const [view, setView] = useState<SeasonView>(EMPTY_SEASON_VIEW)
 
   useEffect(() => {
     fetch('/api/news')
@@ -95,7 +100,33 @@ export default function NewsPage() {
       .then((r) => r.json())
       .then((j) => { setUpcoming(j.items ?? []); setUpcomingSeason(j.season ?? null) })
       .catch(() => { /* enélkül is él az oldal */ })
+    // ízlés-pontok külön csatornán: lassú AI-futás ne késleltesse a rácsot
+    fetch('/api/news/season-scores')
+      .then(async (r) => {
+        const j = await r.json()
+        const items: { anilistId: number; score: number; reason: string }[] = j.items ?? []
+        if (!r.ok || !items.length) { setScoresFailed(true); return }
+        setScores(new Map(items.map((i) => [i.anilistId, { score: i.score, reason: i.reason }])))
+      })
+      .catch(() => setScoresFailed(true))
   }, [])
+
+  const scored = scores.size > 0
+  const seasonItems = useMemo(
+    () => (data?.seasonItems ?? []).map((s) => ({
+      ...s,
+      tasteScore: scores.get(s.anilistId)?.score ?? null,
+      tasteReason: scores.get(s.anilistId)?.reason ?? null,
+    })),
+    [data, scores],
+  )
+  const facets = useMemo(() => seasonFacets(seasonItems), [seasonItems])
+  // pont nélkül az ízlés-rendezés és a küszöb értelmetlen — adásidőre esünk vissza
+  const effectiveView = useMemo<SeasonView>(
+    () => (scored ? view : { ...view, sort: view.sort === 'taste' ? 'airing' : view.sort, minScore: 0 }),
+    [scored, view],
+  )
+  const visibleSeason = useMemo(() => applySeasonView(seasonItems, effectiveView), [seasonItems, effectiveView])
 
   async function addToPlanned(anilistId: number) {
     const res = await fetch('/api/anime', {
@@ -311,8 +342,24 @@ export default function NewsPage() {
         <div className="flex items-baseline justify-between mb-3">
           <p className="label-mono">A szezon</p>
         </div>
+        <div className="mb-4">
+          <SeasonFilterBar
+            view={view}
+            onChange={setView}
+            facets={facets}
+            shown={visibleSeason.length}
+            total={seasonItems.length}
+            scored={scored}
+            scoresFailed={scoresFailed}
+          />
+        </div>
+        {visibleSeason.length === 0 && (
+          <p className="glass rounded-2xl px-5 py-4 text-sm text-text-2">
+            Nincs találat a szűrőkre.
+          </p>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {data.seasonItems.map((s, i) => (
+          {visibleSeason.map((s, i) => (
             <motion.article
               key={s.anilistId}
               initial={{ opacity: 0, y: 10 }}

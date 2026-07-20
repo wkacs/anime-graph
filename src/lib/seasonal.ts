@@ -25,6 +25,11 @@ export function nextSeason(now: Date): { season: string; year: number } {
     : { season: SEASON_ORDER[i + 1], year: cur.year }
 }
 
+// a recommendations-tábla cache-kulcsa egy szezon AI-pontjaira (jelenlegi és következő is)
+export function seasonScoreKind(season: { season: string; year: number }): string {
+  return `seasonal-ai:${season.year}-${season.season}`
+}
+
 export const seasonScoresSchema = z.object({
   scores: z.array(z.object({
     anilistId: z.number().int(),
