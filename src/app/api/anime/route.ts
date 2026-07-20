@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, animeStaff, tasteMemory } from '@/db/schema'
+import { anime, animeStaff, tasteMemory, userTitle } from '@/db/schema'
 import { fetchDirectors, fetchMedia } from '@/lib/anilist'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
-import { ensureTitle, addUserTitle, updateUserTitle } from '@/lib/anime-write'
+import { ensureTitle, addUserTitle, updateUserTitle, joinedRow } from '@/lib/anime-write'
 
 // DB-backed GET must not be statically executed at build time
 export const dynamic = 'force-dynamic'
@@ -28,9 +28,26 @@ export async function POST(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
+
+  // catalog add: title already in our DB — no AniList round-trip
+  const catalogTitleId = Number(body?.titleId)
+  if (Number.isInteger(catalogTitleId) && catalogTitleId > 0) {
+    const status = ADD_STATUSES.includes(body?.status) ? body.status as string : 'planned'
+    const existing = await db.select({ id: userTitle.id }).from(userTitle)
+      .where(and(eq(userTitle.userId, userId), eq(userTitle.titleId, catalogTitleId)))
+    if (existing.length) {
+      const row = await joinedRow(existing[0].id)
+      return NextResponse.json({ anime: row })
+    }
+    const row = await addUserTitle(userId, catalogTitleId, {
+      status, watchedAt: status === 'completed' ? new Date() : null,
+    })
+    return NextResponse.json({ anime: row }, { status: 201 })
+  }
+
   const anilistId = Number(body?.anilistId)
   if (!Number.isInteger(anilistId) || anilistId <= 0) {
-    return NextResponse.json({ error: 'anilistId kötelező' }, { status: 400 })
+    return NextResponse.json({ error: 'anilistId vagy titleId kötelező' }, { status: 400 })
   }
   const status = ADD_STATUSES.includes(body?.status) ? body.status as string : 'planned'
   const userFields = {

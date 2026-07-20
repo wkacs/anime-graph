@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import type { SearchResult } from '@/lib/anilist'
+import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
 
 const ADD_OPTIONS = [
@@ -21,7 +22,9 @@ export default function AddAnimeSearch({
 }) {
   const [q, setQ] = useState('')
   const [mediaType, setMediaType] = useState<'ANIME' | 'MANGA'>('ANIME')
-  const [results, setResults] = useState<SearchResult[]>([])
+  const [results, setResults] = useState<TitleHit[]>([])
+  // AniList fallback for titles not yet in our catalog
+  const [fallback, setFallback] = useState<SearchResult[]>([])
   const [busy, setBusy] = useState<number | null>(null)
 
   const needle = q.trim().toLowerCase()
@@ -33,29 +36,48 @@ export default function AddAnimeSearch({
     : []
 
   useEffect(() => {
-    if (q.trim().length < 2) { setResults([]); return }
+    if (q.trim().length < 2) { setResults([]); setFallback([]); return }
     const t = setTimeout(async () => {
-      const res = await fetch(`/api/anilist/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}`)
-      if (res.ok) setResults((await res.json()).results)
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}&limit=8`)
+      if (!res.ok) return
+      const { hits } = await res.json() as { hits: TitleHit[] }
+      setResults(hits)
+      if (hits.length === 0) {
+        // nothing in the catalog yet -> AniList fallback so brand-new titles are addable
+        const fb = await fetch(`/api/anilist/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}`)
+        setFallback(fb.ok ? (await fb.json()).results : [])
+      } else {
+        setFallback([])
+      }
     }, 400)
     return () => clearTimeout(t)
   }, [q, mediaType])
 
-  async function add(anilistId: number, status: string) {
+  function done(anime?: ApiAnime) {
+    setQ(''); setResults([]); setFallback([]); onAdded(anime)
+  }
+
+  async function addByTitle(titleId: number, status: string) {
+    setBusy(titleId)
+    const res = await fetch('/api/anime', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titleId, status }),
+    })
+    setBusy(null)
+    if (res.ok) done((await res.json()).anime)
+  }
+
+  async function addByAnilist(anilistId: number, status: string) {
     setBusy(anilistId)
     const res = await fetch('/api/anime', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ anilistId, status }),
     })
     setBusy(null)
-    if (res.ok) {
-      const json = await res.json()
-      setQ('')
-      setResults([])
-      onAdded(json.anime)
-    }
+    if (res.ok) done((await res.json()).anime)
   }
+
+  const hasResults = results.length > 0 || fallback.length > 0 || ownMatches.length > 0
 
   return (
     <div className="w-[min(85vw,20rem)] relative text-sm">
@@ -80,7 +102,7 @@ export default function AddAnimeSearch({
           ))}
         </div>
       </div>
-      {(results.length > 0 || ownMatches.length > 0) && (
+      {hasResults && (
         <ul className="glass-strong absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
           {ownMatches.length > 0 && (
             <li className="label-mono px-2 pt-1 pb-0.5">A listádon — ugrás a gráfon</li>
@@ -88,7 +110,7 @@ export default function AddAnimeSearch({
           {ownMatches.map((a) => (
             <li key={`own-${a.id}`}>
               <button
-                onClick={() => { setQ(''); setResults([]); onPickOwn!(a) }}
+                onClick={() => { setQ(''); setResults([]); setFallback([]); onPickOwn!(a) }}
                 className="flex w-full items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 text-left transition-colors"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -104,8 +126,38 @@ export default function AddAnimeSearch({
           {results.length > 0 && ownMatches.length > 0 && (
             <li className="label-mono px-2 pt-2 pb-0.5">Hozzáadás</li>
           )}
-          {results.map((r) => (
-            <li key={r.anilistId} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 transition-colors">
+          {results.map((h) => (
+            <li key={`t-${h.titleId}`} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 transition-colors">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {h.coverUrl && <img src={h.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
+              <span className="flex-1 min-w-0 text-text-1">
+                <span className="block truncate">{h.titleRomaji}</span>
+                <span className="block text-xs text-text-3 font-mono">{h.year ?? '?'} · {h.format ?? '?'}</span>
+              </span>
+              {busy === h.titleId ? (
+                <span className="text-text-2 px-2">…</span>
+              ) : (
+                <span className="flex gap-1 shrink-0">
+                  {ADD_OPTIONS.map((o) => (
+                    <button
+                      key={o.status}
+                      onClick={() => addByTitle(h.titleId, o.status)}
+                      disabled={busy !== null}
+                      title={`Hozzáadás: ${o.label}`}
+                      className="rounded-full border border-white/12 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-text-2 hover:text-text-1 hover:border-white/35 transition-colors"
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </li>
+          ))}
+          {fallback.length > 0 && (
+            <li className="label-mono px-2 pt-2 pb-0.5">Nincs a katalógusban — AniList</li>
+          )}
+          {fallback.map((r) => (
+            <li key={`a-${r.anilistId}`} className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl hover:bg-white/8 transition-colors">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {r.coverUrl && <img src={r.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
               <span className="flex-1 min-w-0 text-text-1">
@@ -119,7 +171,7 @@ export default function AddAnimeSearch({
                   {ADD_OPTIONS.map((o) => (
                     <button
                       key={o.status}
-                      onClick={() => add(r.anilistId, o.status)}
+                      onClick={() => addByAnilist(r.anilistId, o.status)}
                       disabled={busy !== null}
                       title={`Hozzáadás: ${o.label}`}
                       className="rounded-full border border-white/12 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-text-2 hover:text-text-1 hover:border-white/35 transition-colors"
