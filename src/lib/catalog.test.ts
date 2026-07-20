@@ -46,4 +46,18 @@ describe('mapTitle', () => {
   it('defaults mediaType to ANIME when type is null', () => {
     expect(mapTitle({ ...media, type: null }).mediaType).toBe('ANIME')
   })
+  it('drops non-ANIME relation edges', () => {
+    const withMangaRelation: AnilistMedia = {
+      ...media,
+      relations: {
+        edges: [
+          { relationType: 'PREQUEL', node: { id: 121, type: 'ANIME', title: { romaji: 'X' } } },
+          { relationType: 'ADAPTATION', node: { id: 999, type: 'MANGA', title: { romaji: 'Y' } } },
+        ],
+      },
+    }
+    const t = mapTitle(withMangaRelation)
+    expect(t.relations).toHaveLength(1)
+    expect(t.relations.map((r) => r.anilistId)).toEqual([121])
+  })
 })

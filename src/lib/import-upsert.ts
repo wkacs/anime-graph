@@ -1,6 +1,6 @@
 import { and, eq, sql } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { title, userTitle } from '@/db/schema'
+import { userTitle } from '@/db/schema'
 import { ensureTitleByFields } from '@/lib/anime-write'
 import type { TitleMetadata } from '@/lib/catalog'
 

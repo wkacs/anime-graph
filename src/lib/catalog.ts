@@ -63,9 +63,11 @@ export function mapTitle(m: AnilistMedia): TitleMetadata {
     chapters: m.chapters,
     volumes: m.volumes,
     description: m.description,
-    relations: (m.relations?.edges ?? []).map((e) => ({
-      type: e.relationType, anilistId: e.node.id, title: e.node.title.romaji,
-    })),
+    relations: (m.relations?.edges ?? [])
+      .filter((e) => e.node.type === 'ANIME')
+      .map((e) => ({
+        type: e.relationType, anilistId: e.node.id, title: e.node.title.romaji,
+      })),
     trailerSite: m.trailer?.site ?? null,
     trailerId: m.trailer?.id ?? null,
     avgScore: m.averageScore,
