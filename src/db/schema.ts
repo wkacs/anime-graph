@@ -1,10 +1,16 @@
 import {
   pgTable, pgView, serial, integer, text, timestamp, jsonb, real,
-  uniqueIndex, primaryKey,
+  uniqueIndex, index, primaryKey, customType,
 } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 export type TagEntry = { name: string; rank: number }
 export type RelationEntry = { type: string; anilistId: number; title: string }
+
+// Postgres full-text type — no built-in Drizzle helper.
+const tsvector = customType<{ data: string }>({
+  dataType() { return 'tsvector' },
+})
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -44,12 +50,16 @@ export const title = pgTable('title', {
   communityCount: integer('community_count').notNull().default(0),
   popularity: integer('popularity').notNull().default(0), // # of user_title rows
   syncedAt: timestamp('synced_at'),
+  searchVector: tsvector('search_vector').generatedAlwaysAs(
+    sql`to_tsvector('simple', coalesce(title_romaji,'') || ' ' || coalesce(title_english,'') || ' ' || coalesce(title_native,''))`,
+  ),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('title_anilist_type_unique').on(t.anilistId, t.mediaType),
   // slug is unique per media type: AniList ANIME and MANGA id spaces overlap,
   // so `<romaji>-<anilistId>` can collide across types — scope uniqueness by mediaType.
   uniqueIndex('title_slug_unique').on(t.mediaType, t.slug),
+  index('title_search_gin').using('gin', t.searchVector),
 ])
 
 // PER-USER list. id is preserved from the pre-split `anime` table so the
