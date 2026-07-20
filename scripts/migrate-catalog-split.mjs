@@ -41,6 +41,10 @@ async function main() {
       synced_at timestamp,
       created_at timestamp NOT NULL DEFAULT now()
     )`
+  // unique indexes the ON CONFLICT clauses (backfill + sync worker) rely on.
+  // slug is unique PER media_type (AniList ANIME/MANGA id spaces overlap).
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS title_anilist_type_unique ON title (anilist_id, media_type)`
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS title_slug_unique ON title (media_type, slug)`
 
   console.log('2/6 backfill title from distinct anime rows')
   // pick the lowest-id row per (anilist_id, media_type) as the metadata source

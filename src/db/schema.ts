@@ -47,7 +47,9 @@ export const title = pgTable('title', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
   uniqueIndex('title_anilist_type_unique').on(t.anilistId, t.mediaType),
-  uniqueIndex('title_slug_unique').on(t.slug),
+  // slug is unique per media type: AniList ANIME and MANGA id spaces overlap,
+  // so `<romaji>-<anilistId>` can collide across types — scope uniqueness by mediaType.
+  uniqueIndex('title_slug_unique').on(t.mediaType, t.slug),
 ])
 
 // PER-USER list. id is preserved from the pre-split `anime` table so the
