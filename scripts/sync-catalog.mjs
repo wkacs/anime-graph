@@ -5,7 +5,6 @@ import { neon } from '@neondatabase/serverless'
 const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } })
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')))
 const TYPE = args.type === 'MANGA' ? 'MANGA' : 'ANIME'
-const SINCE = args.since ? Number(args.since) : 0
 
 function slugify(s) {
   return (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
@@ -20,10 +19,10 @@ function sleepMsFor(remaining, resetInSec) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const QUERY = `
-query ($page: Int!, $type: MediaType!, $idGt: Int!) {
+query ($page: Int!, $type: MediaType!) {
   Page(page: $page, perPage: 50) {
     pageInfo { hasNextPage }
-    media(type: $type, id_greater: $idGt, sort: ID) {
+    media(type: $type, sort: ID) {
       id type idMal
       title { romaji english native }
       coverImage { large } bannerImage genres
@@ -40,11 +39,16 @@ async function fetchPage(page) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: QUERY, variables: { page, type: TYPE, idGt: SINCE } }),
+      body: JSON.stringify({ query: QUERY, variables: { page, type: TYPE } }),
     })
     if (res.status === 429) {
       const retry = Number(res.headers.get('retry-after') || '60')
       console.log(`429 — sleeping ${retry}s`); await sleep(retry * 1000); continue
+    }
+    if (res.status >= 500) {
+      // AniList throws transient 5xx; back off and retry rather than abort the whole run
+      const wait = 2 ** attempt * 1000
+      console.log(`${res.status} — retry ${attempt + 1}/5 in ${wait}ms`); await sleep(wait); continue
     }
     if (!res.ok) throw new Error(`AniList HTTP ${res.status}`)
     const remaining = Number(res.headers.get('x-ratelimit-remaining') || '90')
@@ -53,7 +57,7 @@ async function fetchPage(page) {
     if (json.errors?.length) throw new Error(json.errors[0].message)
     return { data: json.data.Page, waitMs: Math.max(700, sleepMsFor(remaining, reset)) }
   }
-  throw new Error('too many 429s')
+  throw new Error('too many retries (429/5xx)')
 }
 
 async function upsert(m) {
