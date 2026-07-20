@@ -1,10 +1,17 @@
 // Full/incremental AniList -> title sync. Throttled, idempotent.
-// Run: node scripts/sync-catalog.mjs [--type=ANIME|MANGA] [--since=<anilistId>]
+// Run: node scripts/sync-catalog.mjs [--type=ANIME|MANGA] [--from=YEAR] [--to=YEAR]
+//
+// AniList caps offset pagination at 5000 results per query (page 100 @ perPage 50),
+// so a single sorted paginate cannot reach the full ~20k anime / ~150k manga. We
+// slice the catalog by startDate YEAR (each year has < 5000 titles per media type)
+// and paginate within each slice. Titles with a null startDate are not covered.
 import { neon } from '@neondatabase/serverless'
 
 const sql = neon(process.env.DATABASE_URL, { fetchOptions: { cache: 'no-store' } })
 const args = Object.fromEntries(process.argv.slice(2).map((a) => a.replace(/^--/, '').split('=')))
 const TYPE = args.type === 'MANGA' ? 'MANGA' : 'ANIME'
+const FROM_YEAR = args.from ? Number(args.from) : 1940
+const TO_YEAR = args.to ? Number(args.to) : new Date().getFullYear() + 1
 
 function slugify(s) {
   return (s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
@@ -18,11 +25,13 @@ function sleepMsFor(remaining, resetInSec) {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-const QUERY = `
-query ($page: Int!, $type: MediaType!) {
+// type/from/to are a safe enum + computed ints — inlined; page is the only variable.
+function sliceQuery(type, from, to) {
+  return `
+query ($page: Int!) {
   Page(page: $page, perPage: 50) {
     pageInfo { hasNextPage }
-    media(type: $type, sort: ID) {
+    media(type: ${type}, startDate_greater: ${from}, startDate_lesser: ${to}, sort: START_DATE) {
       id type idMal
       title { romaji english native }
       coverImage { large } bannerImage genres
@@ -34,28 +43,27 @@ query ($page: Int!, $type: MediaType!) {
     }
   }
 }`
+}
 
-async function fetchPage(page) {
+async function fetchPage(query, page) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const res = await fetch('https://graphql.anilist.co', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: QUERY, variables: { page, type: TYPE } }),
+      body: JSON.stringify({ query, variables: { page } }),
     })
     if (res.status === 429) {
       const retry = Number(res.headers.get('retry-after') || '60')
       console.log(`429 — sleeping ${retry}s`); await sleep(retry * 1000); continue
     }
     if (res.status >= 500) {
-      // AniList throws transient 5xx; back off and retry rather than abort the whole run
       const wait = 2 ** attempt * 1000
       console.log(`${res.status} — retry ${attempt + 1}/5 in ${wait}ms`); await sleep(wait); continue
     }
     if (!res.ok) throw new Error(`AniList HTTP ${res.status}`)
     const remaining = Number(res.headers.get('x-ratelimit-remaining') || '90')
-    const reset = 60
     const json = await res.json()
     if (json.errors?.length) throw new Error(json.errors[0].message)
-    return { data: json.data.Page, waitMs: Math.max(700, sleepMsFor(remaining, reset)) }
+    return { data: json.data.Page, waitMs: Math.max(700, sleepMsFor(remaining, 60)) }
   }
   throw new Error('too many retries (429/5xx)')
 }
@@ -86,16 +94,30 @@ async function upsert(m) {
       avg_score = excluded.avg_score, synced_at = now()`
 }
 
-async function main() {
-  let page = 1, total = 0
+async function syncYear(year) {
+  // startDate in [YYYY0000, YYYY1231]; -1 lower bound includes fuzzy year-only dates (YYYY0000).
+  const from = year * 10000 - 1
+  const to = (year + 1) * 10000
+  const query = sliceQuery(TYPE, from, to)
+  let page = 1, count = 0
   for (;;) {
-    const { data, waitMs } = await fetchPage(page)
-    for (const m of data.media) { await upsert(m); total++ }
-    console.log(`page ${page}: +${data.media.length} (total ${total})`)
+    const { data, waitMs } = await fetchPage(query, page)
+    for (const m of data.media) { await upsert(m); count++ }
     if (!data.pageInfo.hasNextPage) break
+    if (page >= 100) { console.log(`  WARN ${year}: hit 5000 cap — year truncated (needs finer slicing)`); break }
     page++
     await sleep(waitMs)
   }
-  console.log(`sync done: ${total} ${TYPE} titles`)
+  return count
+}
+
+async function main() {
+  let total = 0
+  for (let year = FROM_YEAR; year <= TO_YEAR; year++) {
+    const n = await syncYear(year)
+    total += n
+    if (n) console.log(`${TYPE} ${year}: +${n} (total ${total})`)
+  }
+  console.log(`sync done: ${total} ${TYPE} titles (years ${FROM_YEAR}-${TO_YEAR})`)
 }
 main().catch((e) => { console.error(e); process.exit(1) })
