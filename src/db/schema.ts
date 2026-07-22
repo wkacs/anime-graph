@@ -16,6 +16,7 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash').notNull(), // scrypt: salt:hash hex
+  tier: text('tier').notNull().default('free'), // free | paid
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -193,6 +194,20 @@ export const recommendations = pgTable('recommendations', {
   result: jsonb('result').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
+
+// minden AI-hívás egy sor — a valós költség-visszamérés alapja árazás előtt
+export const aiUsageLog = pgTable('ai_usage_log', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  endpoint: text('endpoint').notNull(),
+  model: text('model').notNull(),
+  promptTokens: integer('prompt_tokens').notNull().default(0),
+  completionTokens: integer('completion_tokens').notNull().default(0),
+  estCostUsd: real('est_cost_usd').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('ai_usage_user_day').on(t.userId, t.createdAt),
+])
 
 // egy globális közös "együtt nézzük" lista az instance-nek (housemates-modell)
 export const watchlistItems = pgTable('watchlist_items', {
