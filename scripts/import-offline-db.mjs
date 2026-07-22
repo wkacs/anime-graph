@@ -42,8 +42,9 @@ async function main() {
   for (let i = 0; i < rows.length; i += CHUNK) {
     const chunk = rows.slice(i, i + CHUNK)
     for (const r of chunk) {
-      // SZELEKTÍV upsert: volatilis meta felülíródik; description/relations(ha van)/avgScore(ha van)/
-      // communityScore/popularity/trailer/banner MARAD az AniList-enrichmenté.
+      // GAP-FILL upsert: a katalógus már AniList-enrichelt (21900 title), ezért az offline-db
+      // SOSEM ír felül meglévő értéket (COALESCE = csak NULL/üres mezőt tölt) — különben az
+      // AniList extraLarge borítót az offline MAL-CDN thumbnail lefokozná. ÚJ cím = teljes insert.
       const res2 = await sql`
         INSERT INTO title (anilist_id, media_type, slug, title_romaji, cover_url, episodes,
           season, year, studio, duration_min, avg_score, genres, tags, relations, mal_id, synced_at)
@@ -51,11 +52,11 @@ async function main() {
           ${r.season}, ${r.year}, ${r.studio}, ${r.durationMin}, ${r.avgScore},
           ${r.genres}, ${JSON.stringify(r.tags)}, ${JSON.stringify(r.relations)}, ${r.malId}, now())
         ON CONFLICT (anilist_id, media_type) DO UPDATE SET
-          cover_url = excluded.cover_url,
-          episodes = excluded.episodes,
-          season = excluded.season,
-          year = excluded.year,
-          duration_min = excluded.duration_min,
+          cover_url = COALESCE(title.cover_url, excluded.cover_url),
+          episodes = COALESCE(title.episodes, excluded.episodes),
+          season = COALESCE(title.season, excluded.season),
+          year = COALESCE(title.year, excluded.year),
+          duration_min = COALESCE(title.duration_min, excluded.duration_min),
           studio = COALESCE(title.studio, excluded.studio),
           avg_score = COALESCE(title.avg_score, excluded.avg_score),
           genres = CASE WHEN cardinality(title.genres) = 0 THEN excluded.genres ELSE title.genres END,
