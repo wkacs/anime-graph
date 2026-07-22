@@ -7,6 +7,7 @@ import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
+import { aiUserErrorMessage } from '@/lib/ai-error'
 import { and, eq } from 'drizzle-orm'
 
 export async function POST() {
@@ -65,6 +66,7 @@ export async function POST() {
     })
     return NextResponse.json({ picks: result })
   } catch (e) {
-    return NextResponse.json({ error: `AI-hiba: ${String(e)}` }, { status: 502 })
+    console.error('recommend failed:', e)
+    return NextResponse.json({ error: aiUserErrorMessage(e) }, { status: 502 })
   }
 }

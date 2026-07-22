@@ -7,6 +7,7 @@ import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 import { glmChat } from '@/lib/glm'
+import { aiUserErrorMessage } from '@/lib/ai-error'
 
 // GLM only names new titles — attach real AniList data so the cards are
 // addable with one click. If the best match is already on the list, the pick
@@ -102,6 +103,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json(result)
   } catch (e) {
-    return NextResponse.json({ error: `AI-hiba: ${String(e)}` }, { status: 502 })
+    console.error('vibe failed:', e)
+    return NextResponse.json({ error: aiUserErrorMessage(e) }, { status: 502 })
   }
 }
