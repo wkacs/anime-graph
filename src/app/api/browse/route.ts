@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchBrowse } from '@/lib/anilist'
-import { buildBrowseVariables, randomPage, type BrowseFilters } from '@/lib/browse'
+import { db } from '@/db/client'
+import { title } from '@/db/schema'
+import { type BrowseFilters } from '@/lib/browse'
+import { browseWhere, browseOrder } from '@/lib/browse-local'
 import { requireUserId } from '@/lib/session'
+import { sql } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,25 +23,27 @@ function parseFilters(sp: URLSearchParams): BrowseFilters {
   }
 }
 
+// A Böngésző UI a /api/search (katalógus) felől olvas; ez a route a title katalógusból
+// szolgálja ki a szűrt/rendezett listát élő AniList-hívás NÉLKÜL.
 export async function GET(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const sp = req.nextUrl.searchParams
   const filters = parseFilters(sp)
-  const vars = buildBrowseVariables(filters)
-  vars.sort = [filters.sort]
   try {
+    const where = browseWhere(filters)
+    const perPage = 30
     if (sp.get('random') === '1') {
-      // perPage=1-es lapozással a cap 5000 TALÁLATIG enged
-      const probe = await fetchBrowse({ ...vars, page: 1, perPage: 1 })
-      if (!probe.total) return NextResponse.json({ error: 'Nincs találat ezekkel a szűrőkkel' }, { status: 404 })
-      const page = randomPage(probe.total, 1)
-      const pick = await fetchBrowse({ ...vars, page, perPage: 1 })
-      return NextResponse.json({ media: pick.media })
+      const [pick] = await db.select().from(title).where(where).orderBy(sql`random()`).limit(1)
+      if (!pick) return NextResponse.json({ error: 'Nincs találat ezekkel a szűrőkkel' }, { status: 404 })
+      return NextResponse.json({ media: [pick] })
     }
-    const result = await fetchBrowse(vars)
-    return NextResponse.json(result)
+    const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(title).where(where)
+    const media = await db.select().from(title).where(where)
+      .orderBy(browseOrder(filters.sort)).limit(perPage).offset((filters.page - 1) * perPage)
+    return NextResponse.json({ total, media })
   } catch (e) {
-    return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
+    console.error('browse failed:', e)
+    return NextResponse.json({ error: 'A böngésző most nem elérhető' }, { status: 502 })
   }
 }
