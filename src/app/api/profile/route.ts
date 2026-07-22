@@ -22,8 +22,11 @@ async function generate(userId: number) {
     .slice(0, 5).map((r) => r.titleRomaji)
   const facts = factRows.map((f) => `(${f.kind}) ${f.text}`).slice(0, 60)
 
-  await consumeAiQuota(userId)
-  const raw = await glmChat(buildProfileMessages(facts, topGenres, topTitles, rows.length))
+  await consumeAiQuota(userId, 'profile')
+  const raw = await glmChat(
+    buildProfileMessages(facts, topGenres, topTitles, rows.length),
+    { userId, endpoint: 'profile' },
+  )
   const profile = parseProfile(raw)
   await db.insert(recommendations).values({
     userId,

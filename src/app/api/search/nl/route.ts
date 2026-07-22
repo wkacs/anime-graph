@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
     opinion: r.opinion ? (r.opinion.length > 100 ? `${r.opinion.slice(0, 100)}…` : r.opinion) : null,
   }))
   try {
-    await consumeAiQuota(userId)
-    const raw = await glmChat(buildNlMessages(items, query))
+    await consumeAiQuota(userId, 'nl-search')
+    const raw = await glmChat(buildNlMessages(items, query), { userId, endpoint: 'nl-search' })
     return NextResponse.json(parseNlResult(raw, new Set(items.map((i) => i.id))))
   } catch (e) {
     return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 502 })

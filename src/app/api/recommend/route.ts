@@ -51,8 +51,11 @@ export async function POST() {
   }
 
   try {
-    await consumeAiQuota(userId)
-    const raw = await glmChat(buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji), extras))
+    await consumeAiQuota(userId, 'recommend')
+    const raw = await glmChat(
+      buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji), extras),
+      { userId, endpoint: 'recommend' },
+    )
     const picks = parsePicks(raw)
     const byId = new Map(ranked.map((c) => [c.anilistId, c]))
     const result = picks

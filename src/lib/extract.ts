@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { glmChat, extractJson, type ChatMessage } from './glm'
+import { glmChat, extractJson, type ChatMessage, type GlmOpts } from './glm'
 
 export const factsSchema = z.object({
   facts: z.array(z.object({
@@ -27,16 +27,16 @@ export function parseFacts(raw: string): Fact[] {
   return factsSchema.parse(extractJson(raw)).facts
 }
 
-export async function extractFacts(title: string, opinion: string): Promise<Fact[]> {
+export async function extractFacts(title: string, opinion: string, opts: GlmOpts = {}): Promise<Fact[]> {
   const messages = buildExtractMessages(title, opinion)
-  const first = await glmChat(messages)
+  const first = await glmChat(messages, opts)
   try {
     return parseFacts(first)
   } catch {
     const second = await glmChat([
       ...messages,
       { role: 'user', content: 'A válaszod nem volt érvényes JSON. Küldd újra, CSAK a JSON-t.' },
-    ])
+    ], opts)
     return parseFacts(second)
   }
 }

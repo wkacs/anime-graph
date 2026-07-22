@@ -26,10 +26,10 @@ export async function POST() {
     .orderBy(asc(tasteMemory.createdAt))
   if (facts.length < 8) return NextResponse.json({ error: 'Még kevés az ízlés-tény (írj véleményeket!)' }, { status: 400 })
   try {
-    await consumeAiQuota(userId)
+    await consumeAiQuota(userId, 'taste-eras')
     const eras = parseEras(await glmChat(buildErasMessages(
       facts.map((f) => ({ text: f.text, at: f.createdAt.toISOString() })),
-    )))
+    ), { userId, endpoint: 'taste-eras' }))
     await db.delete(recommendations)
       .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, 'taste-eras')))
     await db.insert(recommendations).values({ userId, kind: 'taste-eras', input: { factCount: facts.length }, result: { eras } })

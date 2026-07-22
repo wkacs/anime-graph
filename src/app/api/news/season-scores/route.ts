@@ -50,8 +50,8 @@ export async function GET() {
   const candidates = seasonList.slice(0, MAX_SCORED)
   const titleById = new Map(candidates.map((c) => [c.anilistId, c.title]))
   try {
-    await consumeAiQuota(userId)
-    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(candidates, facts.map((f) => f.text))))
+    await consumeAiQuota(userId, 'season-scores')
+    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(candidates, facts.map((f) => f.text)), { userId, endpoint: 'season-scores' }))
     const items: StoredScore[] = scores
       .filter((s) => titleById.has(s.anilistId))
       .map((s) => ({ anilistId: s.anilistId, title: titleById.get(s.anilistId)!, score: s.score, reason: s.reason }))

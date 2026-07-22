@@ -53,7 +53,7 @@ export async function GET() {
   const watching = rows.filter((r) => r.status === 'watching').length
 
   try {
-    await consumeAiQuota(userId)
+    await consumeAiQuota(userId, 'digest')
     const text = (await glmChat([
       {
         role: 'system',
@@ -67,7 +67,7 @@ export async function GET() {
           `A szezonból nekem ajánlott: ${topSeason.join('; ') || 'nincs pontozva'}\n` +
           `Friss ízlés-tényeim: ${facts.slice(0, 5).join('; ') || 'nincs'}`,
       },
-    ], { retries: 1 })).trim()
+    ], { retries: 1, userId, endpoint: 'digest' })).trim()
     await db.insert(recommendations).values({
       userId,
       kind: 'digest',

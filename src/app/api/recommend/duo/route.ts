@@ -58,14 +58,14 @@ export async function POST(req: NextRequest) {
   })
   if (!candidates.length) return NextResponse.json({ error: 'Nincs közös jelölt — adjatok hozzá terveket' }, { status: 400 })
 
-  await consumeAiQuota(userId)
+  await consumeAiQuota(userId, 'duo')
   const messages = buildDuoMessages(
     candidates,
     myFactRows.map((f) => f.text),
     theirFactRows.map((f) => f.text),
     'a kérdező', other.username,
   )
-  const picks = parseDuoPicks(await glmChat(messages))
+  const picks = parseDuoPicks(await glmChat(messages, { userId, endpoint: 'duo' }))
   const byId = new Map(candidates.map((c) => [c.anilistId, c]))
   const result = {
     picks: picks

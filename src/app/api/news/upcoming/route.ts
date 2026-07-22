@@ -43,8 +43,8 @@ export async function GET() {
   const pre = rankCandidates(seasonList, owned, genreWeights(rows), 20)
   if (!pre.length) return NextResponse.json({ season, items: [] })
   try {
-    await consumeAiQuota(userId)
-    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(pre, facts.map((f) => f.text))))
+    await consumeAiQuota(userId, 'upcoming')
+    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(pre, facts.map((f) => f.text)), { userId, endpoint: 'upcoming' }))
     const byId = new Map(seasonList.map((s) => [s.anilistId, s]))
     const items = scores
       .sort((a, b) => b.score - a.score).slice(0, 8)

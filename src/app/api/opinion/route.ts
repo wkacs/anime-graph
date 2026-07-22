@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await consumeAiQuota(userId)
-    const facts = await extractFacts(animeRow.titleRomaji, rawText)
+    await consumeAiQuota(userId, 'opinion')
+    const facts = await extractFacts(animeRow.titleRomaji, rawText, { userId, endpoint: 'opinion' })
     await db.delete(tasteMemory).where(
       and(eq(tasteMemory.animeId, animeId), eq(tasteMemory.source, 'opinion')),
     )

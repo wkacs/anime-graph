@@ -66,8 +66,11 @@ export async function POST(req: NextRequest) {
     .slice(0, 60)
 
   try {
-    await consumeAiQuota(userId)
-    const raw = await glmChat(buildVibeMessages(prompt || 'a kiválasztott animékhez hasonlót keresek', own, globalFacts))
+    await consumeAiQuota(userId, 'vibe')
+    const raw = await glmChat(
+      buildVibeMessages(prompt || 'a kiválasztott animékhez hasonlót keresek', own, globalFacts),
+      { userId, endpoint: 'vibe' },
+    )
     const parsed = parseVibe(raw)
     const byId = new Map(rows.map((r) => [r.id, r]))
     const ownPicks = parsed.ownPicks
