@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, tasteMemory, recommendations } from '@/db/schema'
-import { fetchRecommendationsFor, type RecCandidate } from '@/lib/anilist'
+import { anime, title, tasteMemory, recommendations } from '@/db/schema'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
+import { buildLocalCandidates } from '@/lib/local-candidates'
 import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
@@ -19,19 +19,24 @@ export async function POST() {
     return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
   }
 
-  // top 5 by my score → pull AniList recommendations for each
+  // top 5 by my score → lokális jelöltlista a title katalógusból (nincs élő AniList-hívás)
   const top = [...rows]
     .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0))
     .slice(0, 5)
-  const pools = await Promise.allSettled(top.map((t) => fetchRecommendationsFor(t.anilistId)))
-  const candidates: RecCandidate[] = pools
-    .filter((p): p is PromiseFulfilledResult<RecCandidate[]> => p.status === 'fulfilled')
-    .flatMap((p) => p.value)
-  if (!candidates.length) {
-    return NextResponse.json({ error: 'AniList nem adott jelölteket, próbáld újra' }, { status: 502 })
-  }
-
+  const favorites = top.map((t) => ({
+    anilistId: t.anilistId, genres: t.genres,
+    relations: (t.relations ?? []).map((r) => r.anilistId),
+  }))
+  const catalog = await db.select({
+    anilistId: title.anilistId, titleRomaji: title.titleRomaji, coverUrl: title.coverUrl,
+    genres: title.genres, communityScore: title.communityScore, avgScore: title.avgScore,
+    relations: title.relations,
+  }).from(title).where(eq(title.mediaType, 'ANIME'))
   const owned = new Set(rows.map((r) => r.anilistId))
+  const candidates = buildLocalCandidates(favorites, catalog, owned)
+  if (!candidates.length) {
+    return NextResponse.json({ error: 'Nincs elég katalógus-adat az ajánláshoz' }, { status: 502 })
+  }
   const weights = genreWeights(rows)
   const ranked = rankCandidates(candidates, owned, weights, 30)
 
