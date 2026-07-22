@@ -1,6 +1,8 @@
 import { neon } from '@neondatabase/serverless'
 
-const DB_URL = 'https://raw.githubusercontent.com/manami-project/anime-offline-database/master/anime-offline-database-minified.json'
+// A manami repo már NEM branch-fájlként adja a JSON-t (raw/master → 404), hanem GitHub Release-asszetként.
+// A "latest" download URL a legfrissebb release minified JSON-jára mutat (~62 MB).
+const DB_URL = 'https://github.com/manami-project/anime-offline-database/releases/latest/download/anime-offline-database-minified.json'
 const sql = neon(process.env.DATABASE_URL)
 
 const idFrom = (sources, host) => {
