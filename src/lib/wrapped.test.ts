@@ -50,3 +50,18 @@ describe('availableYears', () => {
     )).toEqual([2026, 2024])
   })
 })
+
+describe('wrapped — üres bemenet', () => {
+  it('nem dob és definit struktúrát ad 0 animénél', () => {
+    expect(() => buildWrapped([], [], [], new Date().getFullYear())).not.toThrow()
+    const w = buildWrapped([], [], [], 2024)
+    expect(w).toBeTruthy()
+    // ne legyen NaN egyetlen szám-mezőben sem
+    for (const v of Object.values(w)) {
+      if (typeof v === 'number') expect(Number.isNaN(v)).toBe(false)
+    }
+  })
+  it('availableYears üres bemenetre üres tömb', () => {
+    expect(availableYears([], [])).toEqual([])
+  })
+})
