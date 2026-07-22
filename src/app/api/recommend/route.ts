@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, title, tasteMemory, recommendations } from '@/db/schema'
+import { anime, title, titleRecommendations, tasteMemory, recommendations } from '@/db/schema'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
 import { buildLocalCandidates } from '@/lib/local-candidates'
 import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
@@ -8,7 +8,7 @@ import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
 import { aiUserErrorMessage } from '@/lib/ai-error'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 
 export async function POST() {
   const userId = await requireUserId()
@@ -33,7 +33,14 @@ export async function POST() {
     relations: title.relations,
   }).from(title).where(eq(title.mediaType, 'ANIME'))
   const owned = new Set(rows.map((r) => r.anilistId))
-  const candidates = buildLocalCandidates(favorites, catalog, owned)
+  // batch-cache-elt AniList-recs (heti sync) a kedvenc címekre — kollaboratív jel élő hívás nélkül
+  const topIds = top.map((t) => t.anilistId)
+  const recRows = topIds.length
+    ? await db.select({ recAnilistId: titleRecommendations.recAnilistId })
+        .from(titleRecommendations).where(inArray(titleRecommendations.anilistId, topIds))
+    : []
+  const recIds = new Set(recRows.map((r) => r.recAnilistId))
+  const candidates = buildLocalCandidates(favorites, catalog, owned, 200, recIds)
   if (!candidates.length) {
     return NextResponse.json({ error: 'Nincs elég katalógus-adat az ajánláshoz' }, { status: 502 })
   }

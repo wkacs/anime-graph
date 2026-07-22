@@ -254,6 +254,17 @@ export const animeStaff = pgTable('anime_staff', {
   uniqueIndex('anime_staff_unique').on(t.userId, t.animeId, t.staffId),
 ])
 
+// AniList "users who liked X" jel, batch-cache-elve (heti sync) — nem élő per-request
+export const titleRecommendations = pgTable('title_recommendations', {
+  id: serial('id').primaryKey(),
+  anilistId: integer('anilist_id').notNull(),       // a forrás-cím
+  recAnilistId: integer('rec_anilist_id').notNull(), // az ajánlott cím
+  rating: integer('rating').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('title_rec_unique').on(t.anilistId, t.recAnilistId),
+])
+
 export type TitleInsert = typeof title.$inferInsert
 export type UserTitleInsert = typeof userTitle.$inferInsert
 // AnimeSelect stays available for read call sites via the compat view.
