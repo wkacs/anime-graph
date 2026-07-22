@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { anime } from '@/db/schema'
 import { fetchAiringFor, fetchSeason } from '@/lib/anilist'
 import { currentSeason } from '@/lib/seasonal'
+import { getCached, setCached } from '@/lib/api-cache'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 
@@ -21,10 +22,23 @@ export async function GET() {
     .filter((r) => r.status === 'watching' || r.status === 'planned')
     .map((r) => r.anilistId)
 
-  const [airing, seasonList] = await Promise.all([
-    followedIds.length ? fetchAiringFor(followedIds).catch(() => []) : Promise.resolve([]),
-    fetchSeason(season.season, season.year).catch(() => []),
-  ])
+  // seasonal: napi cache; airing: óránkénti cache — nem minden oldalbetöltésnél AniList-hívás
+  const seasonKey = `season:${season.season}:${season.year}`
+  let seasonList = await getCached<Awaited<ReturnType<typeof fetchSeason>>>(seasonKey)
+  if (!seasonList) {
+    seasonList = await fetchSeason(season.season, season.year).catch(() => [])
+    if (seasonList.length) await setCached(seasonKey, seasonList, 86400)
+  }
+
+  let airing: Awaited<ReturnType<typeof fetchAiringFor>> = []
+  if (followedIds.length) {
+    const airingKey = `airing:${[...followedIds].sort((a, b) => a - b).join(',')}`
+    airing = await getCached<Awaited<ReturnType<typeof fetchAiringFor>>>(airingKey) ?? []
+    if (!airing.length) {
+      airing = await fetchAiringFor(followedIds).catch(() => [])
+      if (airing.length) await setCached(airingKey, airing, 3600)
+    }
+  }
 
   const byAnilist = new Map(rows.map((r) => [r.anilistId, r]))
   const mine = airing

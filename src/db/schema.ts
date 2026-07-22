@@ -265,6 +265,14 @@ export const titleRecommendations = pgTable('title_recommendations', {
   uniqueIndex('title_rec_unique').on(t.anilistId, t.recAnilistId),
 ])
 
+// alacsony-frekvenciás külső hívások (seasonal/airing) TTL-cache-e
+export const apiCache = pgTable('api_cache', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
 export type TitleInsert = typeof title.$inferInsert
 export type UserTitleInsert = typeof userTitle.$inferInsert
 // AnimeSelect stays available for read call sites via the compat view.
