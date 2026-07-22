@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, settings, users } from '@/db/schema'
+import { toPublicAnime } from '@/lib/public-view'
 import { eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -30,12 +31,6 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ token: str
     },
     anime: rows
       .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0))
-      .map((a) => ({
-        title: a.titleRomaji,
-        coverUrl: a.coverUrl,
-        status: a.status,
-        myScore: a.myScore,
-        year: a.year,
-      })),
+      .map(toPublicAnime),
   })
 }
