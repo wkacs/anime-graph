@@ -1,0 +1,30 @@
+name: offline-db-sync
+on:
+  schedule:
+    - cron: '17 4 * * 1'   # hétfő 04:17 UTC, hetente
+  workflow_dispatch: {}
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: import offline-db (bulk katalógus-seed, no rate-limit)
+        run: node scripts/import-offline-db.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: backfill missing descriptions (AniList)
+        run: node scripts/backfill-descriptions.mjs --only-missing
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: sync AniList recommendations cache
+        run: node scripts/sync-title-recs.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: recompute community scores
+        run: node scripts/recompute-scores.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
