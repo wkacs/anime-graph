@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { resolveTitleBySlug } from '@/lib/catalog-page'
 import { stripHtml } from '@/lib/description'
 import OwnerOverlay from '@/components/OwnerOverlay'
+import FitBadge from '@/components/FitBadge'
 import CharacterGrid from '@/components/CharacterGrid'
 import ThemesPlayer from '@/components/ThemesPlayer'
 import StreamLinks from '@/components/StreamLinks'
@@ -72,6 +73,7 @@ export default async function CatalogTitlePage({
         </header>
 
         {/* personalized, dynamic — not part of the cached shell */}
+        <FitBadge titleId={t.id} />
         <OwnerOverlay
           titleId={t.id}
           watchlistMeta={{ anilistId: t.anilistId, title: t.titleRomaji, coverUrl: t.coverUrl, mediaType: t.mediaType }}
