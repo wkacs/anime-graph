@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 
 type Fit = { score: number; top: { name: string }[]; against: { name: string }[] }
-type FitResponse = { fit: Fit | null; authed: boolean }
+type FitResponse = { fit: Fit | null; drop?: Fit | null; authed: boolean }
 
 function scoreColor(score: number): string {
   if (score >= 70) return 'var(--status-watching)'
@@ -52,6 +52,11 @@ export default function FitBadge({ titleId }: { titleId: number }) {
       {against.length > 0 && (
         <span className="text-xs text-text-3">
           ellene: {against.map((t) => t.name).join(', ')}
+        </span>
+      )}
+      {res.drop && res.drop.score >= 65 && (
+        <span className="text-xs font-mono" style={{ color: 'var(--status-dropped)' }} title={`Hasonlókat szoktál dobni: ${res.drop.top.map((t) => t.name).join(', ')}`}>
+          ⚠ droppolás-rizikó {res.drop.score}%
         </span>
       )}
     </section>

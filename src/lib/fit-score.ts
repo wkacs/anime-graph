@@ -51,6 +51,25 @@ export function buildTasteVector(items: TasteItem[]): TasteVector {
   return { vector, sample: items.length }
 }
 
+// Drop-rizikó (D7): CSAK a droppolt címekből épített affinitás-vektor — „miket szoktál dobni".
+// Minden droppolt elem +1 súllyal megy be, így a computeFit score itt drop-VALÓSZÍNŰSÉGET mér.
+export const MIN_DROP_SAMPLE = 3
+
+export function buildDropVector(items: TasteItem[]): TasteVector {
+  const dropped = items.filter((it) => it.status === 'dropped')
+  return {
+    ...buildTasteVector(dropped.map((it) => ({ ...it, status: 'completed', myScore: 10 }))),
+    sample: dropped.length,
+  }
+}
+
+export function computeDropRisk(items: TasteItem[], target: FitTarget): FitResult | null {
+  const vec = buildDropVector(items)
+  if (vec.sample < MIN_DROP_SAMPLE) return null
+  // a computeFit MIN_SAMPLE-je a teljes listára van kalibrálva; droppból kevesebb is elég
+  return computeFit({ ...vec, sample: Math.max(vec.sample, MIN_SAMPLE) }, target)
+}
+
 export function computeFit(taste: TasteVector, target: FitTarget): FitResult | null {
   if (taste.sample < MIN_SAMPLE) return null
   const feats = targetFeatures(target)

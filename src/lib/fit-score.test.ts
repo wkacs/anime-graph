@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTasteVector, computeFit, MIN_SAMPLE } from './fit-score'
+import { buildTasteVector, computeFit, computeDropRisk, MIN_SAMPLE, MIN_DROP_SAMPLE } from './fit-score'
 
 const item = (over: Partial<Parameters<typeof buildTasteVector>[0][number]> = {}) => ({
   genres: ['Action'], tags: [], status: 'completed', myScore: null, ...over,
@@ -74,5 +74,31 @@ describe('computeFit', () => {
 
   it('MIN_SAMPLE exportált és ésszerű', () => {
     expect(MIN_SAMPLE).toBeGreaterThanOrEqual(3)
+  })
+})
+
+describe('computeDropRisk', () => {
+  const dropper = [
+    ...Array.from({ length: 4 }, () => item({ genres: ['Romance'], tags: [{ name: 'School', rank: 60 }], status: 'dropped' })),
+    ...Array.from({ length: 6 }, () => item({ genres: ['Action'], myScore: 9 })),
+  ]
+
+  it('kevés droppolt cím (< MIN_DROP_SAMPLE) → null', () => {
+    const few = [item({ status: 'dropped' }), ...Array.from({ length: 8 }, () => item({ myScore: 8 }))]
+    expect(computeDropRisk(few, { genres: ['Action'], tags: [] })).toBeNull()
+  })
+
+  it('droppolt-mintázatú cél → magas rizikó, indokkal', () => {
+    const risk = computeDropRisk(dropper, { genres: ['Romance'], tags: [{ name: 'School', rank: 50 }] })!
+    expect(risk.score).toBeGreaterThanOrEqual(70)
+    expect(risk.top.map((t) => t.name)).toContain('Romance')
+  })
+
+  it('droppokkal nem rokon cél → nincs ismert feature → null (nem riogat vakon)', () => {
+    expect(computeDropRisk(dropper, { genres: ['Mecha'], tags: [] })).toBeNull()
+  })
+
+  it('MIN_DROP_SAMPLE exportált', () => {
+    expect(MIN_DROP_SAMPLE).toBeGreaterThanOrEqual(2)
   })
 })

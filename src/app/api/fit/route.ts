@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, title } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
-import { buildTasteVector, computeFit } from '@/lib/fit-score'
+import { buildTasteVector, computeFit, computeDropRisk } from '@/lib/fit-score'
 import { eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -26,5 +26,6 @@ export async function GET(req: NextRequest) {
   }).from(anime).where(eq(anime.userId, userId))
 
   const fit = computeFit(buildTasteVector(items), target)
-  return NextResponse.json({ fit, authed: true })
+  const drop = computeDropRisk(items, target)
+  return NextResponse.json({ fit, drop, authed: true })
 }
