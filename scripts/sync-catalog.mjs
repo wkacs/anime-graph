@@ -94,21 +94,37 @@ async function upsert(m) {
       avg_score = excluded.avg_score, synced_at = now()`
 }
 
-async function syncYear(year) {
-  // startDate in [YYYY0000, YYYY1231]; -1 lower bound includes fuzzy year-only dates (YYYY0000).
-  const from = year * 10000 - 1
-  const to = (year + 1) * 10000
+async function syncRange(from, to) {
   const query = sliceQuery(TYPE, from, to)
-  let page = 1, count = 0
+  let page = 1, count = 0, capped = false
   for (;;) {
     const { data, waitMs } = await fetchPage(query, page)
     for (const m of data.media) { await upsert(m); count++ }
     if (!data.pageInfo.hasNextPage) break
-    if (page >= 100) { console.log(`  WARN ${year}: hit 5000 cap — year truncated (needs finer slicing)`); break }
+    if (page >= 100) { capped = true; break }
     page++
     await sleep(waitMs)
   }
-  return count
+  return { count, capped }
+}
+
+async function syncYear(year) {
+  // startDate in [YYYY0000, YYYY1231]; -1 lower bound includes fuzzy year-only dates (YYYY0000).
+  const { count, capped } = await syncRange(year * 10000 - 1, (year + 1) * 10000)
+  if (!capped) return count
+  // 5000-es lapozás-plafon: havi szeletekre váltás. A 0. szelet a csak-év fuzzy
+  // dátumokat fedi (YYYY0000..YYYY0099), az 1-12. a hónapokat; a sávok diszjunktak
+  // és uniójuk azonos az éves sávval (greater/lesser mindkét oldalt exkluzív).
+  console.log(`  ${year}: hit 5000 cap — re-slicing by month`)
+  let total = 0
+  for (let m = 0; m <= 12; m++) {
+    const from = year * 10000 + m * 100 - 1
+    const to = m < 12 ? year * 10000 + (m + 1) * 100 : (year + 1) * 10000
+    const r = await syncRange(from, to)
+    if (r.capped) console.log(`  WARN ${year}-${String(m).padStart(2, '0')}: monthly slice ALSO hit 5000 cap`)
+    total += r.count
+  }
+  return total
 }
 
 async function main() {
