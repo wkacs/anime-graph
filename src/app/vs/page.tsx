@@ -7,6 +7,9 @@ type Result = CompareResult & { username: string; otherUserId?: number | null }
 
 type DuoPick = { anilistId: number; title: string; coverUrl: string | null; reason: string }
 
+type GroupPick = { anilistId: number; title: string; coverUrl: string | null; slug: string; groupScore: number; perMember: (number | null)[] }
+type GroupResult = { members: string[]; picks: GroupPick[] }
+
 export default function VsPage() {
   const [username, setUsername] = useState('')
   const [mode, setMode] = useState<'anilist' | 'internal'>('anilist')
@@ -17,6 +20,10 @@ export default function VsPage() {
   const [duo, setDuo] = useState<DuoPick[] | null>(null)
   const [duoLoading, setDuoLoading] = useState(false)
   const [duoError, setDuoError] = useState('')
+  const [groupNames, setGroupNames] = useState('')
+  const [group, setGroup] = useState<GroupResult | null>(null)
+  const [groupLoading, setGroupLoading] = useState(false)
+  const [groupError, setGroupError] = useState('')
 
   async function run() {
     if (!username.trim()) return
@@ -51,6 +58,20 @@ export default function VsPage() {
     setDuoLoading(false)
     if (!res.ok) { setDuoError(json.error ?? 'Hiba történt'); return }
     setDuo(json.picks ?? [])
+  }
+
+  async function runGroup() {
+    const usernames = groupNames.split(',').map((s) => s.trim()).filter(Boolean)
+    if (!usernames.length) return
+    setGroupLoading(true); setGroupError(''); setGroup(null)
+    const res = await fetch('/api/group-pick', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames }),
+    })
+    const json = await res.json()
+    setGroupLoading(false)
+    if (!res.ok) { setGroupError(json.error ?? 'Hiba történt'); return }
+    setGroup(json)
   }
 
   async function addToPlanned(anilistId: number) {
@@ -204,6 +225,59 @@ export default function VsPage() {
           )}
         </motion.div>
       )}
+
+      <section className="glass rounded-3xl p-6">
+        <p className="label-mono mb-1">Klub-ajánló</p>
+        <p className="text-sm text-text-2 mb-4">
+          Mit nézzen a csoport? Add meg a többiek felhasználónevét vesszővel — a közös ízlés-metszetből ajánlunk
+          (vétó: ami valakinek kifejezetten nem jönne be, kiesik).
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={groupNames}
+            onChange={(e) => setGroupNames(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') runGroup() }}
+            placeholder="pl. demo, marci, anna"
+            className="field flex-1 min-w-[200px] px-4 py-2 text-sm"
+          />
+          <button onClick={runGroup} disabled={groupLoading} className="btn-solid px-4 py-2 text-sm">
+            {groupLoading ? 'Számolás…' : 'Ajánlj a klubnak'}
+          </button>
+        </div>
+        {groupError && <p className="text-sm text-[color:var(--status-dropped)] mt-3">{groupError}</p>}
+        {group && (
+          <>
+            <p className="label-mono mt-5 mb-2">tagok: {group.members.join(' · ')}</p>
+            {group.picks.length === 0 && (
+              <p className="text-sm text-text-3">Nincs elég közös metszet — bővítsétek a listákat, vagy kevesebb taggal próbáljátok.</p>
+            )}
+            <ul className="flex flex-col gap-2">
+              {group.picks.map((p) => (
+                <li key={p.anilistId} className="glass rounded-2xl p-3 flex gap-3 items-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {p.coverUrl && <img src={p.coverUrl} alt="" className="w-10 rounded-lg" />}
+                  <div className="min-w-0 flex-1">
+                    <a href={`/anime/${p.slug}`} className="text-sm font-medium hover:underline underline-offset-4">{p.title}</a>
+                    <p className="text-xs text-text-3">
+                      tagonként: {p.perMember.map((m) => (m == null ? '–' : `${m}%`)).join(' · ')}
+                    </p>
+                  </div>
+                  <span className="font-mono font-semibold shrink-0" style={{ color: p.groupScore >= 70 ? 'var(--status-watching)' : undefined }}>
+                    {p.groupScore}%
+                  </span>
+                  <button
+                    onClick={() => addToPlanned(p.anilistId)}
+                    disabled={added.has(p.anilistId)}
+                    className="btn-ghost border border-white/10 px-2.5 py-1 text-xs shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
+                  >
+                    {added.has(p.anilistId) ? '✓' : '+ Terv'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
     </main>
   )
 }
