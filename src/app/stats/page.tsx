@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import WrappedCard from '@/components/WrappedCard'
+import TasteCard from '@/components/TasteCard'
 import { buildHeatmapCells, type HeatCell } from '@/lib/heatmap'
 import { monthlyEvolution } from '@/lib/evolution'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
@@ -246,14 +247,17 @@ export default function StatsPage() {
         <section className="glass rounded-3xl p-6">
           <div className="flex items-start justify-between gap-3 mb-3">
             <p className="label-mono">Ízlés-profilod</p>
-            <button
-              onClick={regenerateProfile}
-              disabled={profileBusy}
-              className="btn-ghost px-2.5 py-1 text-xs"
-              title="Újragenerálás"
-            >
-              {profileBusy ? '…' : '↻'}
-            </button>
+            <div className="flex items-center gap-2">
+              <TasteCard profile={profile} list={list} />
+              <button
+                onClick={regenerateProfile}
+                disabled={profileBusy}
+                className="btn-ghost px-2.5 py-1 text-xs"
+                title="Újragenerálás"
+              >
+                {profileBusy ? '…' : '↻'}
+              </button>
+            </div>
           </div>
           <p className="text-[15px] leading-relaxed text-text-1 mb-4">{profile.portrait}</p>
           <div className="flex flex-wrap gap-1.5">
