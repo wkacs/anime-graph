@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import CompatChip from '@/components/CompatChip'
 
 type PublicData = {
   username: string | null
@@ -42,6 +43,9 @@ export default function PublicProfilePage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           {data.stats.total} anime · {data.stats.completed} befejezve
         </h1>
+        <div className="mt-3">
+          <CompatChip token={token} />
+        </div>
         <div className="flex flex-wrap gap-1.5 mt-3">
           {data.stats.topGenres.map((g) => (
             <span key={g.name} className="rounded-full border border-white/12 px-3 py-1 text-xs text-text-2">
