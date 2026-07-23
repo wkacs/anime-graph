@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm'
-import { db } from '@/db/client'
+// dbStatic: az ISR-oldalak (katalógus-shell) alatt a no-store kliens 500-at dobna
+import { dbStatic as db } from '@/db/client'
 import { title, userTitle } from '@/db/schema'
 
 export type TitleRow = typeof title.$inferSelect

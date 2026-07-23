@@ -28,3 +28,25 @@ export const db = new Proxy({} as DB, {
       : value
   },
 })
+
+// ISR-kompatibilis kliens a statikusan cache-elt oldalak (katalógus-shell) olvasásaihoz.
+// A globális `cache: 'no-store'` ISR-oldalon DYNAMIC_SERVER_USAGE-dzsel 500-at dob
+// (`next start` alatt), a frissesség-aggály itt nem él: az ISR maga 24h-ra cache-el.
+let _dbStatic: DB | null = null
+
+function getDbStatic(): DB {
+  if (!_dbStatic) {
+    _dbStatic = drizzle(neon(process.env.DATABASE_URL!), { schema })
+  }
+  return _dbStatic
+}
+
+export const dbStatic = new Proxy({} as DB, {
+  get(_target, prop) {
+    const real = getDbStatic() as unknown as Record<PropertyKey, unknown>
+    const value = real[prop]
+    return typeof value === 'function'
+      ? (value as (...args: unknown[]) => unknown).bind(real)
+      : value
+  },
+})
