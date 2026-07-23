@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import Countdown from '@/components/Countdown'
+import OnboardingCTA from '@/components/OnboardingCTA'
 import MediaCard from '@/components/MediaCard'
 import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
 import SeasonFilterBar from '@/components/SeasonFilterBar'
 import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
+import { useFitScores, fitColor } from '@/lib/use-fit-scores'
 import { applySeasonView, seasonFacets, EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
@@ -127,6 +129,7 @@ export default function NewsPage() {
     [scored, view],
   )
   const visibleSeason = useMemo(() => applySeasonView(seasonItems, effectiveView), [seasonItems, effectiveView])
+  const seasonFit = useFitScores(visibleSeason.map((s) => s.anilistId))
 
   async function addToPlanned(anilistId: number) {
     const res = await fetch('/api/anime', {
@@ -190,6 +193,8 @@ export default function NewsPage() {
           <RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} />
         </div>
       </div>
+
+      {data.mine.length === 0 && <OnboardingCTA />}
 
       {digest && (
         <motion.p
@@ -380,6 +385,14 @@ export default function NewsPage() {
                     style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}
                   >
                     {s.tasteScore}
+                  </span>
+                ) : seasonFit[s.anilistId] != null ? (
+                  <span
+                    className="glass rounded-full px-2 py-0.5 font-mono text-[11px]"
+                    title="Ennyire illik az ízlésedhez (lokális becslés)"
+                    style={{ color: fitColor(seasonFit[s.anilistId]) }}
+                  >
+                    {seasonFit[s.anilistId]}%
                   </span>
                 ) : undefined}
                 footer={

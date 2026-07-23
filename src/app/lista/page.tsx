@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
+import OnboardingCTA from '@/components/OnboardingCTA'
 import { filterByMedia, type MediaMode } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
@@ -209,7 +210,7 @@ export default function ListaPage() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-text-3 text-sm">
-                  Nincs találat.
+                  {list.length === 0 ? <OnboardingCTA compact /> : 'Nincs találat.'}
                 </td>
               </tr>
             )}

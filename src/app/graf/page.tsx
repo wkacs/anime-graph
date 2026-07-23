@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
+import OnboardingCTA from '@/components/OnboardingCTA'
 import RecommendMorph from '@/components/RecommendMorph'
 import {
   buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildStaffLayer, buildTimeline, filterByMedia,
@@ -320,9 +321,8 @@ export default function GrafPage() {
 
       {animeList.length === 0 && (
         <div className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="glass rounded-3xl px-8 py-6 text-center">
-            <p className="label-mono mb-2">Üres univerzum</p>
-            <p className="text-sm text-text-2">Add hozzá az első animét a bal felső keresővel.</p>
+          <div className="pointer-events-auto max-w-lg w-full px-4">
+            <OnboardingCTA />
           </div>
         </div>
       )}

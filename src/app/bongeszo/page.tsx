@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import MediaCard from '@/components/MediaCard'
+import { useFitScores, fitColor } from '@/lib/use-fit-scores'
 import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
 
@@ -18,6 +19,7 @@ export default function BrowsePage() {
   const [type, setType] = useState<'ANIME' | 'MANGA'>('ANIME')
   const [page, setPage] = useState(0) // 0-based offset page
   const [hits, setHits] = useState<TitleHit[]>([])
+  const fitScores = useFitScores(hits.map((h) => h.anilistId))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [added, setAdded] = useState<Set<number>>(new Set()) // titleId set
@@ -114,6 +116,7 @@ export default function BrowsePage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {hits.map((h) => {
               const owned = ownIds.has(h.anilistId) || added.has(h.titleId)
+              const fit = fitScores[h.anilistId]
               return (
                 <MediaCard
                   key={h.titleId}
@@ -121,7 +124,9 @@ export default function BrowsePage() {
                   coverUrl={h.coverUrl}
                   genres={[]}
                   href={hrefFor(h)}
-                  badge={h.communityScore != null ? (
+                  badge={fit != null ? (
+                    <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px]" style={{ color: fitColor(fit) }} title="Ennyire illik az ízlésedhez">{fit}%</span>
+                  ) : h.communityScore != null ? (
                     <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">{h.communityScore.toFixed(1)}</span>
                   ) : undefined}
                   footer={owned ? (
