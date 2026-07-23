@@ -25,6 +25,9 @@ A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-description
 | `AI_DAILY_LIMIT` | – | opcionális, default 20 (tier-limitek az `ai-limits.ts`-ben) |
 | `OPENROUTER_API_KEY` | – | GLM-429 failover |
 | `RESEND_API_KEY`, `NOTIFY_EMAIL`, `FROM_EMAIL` | – | napi e-mail digest |
+| `APP_URL` | szinkronhoz | a prod URL — OAuth-callbackekhez |
+| `MAL_CLIENT_ID`, `MAL_CLIENT_SECRET` | – | kétirányú MAL-szinkron (myanimelist.net/apiconfig, redirect: `<APP_URL>/api/sync/mal/callback`) |
+| `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET` | – | kétirányú AniList-szinkron (anilist.co/settings/developer, redirect: `<APP_URL>/api/sync/anilist/callback`) |
 
 4. Deploy. A `vercel.json` cron (06:00 UTC napi e-mail) automatikusan él.
 

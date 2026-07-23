@@ -4,6 +4,7 @@ import { anime, episodeLog, opinions, tasteMemory } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 import { updateUserTitle, deleteUserTitle } from '@/lib/anime-write'
+import { pushRowChange } from '@/lib/sync-back'
 
 const STATUSES = ['watching', 'completed', 'dropped', 'planned'] as const
 
@@ -47,6 +48,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     const row = await updateUserTitle(userId, animeId, {
       rewatchCount: current.rewatchCount + 1, progress: 0, status: 'watching',
     })
+    await pushRowChange(userId, current, { status: 'watching', progress: 0 })
     return NextResponse.json({ anime: row })
   }
 
@@ -81,6 +83,12 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   }
 
   const row = await updateUserTitle(userId, animeId, patch)
+  // kétirányú szinkron: a változás best-effort kimegy a bekötött MAL/AniList fiókba
+  await pushRowChange(userId, current, {
+    ...(patch.status !== undefined ? { status: patch.status as string } : {}),
+    ...(patch.progress !== undefined ? { progress: patch.progress as number } : {}),
+    ...(body.myScore !== undefined ? { myScore: (patch.myScore ?? null) as number | null } : {}),
+  })
   return NextResponse.json({ anime: row })
 }
 

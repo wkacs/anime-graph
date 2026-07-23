@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PushToggle from '@/components/PushToggle'
 import ProfileReveal from '@/components/ProfileReveal'
+import SyncAccounts from '@/components/SyncAccounts'
 
 const CONFIG_KEY = 'anime-graph-config'
 
@@ -202,6 +203,8 @@ export default function BeallitasokPage() {
           </p>
         )}
       </section>
+
+      <SyncAccounts />
 
       <section className="glass rounded-3xl p-6">
         <p className="label-mono mb-1">Publikus link</p>

@@ -273,6 +273,20 @@ export const apiCache = pgTable('api_cache', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
+// D3: kétirányú lista-szinkron — per-user OAuth-tokenek a külső szolgáltatókhoz (MAL/AniList)
+export const syncAccounts = pgTable('sync_accounts', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  provider: text('provider').notNull(), // 'mal' | 'anilist'
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token'),
+  expiresAt: timestamp('expires_at'),
+  externalUsername: text('external_username'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('sync_account_user_provider').on(t.userId, t.provider),
+])
+
 export type TitleInsert = typeof title.$inferInsert
 export type UserTitleInsert = typeof userTitle.$inferInsert
 // AnimeSelect stays available for read call sites via the compat view.

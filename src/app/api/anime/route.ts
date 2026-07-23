@@ -5,6 +5,7 @@ import { fetchDirectors, fetchMedia } from '@/lib/anilist'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 import { ensureTitle, addUserTitle, updateUserTitle, joinedRow } from '@/lib/anime-write'
+import { pushRowChange } from '@/lib/sync-back'
 
 // DB-backed GET must not be statically executed at build time
 export const dynamic = 'force-dynamic'
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
     const row = await addUserTitle(userId, catalogTitleId, {
       status, watchedAt: status === 'completed' ? new Date() : null,
     })
+    await pushRowChange(userId, row, { status })
     return NextResponse.json({ anime: row }, { status: 201 })
   }
 
@@ -63,6 +65,7 @@ export async function POST(req: NextRequest) {
       const row = await updateUserTitle(userId, existing[0].id, {
         status, watchedAt: existing[0].watchedAt ?? userFields.watchedAt,
       })
+      await pushRowChange(userId, existing[0], { status })
       return NextResponse.json({ anime: row })
     }
     return NextResponse.json({ anime: existing[0] })
@@ -79,5 +82,6 @@ export async function POST(req: NextRequest) {
         .onConflictDoNothing()
     }
   } catch { /* staff nélkül is él a sor */ }
+  await pushRowChange(userId, row, { status })
   return NextResponse.json({ anime: row }, { status: 201 })
 }
