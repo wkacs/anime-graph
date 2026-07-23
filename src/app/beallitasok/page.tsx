@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PushToggle from '@/components/PushToggle'
+import ProfileReveal from '@/components/ProfileReveal'
 
 const CONFIG_KEY = 'anime-graph-config'
 
@@ -15,6 +16,7 @@ export default function BeallitasokPage() {
   const [importing, setImporting] = useState<'anilist' | 'mal' | null>(null)
   const [importResult, setImportResult] = useState('')
   const [publicToken, setPublicToken] = useState<string | null>(null)
+  const [revealOpen, setRevealOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
 
@@ -85,6 +87,7 @@ export default function BeallitasokPage() {
     setImportResult(res.ok
       ? `✓ ${json.added} új, ${json.updated} frissítve`
       : `✕ ${json.error ?? 'Hiba történt'}`)
+    if (res.ok && json.added + json.updated > 0) setRevealOpen(true)
   }
 
   async function importMal(file: File) {
@@ -101,6 +104,7 @@ export default function BeallitasokPage() {
     setImportResult(res.ok
       ? `✓ ${json.added} új, ${json.updated} frissítve${json.notFound ? `, ${json.notFound} nem található AniList-en` : ''}`
       : `✕ ${json.error ?? 'Hiba történt'}`)
+    if (res.ok && json.added + json.updated > 0) setRevealOpen(true)
   }
 
   return (
@@ -239,6 +243,8 @@ export default function BeallitasokPage() {
           Kijelentkezés
         </button>
       </section>
+
+      <ProfileReveal open={revealOpen} onClose={() => setRevealOpen(false)} />
     </main>
   )
 }
