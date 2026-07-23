@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { users } from '@/db/schema'
 import { createSession } from '@/lib/auth'
 import { hashPassword } from '@/lib/password'
+import { clientIp, rateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
@@ -14,6 +15,10 @@ export async function POST(req: NextRequest) {
   const password = String(body.password ?? '')
   const invite = String(body.invite ?? '')
 
+  // meghívó-kód brute-force fék: 5 próbálkozás / óra / IP
+  if (!(await rateLimit('register', clientIp(req.headers), 5, 3600))) {
+    return NextResponse.json({ error: 'Túl sok próbálkozás — próbáld később' }, { status: 429 })
+  }
   if (invite !== process.env.INVITE_CODE) {
     return NextResponse.json({ error: 'Érvénytelen meghívó-kód' }, { status: 403 })
   }
