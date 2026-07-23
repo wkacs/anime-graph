@@ -6,6 +6,8 @@ import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import OnboardingCTA from '@/components/OnboardingCTA'
 import RecommendMorph from '@/components/RecommendMorph'
+import TourSpotlight from '@/components/TourSpotlight'
+import type { TourStep } from '@/lib/tour'
 import {
   buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildStaffLayer, buildTimeline, filterByMedia,
   COVER_AUTO_LIMIT, DEFAULT_CONFIG, type FavChar, type GraphConfig, type GraphNode, type MediaMode, type StaffRow,
@@ -15,7 +17,12 @@ import type { ApiAnime, ApiFact } from '@/lib/types'
 
 const CONFIG_KEY = 'anime-graph-config'
 const VIEW_KEY = 'anime-graph-view'
-const HINT_KEY = 'anime-graph-hint-seen'
+
+const GRAF_TOUR: TourStep[] = [
+  { selector: 'graph', title: '3D térkép', text: 'A műfaj-buborékok mérete = hány animéd van benne. Kattints egy buborékra a műfaj animéihez, húzással forgatsz.' },
+  { selector: 'view-toggle', title: 'Haladó nézet', text: 'Többszintes hierarchia (műfaj → stúdió → anime), átrendezhető szintekkel — ha mélyebbre másznál.' },
+  { selector: 'graph', title: 'Repülés', text: 'WASD + Q/E: szabad repülés a saját anime-univerzumodban. Az idővonal-mód a jobb-alsó sarokban van.' },
+]
 const MEDIA_KEY = 'anime-graph-media'
 const CHARS_KEY = 'anime-graph-chars'
 const STAFF_KEY = 'anime-graph-staff'
@@ -37,7 +44,6 @@ export default function GrafPage() {
   const [advanced, setAdvanced] = useState(false)
   const [focusGenre, setFocusGenre] = useState<string | null>(null)
   const [fitKey, setFitKey] = useState(0)
-  const [showHint, setShowHint] = useState(false)
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
@@ -55,7 +61,6 @@ export default function GrafPage() {
     if (savedMedia === 'MANGA' || savedMedia === 'ALL') setMediaMode(savedMedia)
     setShowChars(localStorage.getItem(CHARS_KEY) === '1')
     setShowStaff(localStorage.getItem(STAFF_KEY) === '1')
-    setShowHint(!localStorage.getItem(HINT_KEY))
     if (saved) { setLoaded(true); return }
     fetch('/api/settings')
       .then((r) => r.json())
@@ -183,8 +188,6 @@ export default function GrafPage() {
     if (n.bubble) {
       setFocusGenre(n.label)
       setFitKey(Date.now())
-      localStorage.setItem(HINT_KEY, '1')
-      setShowHint(false)
     } else {
       setFocusGenre(null)
       setFitKey(Date.now())
@@ -198,16 +201,18 @@ export default function GrafPage() {
       className="relative h-screen w-screen overflow-hidden"
       onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
     >
-      <Graph3D
-        data={graph}
-        onAnimeClick={openAnime}
-        onAnimeHover={setHoverId}
-        flythrough={flythrough}
-        nodeMode={nodeMode}
-        onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
-        fitKey={fitKey}
-        focusNodeId={focusNodeId}
-      />
+      <div data-tour="graph" className="absolute inset-0">
+        <Graph3D
+          data={graph}
+          onAnimeClick={openAnime}
+          onAnimeHover={setHoverId}
+          flythrough={flythrough}
+          nodeMode={nodeMode}
+          onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
+          fitKey={fitKey}
+          focusNodeId={focusNodeId}
+        />
+      </div>
 
       <div className="fixed top-20 left-4 z-20">
         <AddAnimeSearch onAdded={handleAdded} ownList={animeList} onPickOwn={flyToAnime} />
@@ -248,6 +253,7 @@ export default function GrafPage() {
         </div>
         {!timelineMode && (
           <button
+            data-tour="view-toggle"
             onClick={() => setView(!advanced)}
             className="glass rounded-full px-4 py-2.5 label-mono hover:bg-white/10 transition-colors"
           >
@@ -327,22 +333,8 @@ export default function GrafPage() {
         </div>
       )}
 
-      {/* első látogatás: rövid vezetés */}
-      {showHint && !advanced && !timelineMode && !focusGenre && animeList.length > 0 && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-20">
-          <div className="glass-strong rounded-2xl px-5 py-3 flex items-center gap-4 text-sm text-text-1">
-            <span>
-              Kattints egy buborékra a műfaj animéihez · húzással forgatsz · WASD + Q/E: repülés
-            </span>
-            <button
-              onClick={() => { setShowHint(false); localStorage.setItem(HINT_KEY, '1') }}
-              className="btn-ghost px-2 py-0.5 text-xs shrink-0"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {/* első látogatás: oldalankénti spotlight-túra (a régi hint-sávot váltja) */}
+      {animeList.length > 0 && <TourSpotlight page="graf" steps={GRAF_TOUR} />}
 
       {hoverAnime && (
         <div

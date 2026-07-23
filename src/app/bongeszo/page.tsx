@@ -3,6 +3,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores, fitColor } from '@/lib/use-fit-scores'
+import TourSpotlight from '@/components/TourSpotlight'
+import type { TourStep } from '@/lib/tour'
+
+const BONGESZO_TOUR: TourStep[] = [
+  { selector: 'search', title: 'Katalógus', text: ' 130 ezer anime és manga, saját adatbázisból — villámgyors keresés, szűrők, egy-kattintásos hozzáadás.' },
+  { selector: 'results', title: 'Neked való?', text: 'A találatokon a %-badge azt mutatja, mennyire illik az ízlésedhez — a saját listádból számolva, minden címre.' },
+]
 import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
 
@@ -81,7 +88,9 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      <div className="glass rounded-3xl p-4 flex flex-wrap items-center gap-2 text-sm">
+      <TourSpotlight page="bongeszo" steps={BONGESZO_TOUR} />
+
+      <div data-tour="search" className="glass rounded-3xl p-4 flex flex-wrap items-center gap-2 text-sm">
         <input
           value={search}
           onChange={(e) => setQuery(e.target.value)}
@@ -113,7 +122,7 @@ export default function BrowsePage() {
         </motion.p>
       ) : (
         <>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div data-tour="results" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {hits.map((h) => {
               const owned = ownIds.has(h.anilistId) || added.has(h.titleId)
               const fit = fitScores[h.anilistId]

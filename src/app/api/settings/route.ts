@@ -25,6 +25,7 @@ export async function GET() {
     tasteDislikes: map.tasteDislikes ?? '',
     hierarchyDefault: map.hierarchyDefault ?? null,
     publicToken: map.publicToken ?? null,
+    onboarding: map.onboarding ?? null,
   })
 }
 
@@ -36,6 +37,11 @@ export async function PUT(req: NextRequest) {
 
   if (body.hierarchyDefault !== undefined) {
     await upsert(userId, 'hierarchyDefault', body.hierarchyDefault)
+  }
+
+  // onboarding-wizard állapot (szerveroldali → több eszközön is tudott)
+  if (body.onboardingDone !== undefined) {
+    await upsert(userId, 'onboarding', { done: Boolean(body.onboardingDone) })
   }
 
   // publikus link: true = új token generálása, null = visszavonás

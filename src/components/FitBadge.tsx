@@ -26,7 +26,7 @@ export default function FitBadge({ titleId }: { titleId: number }) {
 
   if (!res.authed) {
     return (
-      <section className="glass rounded-3xl px-5 py-3.5 flex items-center gap-3">
+      <section data-tour="fit" className="glass rounded-3xl px-5 py-3.5 flex items-center gap-3">
         <span className="label-mono">Neked való?</span>
         <a href="/login" className="text-sm text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20">
           Jelentkezz be, és megmondjuk, mennyire illik az ízlésedhez →
@@ -39,7 +39,7 @@ export default function FitBadge({ titleId }: { titleId: number }) {
 
   const { score, top, against } = res.fit
   return (
-    <section className="glass rounded-3xl px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+    <section data-tour="fit" className="glass rounded-3xl px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
       <span className="label-mono">Neked való?</span>
       <span className="text-xl font-mono font-semibold tracking-tight" style={{ color: scoreColor(score) }}>
         {score}%

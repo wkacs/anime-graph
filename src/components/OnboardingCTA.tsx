@@ -12,7 +12,7 @@ export default function OnboardingCTA({ compact = false }: { compact?: boolean }
         megírja az ízlés-profilod. A régi listád nem vész el.
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2.5">
-        <a href="/beallitasok" className="btn-solid px-5 py-2.5 text-sm">Lista importálása →</a>
+        <a href="/onboarding" className="btn-solid px-5 py-2.5 text-sm">Vezess végig →</a>
         <a href="/bongeszo" className="btn-ghost border border-white/10 px-5 py-2.5 text-sm">
           Vagy böngéssz a katalógusban
         </a>

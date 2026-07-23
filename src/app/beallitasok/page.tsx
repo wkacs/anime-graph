@@ -239,6 +239,24 @@ export default function BeallitasokPage() {
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between">
         <div>
+          <p className="label-mono mb-1">Onboarding</p>
+          <p className="text-sm text-text-2">Első-lépések varázsló és oldal-túrák újraindítása.</p>
+        </div>
+        <button
+          onClick={() => {
+            Object.keys(localStorage)
+              .filter((k) => k.startsWith('anime-graph-tour:'))
+              .forEach((k) => localStorage.removeItem(k))
+            router.push('/onboarding')
+          }}
+          className="btn-ghost border border-white/10 px-5 py-2 text-sm"
+        >
+          Újraindítás
+        </button>
+      </section>
+
+      <section className="glass rounded-3xl p-6 flex items-center justify-between">
+        <div>
           <p className="label-mono mb-1">Munkamenet</p>
           <p className="text-sm text-text-2">Kijelentkezés erről az eszközről.</p>
         </div>

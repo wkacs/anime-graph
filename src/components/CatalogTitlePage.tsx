@@ -4,6 +4,13 @@ import { buildTitleJsonLd, jsonLdScript, siteUrl } from '@/lib/seo'
 import { stripHtml } from '@/lib/description'
 import OwnerOverlay from '@/components/OwnerOverlay'
 import FitBadge from '@/components/FitBadge'
+import TourSpotlight from '@/components/TourSpotlight'
+import type { TourStep } from '@/lib/tour'
+
+const TITLE_TOUR: TourStep[] = [
+  { selector: 'fit', title: 'Neked való?', text: 'Az ízlésedből számolt egyezés — mellette/ellene érvekkel, és ha hasonlókat szoktál dobni, arra is figyelmeztet.' },
+  { selector: 'opinion', title: 'Vélemény = a rendszer lelke', text: 'Írd le szabadon, mi tetszett és mi nem — az AI ízlés-tényeket nyer ki belőle, és ettől lesz egyre pontosabb minden ajánlás.' },
+]
 import CharacterGrid from '@/components/CharacterGrid'
 import ThemesPlayer from '@/components/ThemesPlayer'
 import StreamLinks from '@/components/StreamLinks'
@@ -80,6 +87,7 @@ export default async function CatalogTitlePage({
         </header>
 
         {/* personalized, dynamic — not part of the cached shell */}
+        <TourSpotlight page="title" steps={TITLE_TOUR} />
         <FitBadge titleId={t.id} />
         <OwnerOverlay
           titleId={t.id}

@@ -21,7 +21,7 @@ export default function LoginPage() {
       body: JSON.stringify(mode === 'login' ? { username, password } : { username, password, invite }),
     })
     setBusy(false)
-    if (res.ok) { router.push('/'); return }
+    if (res.ok) { router.push(mode === 'register' ? '/onboarding' : '/'); return }
     const json = await res.json().catch(() => null)
     setError(json?.error ?? 'Hiba történt')
   }

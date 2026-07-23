@@ -219,7 +219,7 @@ export default function OwnerOverlay({
       </section>
 
       {/* opinion */}
-      <section className="glass rounded-3xl p-5">
+      <section data-tour="opinion" className="glass rounded-3xl p-5">
         <p className="label-mono mb-3">Véleményem</p>
         <textarea
           value={opinion}

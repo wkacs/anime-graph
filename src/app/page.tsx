@@ -10,6 +10,14 @@ import TonightPicker from '@/components/TonightPicker'
 import SeasonFilterBar from '@/components/SeasonFilterBar'
 import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
 import { useFitScores, fitColor } from '@/lib/use-fit-scores'
+import TourSpotlight from '@/components/TourSpotlight'
+import type { TourStep } from '@/lib/tour'
+
+const NEWS_TOUR: TourStep[] = [
+  { selector: 'season', title: 'Szezon', text: 'Az aktuális szezon minden címe — a badge azt mutatja, mennyire illik az ízlésedhez. Lista nélkül is él.' },
+  { selector: 'recommend', title: 'Ajánlj nekem', text: 'Egy gomb: az AI a listádból és a véleményeidből tanult ízlésed alapján ajánl. Ez a lényeg.' },
+  { selector: 'tonight', title: 'Ma este?', text: 'Nincs kedved dönteni? Hangulat + idő alapján kiválasztja, mit nézz ma este.' },
+]
 import { applySeasonView, seasonFacets, EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
 import { SEASON_LABELS } from '@/lib/seasonal'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
@@ -189,12 +197,17 @@ export default function NewsPage() {
           </h1>
         </div>
         <div className="flex items-start gap-2">
-          <TonightPicker />
-          <RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} />
+          <div data-tour="tonight"><TonightPicker /></div>
+          <div data-tour="recommend"><RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} /></div>
         </div>
       </div>
 
       {data.mine.length === 0 && <OnboardingCTA />}
+      <TourSpotlight
+        page="news"
+        steps={NEWS_TOUR}
+        force={typeof window !== 'undefined' && window.location.search.includes('tour=1')}
+      />
 
       {digest && (
         <motion.p
@@ -363,7 +376,7 @@ export default function NewsPage() {
             Nincs találat a szűrőkre.
           </p>
         )}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div data-tour="season" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {visibleSeason.map((s, i) => (
             <motion.article
               key={s.anilistId}
