@@ -1,6 +1,8 @@
 import { redirect, notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import CatalogTitlePage from '@/components/CatalogTitlePage'
-import { legacyRedirectTarget } from '@/lib/catalog-page'
+import { canonicalPath, legacyRedirectTarget, resolveTitleBySlug } from '@/lib/catalog-page'
+import { titleMetadata } from '@/lib/seo'
 
 export const revalidate = 86400
 export const dynamicParams = true
@@ -11,6 +13,14 @@ export const dynamicParams = true
 // data makes it worthwhile.
 export function generateStaticParams() {
   return []
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  if (/^\d+$/.test(slug)) return {}
+  const t = await resolveTitleBySlug('ANIME', slug)
+  if (!t) return {}
+  return titleMetadata(t, canonicalPath(t.mediaType, t.slug))
 }
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {

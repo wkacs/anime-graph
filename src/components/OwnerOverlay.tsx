@@ -121,6 +121,8 @@ export default function OwnerOverlay({
     const res = await fetch('/api/anime', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titleId, status }),
     })
+    // publikus katalógus-oldalon anonim látogató: a lista-műveletek loginhoz kötöttek
+    if (res.status === 401) { window.location.href = '/login'; return }
     if (res.ok) load()
   }
 
@@ -145,6 +147,7 @@ export default function OwnerOverlay({
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ anilistId: watchlistMeta.anilistId, title: watchlistMeta.title, coverUrl: watchlistMeta.coverUrl, mediaType: watchlistMeta.mediaType }),
             })
+            if (res.status === 401) { window.location.href = '/login'; return }
             if (res.ok) setSharedAdded(true)
           }}
           disabled={sharedAdded}

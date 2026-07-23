@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { resolveTitleBySlug } from '@/lib/catalog-page'
+import { canonicalPath, resolveTitleBySlug } from '@/lib/catalog-page'
+import { buildTitleJsonLd, jsonLdScript, siteUrl } from '@/lib/seo'
 import { stripHtml } from '@/lib/description'
 import OwnerOverlay from '@/components/OwnerOverlay'
 import FitBadge from '@/components/FitBadge'
@@ -29,8 +30,14 @@ export default async function CatalogTitlePage({
     t.communityScore != null ? `★ ${t.communityScore.toFixed(1)} (${t.communityCount})` : null,
   ].filter(Boolean) as string[]
 
+  const jsonLd = buildTitleJsonLd(t, `${siteUrl()}${canonicalPath(t.mediaType, t.slug)}`)
+
   return (
     <main className="min-h-screen pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
+      />
       {(t.bannerUrl ?? t.coverUrl) && (
         <div className="fixed inset-x-0 top-0 h-[42vh] -z-10 overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}

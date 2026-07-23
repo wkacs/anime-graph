@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySession } from '@/lib/auth'
 
-// /api/cron a saját CRON_SECRET-jével véd; /p + /api/public token-alapú megosztott nézet
-const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/cron', '/p/', '/api/public/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/sw.js']
+// /api/cron a saját CRON_SECRET-jével véd; /p + /api/public token-alapú megosztott nézet.
+// M2c: a katalógus (címoldalak, böngésző, kereső) PUBLIKUS — ez az SEO-wedge; a hozzájuk
+// tartozó olvasó-API-k anonim-biztosak (owned/fit: authed:false ágat adnak, sosem 500).
+const PUBLIC_PREFIXES = [
+  '/login', '/api/auth', '/api/cron', '/p/', '/api/public/',
+  '/anime/', '/manga/', '/bongeszo',
+  '/api/search', '/api/browse', '/api/characters/', '/api/themes/', '/api/links/',
+  '/api/anime/owned', '/api/fit',
+  '/sitemap.xml', '/sitemaps/', '/robots.txt',
+  '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/sw.js',
+]
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
