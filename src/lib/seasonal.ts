@@ -15,7 +15,7 @@ export function currentSeason(now: Date): { season: string; year: number } {
   return { season, year: now.getFullYear() }
 }
 
-const SEASON_ORDER = ['WINTER', 'SPRING', 'SUMMER', 'FALL']
+export const SEASON_ORDER = ['WINTER', 'SPRING', 'SUMMER', 'FALL']
 
 export function nextSeason(now: Date): { season: string; year: number } {
   const cur = currentSeason(now)
