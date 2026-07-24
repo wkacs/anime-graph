@@ -392,3 +392,11 @@ export async function fetchDirectors(anilistId: number): Promise<StaffEntry[]> {
     .filter((e) => e.role === 'Director')
     .map((e) => ({ staffId: e.node.id, name: e.node.name.full, image: e.node.image?.medium ?? null, role: e.role }))
 }
+
+// teljes stáb-lista szűrés nélkül — a rangsorolást a staff-cache végzi
+export async function fetchStaff(anilistId: number): Promise<StaffEntry[]> {
+  type R = { Media: { staff: { edges: { role: string; node: { id: number; name: { full: string }; image: { medium: string | null } | null } }[] } } }
+  const data = await anilistFetch<R>(STAFF_QUERY, { id: anilistId })
+  return data.Media.staff.edges
+    .map((e) => ({ staffId: e.node.id, name: e.node.name.full, image: e.node.image?.medium ?? null, role: e.role }))
+}

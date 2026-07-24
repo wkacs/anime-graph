@@ -76,7 +76,15 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
               </div>
               <div className="p-2">
                 <p className="text-[11px] font-medium leading-tight line-clamp-1">{c.name}</p>
-                {c.vaName && <p className="text-[10px] text-text-3 leading-tight line-clamp-1">CV: {c.vaName}</p>}
+                {c.vaName && (
+                  <p className="flex items-center gap-1 mt-0.5" title={`Seiyuu: ${c.vaName}`}>
+                    {c.vaImage && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.vaImage} alt="" className="w-4 h-4 rounded-full object-cover shrink-0 border border-white/10" />
+                    )}
+                    <span className="text-[10px] text-text-3 leading-tight line-clamp-1">{c.vaName}</span>
+                  </p>
+                )}
               </div>
             </div>
           )

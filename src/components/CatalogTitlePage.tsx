@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation'
-import { canonicalPath, resolveTitleBySlug } from '@/lib/catalog-page'
+import Link from 'next/link'
+import { canonicalPath, pickSourceRelation, resolveRelationLocal, resolveTitleBySlug } from '@/lib/catalog-page'
+import { getCachedStaff } from '@/lib/staff-cache'
 import { buildTitleJsonLd, jsonLdScript, siteUrl } from '@/lib/seo'
 import { stripHtml } from '@/lib/description'
 import OwnerOverlay from '@/components/OwnerOverlay'
@@ -32,10 +34,19 @@ export default async function CatalogTitlePage({
     t.format,
     countChip,
     t.mediaType !== 'MANGA' && t.durationMin != null ? `${t.durationMin} perc` : null,
-    t.studio,
     t.avgScore != null ? `AniList ${t.avgScore}%` : null,
     t.communityScore != null ? `★ ${t.communityScore.toFixed(1)} (${t.communityCount})` : null,
   ].filter(Boolean) as string[]
+
+  // eredeti mű / adaptáció kiemelése + stáb (api_cache-elt AniList-query, hibánál üres)
+  const sourceRel = pickSourceRelation(t.relations, t.mediaType === 'MANGA' ? 'MANGA' : 'ANIME')
+  const sourceLocal = sourceRel
+    ? await resolveRelationLocal(sourceRel.anilistId, t.mediaType === 'MANGA' ? 'ANIME' : 'MANGA')
+    : null
+  const staff = await getCachedStaff(t.anilistId, t.mediaType)
+  const otherRelations = sourceRel
+    ? t.relations.filter((r) => !(r.type === sourceRel.type && r.anilistId === sourceRel.anilistId))
+    : t.relations
 
   const jsonLd = buildTitleJsonLd(t, `${siteUrl()}${canonicalPath(t.mediaType, t.slug)}`)
 
@@ -69,6 +80,15 @@ export default async function CatalogTitlePage({
               {chips.map((chip) => (
                 <span key={chip} className="glass rounded-full px-3 py-1 text-xs font-mono text-text-2">{chip}</span>
               ))}
+              {t.studio && (
+                <Link
+                  href={`/bongeszo?studio=${encodeURIComponent(t.studio)}`}
+                  title={`További ${t.studio}-címek a böngészőben`}
+                  className="glass rounded-full px-3 py-1 text-xs font-mono text-text-2 hover:text-text-1 transition-colors"
+                >
+                  {t.studio} →
+                </Link>
+              )}
             </div>
             <div className="flex flex-wrap gap-1.5 mt-2">
               {t.genres.map((g) => (
@@ -101,7 +121,61 @@ export default async function CatalogTitlePage({
           </section>
         )}
 
+        {sourceRel && (
+          <section className="glass rounded-3xl p-5">
+            <p className="label-mono mb-3">{t.mediaType === 'MANGA' ? 'Anime-adaptáció' : 'Eredeti mű'}</p>
+            <div className="flex items-center gap-4">
+              {sourceLocal?.coverUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={sourceLocal.coverUrl} alt="" className="w-16 aspect-[2/3] object-cover rounded-xl border border-white/10 shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium leading-tight">{sourceRel.title}</p>
+                <p className="text-xs text-text-3 mt-0.5">{t.mediaType === 'MANGA' ? 'ebből készült az anime-változat' : 'ebből készült ez a feldolgozás'}</p>
+              </div>
+              {sourceLocal ? (
+                <Link
+                  href={canonicalPath(sourceLocal.mediaType, sourceLocal.slug)}
+                  className="btn-ghost border border-white/10 px-3.5 py-1.5 text-xs shrink-0"
+                >
+                  Megnyitás →
+                </Link>
+              ) : (
+                <a
+                  href={`https://anilist.co/${t.mediaType === 'MANGA' ? 'anime' : 'manga'}/${sourceRel.anilistId}`}
+                  target="_blank" rel="noreferrer"
+                  className="btn-ghost border border-white/10 px-3.5 py-1.5 text-xs shrink-0"
+                >
+                  AniList ↗
+                </a>
+              )}
+            </div>
+          </section>
+        )}
+
         <CharacterGrid anilistId={t.anilistId} readOnly />
+
+        {staff.length > 0 && (
+          <section className="glass rounded-3xl p-5">
+            <p className="label-mono mb-3">Stáb</p>
+            <div className="flex flex-wrap gap-4">
+              {staff.map((s) => (
+                <div key={s.staffId} className="flex items-center gap-2.5">
+                  {s.image ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={s.image} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-white/5" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium leading-tight">{s.name}</p>
+                    <p className="text-[10px] text-text-3 leading-tight">{s.role}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <ThemesPlayer
           anilistId={t.anilistId}
@@ -111,11 +185,11 @@ export default async function CatalogTitlePage({
           bannerUrl={t.bannerUrl}
         />
 
-        {t.relations.length > 0 && (
+        {otherRelations.length > 0 && (
           <section className="glass rounded-3xl p-5">
             <p className="label-mono mb-3">Kapcsolódó</p>
             <ul className="flex flex-col gap-1.5">
-              {t.relations.map((r) => (
+              {otherRelations.map((r) => (
                 <li key={`${r.type}-${r.anilistId}`} className="flex items-center gap-3 text-sm">
                   <span className="label-mono w-24 shrink-0">{r.type.toLowerCase().replace('_', ' ')}</span>
                   <a
