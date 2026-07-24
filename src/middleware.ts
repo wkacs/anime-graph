@@ -6,8 +6,9 @@ import { verifySession } from '@/lib/auth'
 // tartozó olvasó-API-k anonim-biztosak (owned/fit: authed:false ágat adnak, sosem 500).
 const PUBLIC_PREFIXES = [
   '/login', '/api/auth', '/api/cron', '/p/', '/api/public/',
-  '/anime/', '/manga/', '/bongeszo',
+  '/anime/', '/manga/', '/bongeszo', '/toplista',
   '/api/search', '/api/browse', '/api/characters/', '/api/themes/', '/api/links/',
+  '/api/leaderboard',
   '/api/anime/owned', '/api/fit',
   '/sitemap.xml', '/sitemaps/', '/robots.txt',
   '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/sw.js',
