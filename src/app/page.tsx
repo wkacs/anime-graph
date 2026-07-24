@@ -19,7 +19,13 @@ const NEWS_TOUR: TourStep[] = [
   { selector: 'tonight', title: 'Ma este?', text: 'Nincs kedved dönteni? Hangulat + idő alapján kiválasztja, mit nézz ma este.' },
 ]
 import { applySeasonView, seasonFacets, EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
-import { SEASON_LABELS } from '@/lib/seasonal'
+import { SEASON_LABELS, nextSeason } from '@/lib/seasonal'
+
+// a teljes next-season rács sorai a lokális katalógusból (/api/browse?season=next)
+type NextSeasonRow = {
+  id: number; anilistId: number; titleRomaji: string; coverUrl: string | null
+  genres: string[]; slug: string; mediaType: string; format: string | null
+}
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { FeedItem } from '@/lib/feed'
 
@@ -82,6 +88,7 @@ export default function NewsPage() {
   const [wlUsers, setWlUsers] = useState<Record<number, string>>({})
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([])
   const [upcomingSeason, setUpcomingSeason] = useState<{ season: string; year: number } | null>(null)
+  const [nextList, setNextList] = useState<NextSeasonRow[] | null>(null)
   const [scores, setScores] = useState<Map<number, { score: number; reason: string }>>(new Map())
   const [scoresFailed, setScoresFailed] = useState(false)
   const [view, setView] = useState<SeasonView>(EMPTY_SEASON_VIEW)
@@ -106,6 +113,10 @@ export default function NewsPage() {
       .then((r) => r.json())
       .then((j) => { setWatchlist(j.items ?? []); setWlUsers(j.usernames ?? {}) })
       .catch(() => { /* watchlist nélkül is él az oldal */ })
+    fetch('/api/browse?season=next&type=ANIME&sort=SCORE_DESC')
+      .then((r) => (r.ok ? r.json() : { media: [] }))
+      .then((j: { media: NextSeasonRow[] }) => setNextList((j.media ?? []).slice(0, 18)))
+      .catch(() => setNextList([]))
     fetch('/api/news/upcoming')
       .then((r) => r.json())
       .then((j) => { setUpcoming(j.items ?? []); setUpcomingSeason(j.season ?? null) })
@@ -138,6 +149,7 @@ export default function NewsPage() {
   )
   const visibleSeason = useMemo(() => applySeasonView(seasonItems, effectiveView), [seasonItems, effectiveView])
   const seasonFit = useFitScores(visibleSeason.map((s) => s.anilistId))
+  const nextFit = useFitScores((nextList ?? []).map((t) => t.anilistId))
 
   async function addToPlanned(anilistId: number) {
     const res = await fetch('/api/anime', {
@@ -472,6 +484,47 @@ export default function NewsPage() {
           </div>
         </section>
       )}
+
+      {nextList != null && (() => {
+        const ns = nextSeason(new Date())
+        return (
+          <section>
+            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+              <p className="label-mono">
+                Következő szezon — teljes kínálat · {ns.year} {SEASON_LABELS[ns.season] ?? ns.season}
+              </p>
+              <Link href="/bongeszo?season=next" className="text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20">
+                Mind a böngészőben →
+              </Link>
+            </div>
+            {nextList.length === 0 ? (
+              <p className="text-sm text-text-2">Még kevés bejelentett cím — a katalógus-sync bővíti majd.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {nextList.map((t) => (
+                  <MediaCard
+                    key={t.id}
+                    title={t.titleRomaji}
+                    coverUrl={t.coverUrl}
+                    genres={t.genres}
+                    href={`/${t.mediaType === 'MANGA' ? 'manga' : 'anime'}/${t.slug}`}
+                    badge={nextFit[t.anilistId] != null ? (
+                      <span
+                        className="glass rounded-full px-2 py-0.5 font-mono text-[11px]"
+                        style={{ color: fitColor(nextFit[t.anilistId]) }}
+                        title="Ennyire illik az ízlésedhez"
+                      >
+                        {nextFit[t.anilistId]}%
+                      </span>
+                    ) : undefined}
+                    footer={t.format ? <span className="label-mono">{t.format}</span> : undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )
+      })()}
     </main>
   )
 }
