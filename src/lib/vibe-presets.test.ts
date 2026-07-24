@@ -18,4 +18,13 @@ describe('buildVibePrompt', () => {
     const ids = VIBE_PRESETS.flatMap((g) => g.chips.map((c) => c.id))
     expect(new Set(ids).size).toBe(ids.length)
   })
+  it('uj csoportok: helyszin, temak, celkozonseg, forras', () => {
+    const groups = VIBE_PRESETS.map((g) => g.group)
+    for (const g of ['Helyszín', 'Témák', 'Célközönség', 'Forrás']) expect(groups).toContain(g)
+  })
+  it('uj chipek prompt-darabja is befuzodik', () => {
+    const out = buildVibePrompt(['th-isekai', 'demo-seinen'], '')
+    expect(out).toContain('isekai')
+    expect(out).toContain('seinen')
+  })
 })

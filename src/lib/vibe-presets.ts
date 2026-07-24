@@ -34,6 +34,35 @@ export const VIBE_PRESETS: { group: string; chips: VibeChip[] }[] = [
     { id: 'pace-slow', label: 'Lassú-hangulatos', prompt: 'lassú tempójú, hangulatos' },
     { id: 'pace-fast', label: 'Pörgős', prompt: 'pörgős, gyors tempójú' },
   ]},
+  { group: 'Helyszín', chips: [
+    { id: 'set-school', label: 'Iskola', prompt: 'iskolai környezetben játszódik' },
+    { id: 'set-fantasy', label: 'Fantasy-világ', prompt: 'fantasy-világban játszódik' },
+    { id: 'set-space', label: 'Űr', prompt: 'űrben / sci-fi világban játszódik' },
+    { id: 'set-historical', label: 'Történelmi', prompt: 'történelmi korban játszódik' },
+    { id: 'set-city', label: 'Nagyváros', prompt: 'modern nagyvárosban játszódik' },
+  ]},
+  { group: 'Témák', chips: [
+    { id: 'th-revenge', label: 'Bosszú', prompt: 'bosszú-történet' },
+    { id: 'th-sport', label: 'Sport', prompt: 'sport-téma' },
+    { id: 'th-music', label: 'Zene', prompt: 'zenei téma' },
+    { id: 'th-psych', label: 'Pszichológiai', prompt: 'pszichológiai mélységű' },
+    { id: 'th-mecha', label: 'Mecha', prompt: 'mecha / óriásrobotok' },
+    { id: 'th-isekai', label: 'Isekai', prompt: 'isekai, másik világba kerülés' },
+    { id: 'th-timetravel', label: 'Időutazás', prompt: 'időutazás-téma' },
+    { id: 'th-martial', label: 'Harcművészet', prompt: 'harcművészet, látványos küzdelmek' },
+  ]},
+  { group: 'Célközönség', chips: [
+    { id: 'demo-shounen', label: 'Shounen', prompt: 'shounen-stílusú' },
+    { id: 'demo-seinen', label: 'Seinen', prompt: 'seinen, felnőttesebb hangvétel' },
+    { id: 'demo-shoujo', label: 'Shoujo', prompt: 'shoujo-stílusú' },
+    { id: 'demo-josei', label: 'Josei', prompt: 'josei, felnőtt női közönségnek' },
+  ]},
+  { group: 'Forrás', chips: [
+    { id: 'src-manga', label: 'Manga-adaptáció', prompt: 'manga-adaptáció' },
+    { id: 'src-ln', label: 'Light novel', prompt: 'light novel adaptáció' },
+    { id: 'src-original', label: 'Eredeti anime', prompt: 'eredeti (nem adaptáció) anime' },
+    { id: 'src-game', label: 'Játék-adaptáció', prompt: 'videojáték-adaptáció' },
+  ]},
 ]
 
 const BY_ID = new Map(VIBE_PRESETS.flatMap((g) => g.chips).map((c) => [c.id, c]))
