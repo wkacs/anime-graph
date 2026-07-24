@@ -1,6 +1,6 @@
 # Anime Graph — Teljes funkciólista
 
-*Állapot: 2026-07-24 (HEAD: `c98ae36`, 232 teszt zöld, build zöld)*
+*Állapot: 2026-07-24 este (feature-batch-2 után, 272 teszt zöld, build zöld)*
 
 Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus, több­felhasználós anime/manga-katalógus és AI-alapú ízléskövető platform** (MAL-versenytárs irány, freemium modellel tervezve). Ez a dokumentum összefoglalja, hogy **most** mit tud az alkalmazás.
 
@@ -11,9 +11,11 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 | Útvonal | Mit csinál |
 |---|---|
 | `/` | Kezdőlap / hírek (News) |
-| `/graf` | 3D anime-gráf (a névadó funkció) |
-| `/bongeszo` | Katalógus-böngésző (lokális DB-ből, szűrőkkel, fit-badge-ekkel) |
-| `/lista` | Saját lista (státuszok, értékelések kezelése) |
+| `/graf` | 3D anime-gráf (a névadó funkció; zoom a kurzor felé) |
+| `/bongeszo` | Katalógus-böngésző (lokális DB, „Felkapott most" üres állapot, stúdió- és szezon-szűrő) |
+| `/lista` | Saját lista (státuszok, értékelések, 📌 kitűzés) |
+| `/velemenyek` | Vélemény-váró címek, kártyán belüli vélemény-írással (TopNav-badge számlálóval) |
+| `/toplista` | Publikus leaderboard: Nálunk / AniList / Legnézettebb fülek + műfaj-szűrő |
 | `/anime/[slug]`, `/manga/[slug]` | Kanonikus, publikus címoldalak (ISR + SEO) |
 | `/anime/preview/[anilistId]` | Előnézet még fel nem vett címekhez, hozzáadás-gombokkal |
 | `/stats` | Statisztikák (heatmap, idővonal, összehasonlítás) |
@@ -39,7 +41,7 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 - **Teljes AniList-szinkron lefutott**: ~**21 900 anime** + **108 000+ manga**, összesen **~32k+ title** a dev DB-ben, 0 orphan. Szinkron-script (`sync-catalog.mjs`) évek/hónapok szerinti szeleteléssel kerüli az AniList 5000-es lapozási plafonját.
 - **Offline-DB import** (`import-offline-db.mjs`): szelektív upsert a title-táblába, GitHub-Release-assetről.
 - **Kanonikus publikus oldalak** (M2b): `/anime/[slug]` és `/manga/[slug]` — ISR-shell (`CatalogTitlePage`) + kliens­oldali `OwnerOverlay` (a saját adat csak kliensen töltődik → nincs cache-szivárgás). Slug-resolver + legacy `/anime/[id]` numerikus 301-redirect.
-- Címoldal-tartalom: leírás, karakter-rács (`CharacterGrid`), stáb, **openingek/endingek lejátszó** (`ThemesPlayer`), **streaming-linkek** (`StreamLinks`), közösségi pontszám.
+- Címoldal-tartalom: leírás, karakter-rács **seiyuu-képpel/névvel** (`CharacterGrid`), **stáb-szekció** (rendező, alkotó, karakterdizájn stb., 7 napos `api_cache`-sel), **kattintható stúdió-chip** (→ böngésző stúdió-szűrő), **„Eredeti mű"/„Anime-adaptáció" kártya** (a relations SOURCE/ADAPTATION eleme borítóval, lokális kanonikus linkkel), **openingek/endingek lejátszó** (`ThemesPlayer`), **streaming-linkek** (`StreamLinks`), közösségi pontszám.
 - **Keresés** (M2a): Postgres `tsvector` + GIN-index, `/api/search`; a böngésző és a hozzáadás-flow is a lokális katalógusból keres (AniList-fallbackkel, hozzáadás titleId alapján).
 - **SEO** (M2c): `robots.ts`, sitemap-index 45k-s chunkokkal, JSON-LD (XSS-safe `<`-escape-pel), OpenGraph + `generateMetadata` minden címoldalon.
 
@@ -55,12 +57,18 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 - **Fit-score (D1)**: minden címre 0–100 illeszkedés a saját ízléshez; `FitBadge` a böngészőben, szezon-gridben, címoldalakon; batch-endpoint (`/api/fit/batch`).
 - **Drop-rizikó (D7)**: a fit-motor becsüli, mekkora eséllyel dobnád el a címet.
 - **Ízlés-evolúció**: hogyan változott az ízlésed időben (`evolution`, `taste/eras` — ízlés-korszakok), **ízlés-DNS kártya** (`TasteCard`).
-- **Vibe-keresés** (`/vibe`): hangulat-presetek + szabad szöveg → ajánlat.
+- **Vibe-keresés** (`/vibe`): hangulat-presetek + szabad szöveg → ajánlat; 9 chip-csoport (hangulat, műfaj, hossz, korszak, tempó + **helyszín, témák, célközönség, forrás**).
 - **Természetes nyelvű keresés** (`/api/search/nl`): „valami rövid, sötét thriller a 2010-es évekből" jellegű lekérdezések.
 - **Tonight-picker** (`TonightPicker`): „ma este mit nézzek" gyorsválasztó.
 - **Szezon-AI**: az aktuális szezon címeinek AI-pontozása az ízlésedre (`/api/news/season-scores`).
 - **Duo-ajánló** (`/api/recommend/duo`): két felhasználó közös ízlésére ajánl.
 - **Klub-ajánló (D5, `/vs`)**: több fős csoportnak közös pick (`group-pick`).
+
+## 5/b. Toplista és vélemény-váró (feature-batch-2)
+
+- **/toplista** (publikus): három fül — házon belüli communityScore (min. 2 értékelés), AniList avgScore (32k címen), „Legnézettebb nálunk" (popularity) — műfaj-chipsorral és anime/manga váltóval, top 50, 1 órás cache.
+- **/velemenyek**: minden saját cím, amihez nincs (sikeres) vélemény; completed→watching→dropped sorrend, kártyán belüli textarea + mentés a meglévő opinion-flow-ba; TopNav-badge mutatja a darabszámot.
+- **Böngésző üres állapota**: keresés nélkül „Felkapott most" (aktuális szezon top AniList-pontszám) + „Nálunk népszerű" rácsok, tisztán lokális DB-ből.
 
 ## 6. Social / több felhasználó
 
@@ -68,12 +76,14 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 - **Feed**: a többiek aktivitása (`/api/feed`).
 - **Közös watchlist** (`/api/watchlist`).
 - **Kompatibilitás-% (D4)**: két felhasználó ízlés-egyezése, `CompatChip` a publikus profilon.
-- **Publikus profil** (`/p/[token]`): token-alapú, megosztható nézet.
+- **Publikus profil** (`/p/[token]`): token-alapú, megosztható nézet; **rendezés** (pont/cím/év) + **státusz-szűrő** chipek; **kitűzött kedvencek hero-sávja**.
+- **Kitűzés**: max 3 kedvenc cím (lista 📌-oszlop, címoldali overlay-gomb) + max 3 kedvenc karakter (karakter-rács 📌) — a publikus profilon és a stats tetején jelenik meg; szigorú whitelist (vélemény-adat nem megy ki).
+- **Klub-ajánló UX**: „Hogyan működik?" magyarázó + tagonkénti fit-sávok, vétó-közeli érték jelölve.
 - **Összehasonlítás** (`/api/compare`): listák/ízlések egymás mellett.
 
 ## 7. Hírek, szezon, értesítések
 
-- **News-oldal** (`/`): felkapott/szezonális hírek, cache-elve; upcoming-lista visszaszámlálóval (`Countdown`).
+- **News-oldal** (`/`): felkapott/szezonális hírek, cache-elve; upcoming-lista visszaszámlálóval (`Countdown`); **„Következő szezon — teljes kínálat"** rács a lokális katalógusból fit-badge-ekkel + link a böngésző next-season szűrőjére.
 - **Szezon-szűrősáv** (`SeasonFilterBar`) + szezon-grid fit-badge-ekkel.
 - **Web push értesítések** (`PushToggle`, `/api/push`): epizód-megjelenés (airing-check cron), **szezonváltás-értesítés** a napi cronban.
 - **Cron-jobok** (GitHub Actions ütemezéssel): `airing-check` (napi), `time-capsule`.
@@ -83,7 +93,7 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 - **MAL-import** (`/api/import/mal`) és **AniList-import** (`/api/import/anilist`) — teljes lista áthozása, upsert-tel.
 - **Kétirányú MAL/AniList-szinkron (D3)**: OAuth-flow (`/api/sync/[provider]/start` + `callback`), `sync_accounts` tábla, visszaírás (`sync-back`) és státusz-lekérdezés. ⚠️ *OAuth-app-regisztráció + env-kulcsok kellenek hozzá, élő API ellen még nem tesztelt.*
-- **Export** (`/api/export`): saját adatok kimentése.
+- ~~Export~~: az adatmentés-funkció 2026-07-24-én kikerült (user-döntés).
 
 ## 9. Onboarding és túra
 
@@ -93,7 +103,7 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 ## 10. Wrapped és statisztikák
 
-- **/wrapped**: éves összefoglaló (Spotify Wrapped-stílus, `WrappedCard`).
+- **/wrapped**: éves összefoglaló — **teljes képernyős story-mód** (progress-sáv, kattintás/nyíl-lapozás, animált slide-ok, záró összefoglaló-kártya) + görgetős fallback; új statok: **binge-rekord** (legtöbb epizód egy nap) és **dropok**.
 - **/stats**: heatmap (nézési aktivitás), idővonal, összesítők.
 
 ## 11. Backend-hardening / üzemeltetés
@@ -109,7 +119,7 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 - **Next.js** (App Router, ISR) + **Neon Postgres** + **Drizzle ORM**; Vercel-re szánva.
 - AI: GLM `glm-4.7-flash` (ingyenes tier) + OpenRouter failover.
-- Tesztek: **232 vitest unit** (DB/hálózat nélkül futnak) + `tsc` + build zöld.
+- Tesztek: **272 vitest unit** (DB/hálózat nélkül futnak) + `tsc` + build zöld.
 - Env: `DATABASE_URL`, `GLM_API_KEY`, `SESSION_SECRET`, `INVITE_CODE`, opcionális `AI_DAILY_LIMIT`, `OPENROUTER_API_KEY`, push-hoz VAPID-kulcsok, cronhoz `CRON_SECRET`/`APP_URL`.
 
 ---
