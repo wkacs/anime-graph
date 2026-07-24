@@ -303,6 +303,9 @@ export default function Graph3D({
       const fg = fgRef.current
       if (!fg) return
       clearInterval(timer)
+      // zoom a kurzor iránya felé, ne a scéna közepe felé (three r149+ natív)
+      const controls = fg.controls() as { zoomToCursor?: boolean }
+      if (controls) controls.zoomToCursor = true
       const scene = fg.scene()
       if (!scene.getObjectByName('starfield')) {
         const N = 700
