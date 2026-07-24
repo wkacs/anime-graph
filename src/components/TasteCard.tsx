@@ -43,7 +43,28 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 type Profile = { portrait: string; badges: string[] }
 
 async function drawTasteCard(profile: Profile, list: ApiAnime[]): Promise<string> {
-  const W = 1080, H = 1350
+  const W = 1080
+  const cw = 190, ch = 268, gap = 26
+
+  // mérő-menet: a tartalom tényleges aljához igazítjuk a magasságot,
+  // különben a fix pozíciójú borítók a statokra rajzolódnak
+  const measure = document.createElement('canvas').getContext('2d')!
+  measure.font = '600 44px Instrument Sans, sans-serif'
+  const measuredLines = wrapText(measure, profile.portrait, W - 144).slice(0, 8)
+  let my = 210 + measuredLines.length * 62 + 40
+  measure.font = '500 30px Instrument Sans, sans-serif'
+  let mbx = 72
+  for (const b of profile.badges) {
+    const pw = measure.measureText(b).width + 56
+    if (mbx + pw > W - 72) { mbx = 72; my += 76 }
+    mbx += pw + 18
+  }
+  my += 110
+  const genreCount = Math.min(5, new Set(list.flatMap((a) => a.genres)).size)
+  const statsBottom = my + 44 + genreCount * 58
+  const cy = statsBottom + 40
+  const H = Math.max(1350, cy + ch + 130)
+
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -110,11 +131,9 @@ async function drawTasteCard(profile: Profile, list: ApiAnime[]): Promise<string
     y += 58
   }
 
-  // top-3 borító alul
+  // top-3 borító a statok UTÁN (folyó pozíció, nem fix — nem lóghat a sávokra)
   const covers = [...list].filter((a) => a.coverUrl)
     .sort((a, b) => (b.myScore ?? 0) - (a.myScore ?? 0)).slice(0, 3)
-  const cw = 190, ch = 268, gap = 26
-  const cy = H - ch - 130
   await Promise.all(covers.map(async (a, i) => {
     try {
       const img = await loadImage(proxied(a.coverUrl!))
