@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const mapped = rows.map((r) => ({
     id: r.id, titleRomaji: r.titleRomaji, coverUrl: r.coverUrl, genres: r.genres,
     studio: r.studio, myScore: r.myScore, mediaType: r.mediaType,
-    durationMin: r.durationMin, chapters: r.chapters, progress: r.progress,
+    durationMin: r.durationMin, chapters: r.chapters, progress: r.progress, status: r.status,
     watchedAt: r.watchedAt?.toISOString() ?? null, createdAt: r.createdAt.toISOString(),
   }))
   const episodes = eps.map((e) => ({ animeId: e.animeId, watchedAt: e.watchedAt.toISOString() }))

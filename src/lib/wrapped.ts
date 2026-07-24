@@ -9,6 +9,7 @@ export type WrappedAnimeRow = {
   durationMin: number | null
   chapters: number | null
   progress: number
+  status: string
   watchedAt: string | null
   createdAt: string
 }
@@ -26,6 +27,8 @@ export type WrappedData = {
   longestStreakDays: number
   favChars: { name: string; image: string | null }[]
   manga: { count: number; chapters: number } | null
+  drops: number
+  maxEpisodesInDay: number
 }
 
 const yearOf = (iso: string) => Number(iso.slice(0, 4))
@@ -65,6 +68,13 @@ export function buildWrapped(
     if (run > longest) longest = run
   }
 
+  // binge-rekord: egy napon nézett legtöbb epizód
+  const perDay = new Map<string, number>()
+  for (const e of eps) {
+    const d = e.watchedAt.slice(0, 10)
+    perDay.set(d, (perDay.get(d) ?? 0) + 1)
+  }
+
   const mangaIds = new Set(activeManga.map((m) => m.id))
   return {
     year,
@@ -81,6 +91,8 @@ export function buildWrapped(
     manga: activeManga.length
       ? { count: activeManga.length, chapters: eps.filter((e) => mangaIds.has(e.animeId)).length }
       : null,
+    drops: active.filter((r) => r.status === 'dropped').length,
+    maxEpisodesInDay: perDay.size ? Math.max(...perDay.values()) : 0,
   }
 }
 

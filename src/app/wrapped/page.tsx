@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import WrappedCard from '@/components/WrappedCard'
+import WrappedStory from '@/components/WrappedStory'
 import type { WrappedData } from '@/lib/wrapped'
 import type { ApiAnime } from '@/lib/types'
 
@@ -28,6 +29,7 @@ export default function WrappedPage() {
   const [data, setData] = useState<Data | null>(null)
   const [list, setList] = useState<ApiAnime[]>([])
   const [error, setError] = useState('')
+  const [storyOpen, setStoryOpen] = useState(false)
 
   async function load(year?: number) {
     const res = await fetch(`/api/wrapped${year ? `?year=${year}` : ''}`)
@@ -44,6 +46,7 @@ export default function WrappedPage() {
 
   return (
     <main className="h-screen overflow-y-auto snap-y snap-mandatory">
+      {storyOpen && <WrappedStory data={data} onExit={() => setStoryOpen(false)} />}
       <Slide>
         <p className="label-mono mb-2">Anime Wrapped</p>
         <h1 className="text-5xl font-semibold tabular-nums">{data.year}</h1>
@@ -55,7 +58,10 @@ export default function WrappedPage() {
             </button>
           ))}
         </div>
-        <p className="text-text-3 text-sm mt-6">Görgess ↓</p>
+        <button onClick={() => setStoryOpen(true)} className="btn-solid cta-glow px-6 py-2.5 text-sm mt-6">
+          ▶ Story indítása
+        </button>
+        <p className="text-text-3 text-sm mt-4">…vagy görgess ↓</p>
       </Slide>
       <Slide>
         <p className="label-mono mb-3">Ennyit néztél</p>
@@ -107,6 +113,20 @@ export default function WrappedPage() {
           <p className="label-mono mb-3">Leghosszabb sorozatod</p>
           <p className="text-5xl font-semibold tabular-nums">{data.longestStreakDays} nap</p>
           <p className="text-text-2 mt-2">megállás nélkül minden nap</p>
+        </Slide>
+      )}
+      {data.maxEpisodesInDay > 1 && (
+        <Slide>
+          <p className="label-mono mb-3">Binge-rekordod</p>
+          <p className="text-5xl font-semibold tabular-nums">{data.maxEpisodesInDay} rész</p>
+          <p className="text-text-2 mt-2">egyetlen nap alatt</p>
+        </Slide>
+      )}
+      {data.drops > 0 && (
+        <Slide>
+          <p className="label-mono mb-3">Elengedted</p>
+          <p className="text-5xl font-semibold tabular-nums">{data.drops} cím</p>
+          <p className="text-text-2 mt-2">és ez teljesen rendben van</p>
         </Slide>
       )}
       {data.favChars.length > 0 && (

@@ -4,6 +4,7 @@ import { availableYears, buildWrapped, type WrappedAnimeRow } from './wrapped'
 const a = (over: Partial<WrappedAnimeRow>): WrappedAnimeRow => ({
   id: 1, titleRomaji: 'T', coverUrl: null, genres: ['Action'], studio: 'MAPPA',
   myScore: 8, mediaType: 'ANIME', durationMin: 24, chapters: null, progress: 12,
+  status: 'completed',
   watchedAt: '2026-02-10T00:00:00Z', createdAt: '2026-01-01T00:00:00Z', ...over,
 })
 
@@ -39,6 +40,32 @@ describe('buildWrapped', () => {
   it('másik év epizódjai nem számítanak', () => {
     const w = buildWrapped([a({})], [{ animeId: 1, watchedAt: '2025-02-01T10:00:00Z' }], [], 2026)
     expect(w.totalEpisodes).toBe(0)
+  })
+
+  it('drops: az ev aktiv, dropped statuszu cimei', () => {
+    const w = buildWrapped(
+      [a({ id: 1, status: 'dropped', watchedAt: '2026-03-01T00:00:00Z' }), a({ id: 2 })],
+      [], [], 2026,
+    )
+    expect(w.drops).toBe(1)
+  })
+
+  it('drops: masik evi drop nem szamit', () => {
+    const w = buildWrapped([a({ status: 'dropped', watchedAt: '2025-03-01T00:00:00Z' })], [], [], 2026)
+    expect(w.drops).toBe(0)
+  })
+
+  it('maxEpisodesInDay: egy nap legtobb epizodja', () => {
+    const w = buildWrapped([a({})], [
+      { animeId: 1, watchedAt: '2026-02-01T10:00:00Z' },
+      { animeId: 1, watchedAt: '2026-02-01T11:00:00Z' },
+      { animeId: 1, watchedAt: '2026-02-02T10:00:00Z' },
+    ], [], 2026)
+    expect(w.maxEpisodesInDay).toBe(2)
+  })
+
+  it('maxEpisodesInDay: ures log -> 0', () => {
+    expect(buildWrapped([a({})], [], [], 2026).maxEpisodesInDay).toBe(0)
   })
 })
 
