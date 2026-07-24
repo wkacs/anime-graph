@@ -27,3 +27,15 @@ export function toPublicAnime(row: PublicAnimeInput): PublicAnime {
     year: row.year,
   }
 }
+
+// Kliens-oldali rendezés a megosztott nézethez — nem mutálja az inputot.
+export type PublicSort = 'score' | 'title' | 'year'
+
+export function sortPublicList(list: PublicAnime[], sort: PublicSort): PublicAnime[] {
+  const copy = [...list]
+  if (sort === 'title') return copy.sort((a, b) => a.title.localeCompare(b.title, 'hu'))
+  const key = sort === 'score'
+    ? (a: PublicAnime) => a.myScore
+    : (a: PublicAnime) => a.year
+  return copy.sort((a, b) => (key(b) ?? -Infinity) - (key(a) ?? -Infinity))
+}
