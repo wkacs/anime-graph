@@ -237,7 +237,7 @@ export default function VsPage() {
             Minden tagra kiszámoljuk, mennyire illik a cím az ízléséhez (0–100). A csoport-pontszám
             60% átlag + 40% minimum — a legalacsonyabb érték súlyozása a leggyengébb láncszemet védi,
             hogy senkinek ne legyen rossz este. Ha valakinél 35 alá esne az egyezés, a cím kiesik (vétó).
-            Legalább 2 tagnál kell ismert ízlés-adat; a „–" azt jelenti, arról a tagról nincs elég adat.
+            Legalább 2 tagnál kell ismert ízlés-adat; a „–” azt jelenti, arról a tagról nincs elég adat.
           </p>
         </details>
         <div className="flex flex-wrap items-center gap-2">
