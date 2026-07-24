@@ -1,12 +1,15 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
-const TABS: { href: string; label: string; soon?: boolean }[] = [
+const TABS: { href: string; label: string; soon?: boolean; pendingBadge?: boolean }[] = [
   { href: '/', label: 'News' },
   { href: '/graf', label: 'Gráf' },
   { href: '/lista', label: 'Lista' },
+  { href: '/velemenyek', label: 'Vélemények', pendingBadge: true },
   { href: '/bongeszo', label: 'Böngésző' },
+  { href: '/toplista', label: 'Toplista' },
   { href: '/vibe', label: 'Vibe' },
   { href: '/stats', label: 'Stats' },
   { href: '/vs', label: 'VS' },
@@ -14,7 +17,19 @@ const TABS: { href: string; label: string; soon?: boolean }[] = [
 
 export default function TopNav() {
   const pathname = usePathname()
-  if (pathname === '/login' || pathname.startsWith('/p/')) return null
+  const [pendingCount, setPendingCount] = useState(0)
+  const hidden = pathname === '/login' || pathname.startsWith('/p/')
+
+  // velemeny-varo darabszam a badge-hez; oldalvaltasnal frissul
+  useEffect(() => {
+    if (hidden) return
+    fetch('/api/opinions/pending?countOnly=1')
+      .then((r) => (r.ok ? r.json() : { count: 0 }))
+      .then((j: { count: number }) => setPendingCount(j.count ?? 0))
+      .catch(() => { /* badge nelkul is el a nav */ })
+  }, [pathname, hidden])
+
+  if (hidden) return null
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
@@ -41,6 +56,11 @@ export default function TopNav() {
               {t.soon && (
                 <span className="ml-1 align-super text-[8px] font-mono uppercase tracking-widest text-text-3">
                   soon
+                </span>
+              )}
+              {t.pendingBadge && pendingCount > 0 && (
+                <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/15 px-1.5 min-w-[18px] h-[18px] text-[10px] font-mono text-text-1 align-middle">
+                  {pendingCount > 99 ? '99+' : pendingCount}
                 </span>
               )}
             </Link>
