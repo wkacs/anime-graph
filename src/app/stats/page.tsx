@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import WrappedCard from '@/components/WrappedCard'
 import TasteCard from '@/components/TasteCard'
+import PinnedShowcase from '@/components/PinnedShowcase'
+import { toPublicPinned, type PublicPinned } from '@/lib/public-view'
 import { buildHeatmapCells, type HeatCell } from '@/lib/heatmap'
 import { monthlyEvolution } from '@/lib/evolution'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
@@ -157,6 +159,7 @@ export default function StatsPage() {
   const [heatCells, setHeatCells] = useState<HeatCell[]>([])
   const [profile, setProfile] = useState<{ portrait: string; badges: string[] } | null>(null)
   const [profileBusy, setProfileBusy] = useState(false)
+  const [pinned, setPinned] = useState<PublicPinned | null>(null)
 
   useEffect(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => {
@@ -168,6 +171,12 @@ export default function StatsPage() {
     }).catch(() => { /* heatmap nélkül is él */ })
     fetch('/api/profile').then((r) => r.json()).then((j) => setProfile(j.profile ?? null))
       .catch(() => { /* profil nélkül is él */ })
+    fetch('/api/pins')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { titles: { titleRomaji: string; coverUrl: string | null; slug: string; mediaType: string }[]; chars: { name: string; image: string | null }[] } | null) => {
+        if (j) setPinned(toPublicPinned(j.titles, j.chars))
+      })
+      .catch(() => { /* kitűzöttek nélkül is él */ })
   }, [])
 
   async function regenerateProfile() {
@@ -242,6 +251,8 @@ export default function StatsPage() {
           <WrappedCard list={list} />
         </div>
       </div>
+
+      {pinned && <PinnedShowcase pinned={pinned} />}
 
       {profile && (
         <section className="glass rounded-3xl p-6">

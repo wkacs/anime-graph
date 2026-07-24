@@ -28,6 +28,24 @@ export function toPublicAnime(row: PublicAnimeInput): PublicAnime {
   }
 }
 
+// Kitűzött kedvencek a publikus profilra — SZIGORÚ whitelist, vélemény/ízlés-adat itt sem mehet ki.
+export type PublicPinned = {
+  titles: { title: string; coverUrl: string | null; slug: string; mediaType: string }[]
+  chars: { name: string; image: string | null }[]
+}
+
+export function toPublicPinned(
+  titles: { titleRomaji: string; coverUrl: string | null; slug: string; mediaType: string }[],
+  chars: { name: string; image: string | null }[],
+): PublicPinned {
+  return {
+    titles: titles.map((t) => ({
+      title: t.titleRomaji, coverUrl: t.coverUrl, slug: t.slug, mediaType: t.mediaType,
+    })),
+    chars: chars.map((c) => ({ name: c.name, image: c.image })),
+  }
+}
+
 // Kliens-oldali rendezés a megosztott nézethez — nem mutálja az inputot.
 export type PublicSort = 'score' | 'title' | 'year'
 

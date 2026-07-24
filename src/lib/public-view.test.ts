@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { toPublicAnime, sortPublicList, PUBLIC_ANIME_KEYS, type PublicAnime } from './public-view'
+import { toPublicAnime, toPublicPinned, sortPublicList, PUBLIC_ANIME_KEYS, type PublicAnime } from './public-view'
 
 describe('toPublicAnime', () => {
   it('csak a whitelist-mezőket adja vissza, a privát mezőket levágja', () => {
@@ -19,6 +19,35 @@ describe('toPublicAnime', () => {
     for (const leaked of ['rawText', 'description', 'tasteMemory', 'userId', 'id']) {
       expect(out).not.toHaveProperty(leaked)
     }
+  })
+})
+
+describe('toPublicPinned', () => {
+  it('csak a whitelist-mezoket engedi at', () => {
+    const out = toPublicPinned(
+      [{ titleRomaji: 'Frieren', coverUrl: 'c.jpg', slug: 'frieren-1', mediaType: 'ANIME',
+         // szivárgó mezők:
+         myScore: 10, rawText: 'titok' } as never],
+      [{ name: 'Himmel', image: null, vaId: 5, animeId: 3 } as never],
+    )
+    expect(out.titles[0]).toEqual({ title: 'Frieren', coverUrl: 'c.jpg', slug: 'frieren-1', mediaType: 'ANIME' })
+    expect(Object.keys(out.titles[0]).sort()).toEqual(['coverUrl', 'mediaType', 'slug', 'title'])
+    expect(out.chars[0]).toEqual({ name: 'Himmel', image: null })
+    expect(Object.keys(out.chars[0]).sort()).toEqual(['image', 'name'])
+  })
+})
+
+describe('toPublicPinned', () => {
+  it('csak a whitelist-mezok mennek ki, privat mezok levagva', () => {
+    const out = toPublicPinned(
+      [{ titleRomaji: 'Frieren', coverUrl: 'c.jpg', slug: 'frieren-1', mediaType: 'ANIME',
+         myScore: 10, rawText: 'titok', userId: 1, id: 5 } as never],
+      [{ name: 'Fern', image: 'f.jpg', vaId: 9, animeId: 3, userId: 1 } as never],
+    )
+    expect(out.titles[0]).toEqual({ title: 'Frieren', coverUrl: 'c.jpg', slug: 'frieren-1', mediaType: 'ANIME' })
+    expect(Object.keys(out.titles[0]).sort()).toEqual(['coverUrl', 'mediaType', 'slug', 'title'])
+    expect(out.chars[0]).toEqual({ name: 'Fern', image: 'f.jpg' })
+    expect(Object.keys(out.chars[0]).sort()).toEqual(['image', 'name'])
   })
 })
 

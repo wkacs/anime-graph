@@ -32,6 +32,29 @@ export default function ListaPage() {
 
   useEffect(() => { reload() }, [reload])
 
+  // profilra kitűzött címek (📌 oszlop)
+  const [pinnedTitles, setPinnedTitles] = useState<number[] | null>(null)
+  useEffect(() => {
+    fetch('/api/pins')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { titles: { titleId: number }[] } | null) => {
+        if (j) setPinnedTitles(j.titles.map((t) => t.titleId))
+      })
+      .catch(() => { /* kitűzés nélkül is él a lista */ })
+  }, [])
+
+  async function togglePin(titleId: number) {
+    if (pinnedTitles == null) return
+    const isPinned = pinnedTitles.includes(titleId)
+    const next = isPinned ? pinnedTitles.filter((t) => t !== titleId) : [...pinnedTitles, titleId]
+    const res = await fetch('/api/pins', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titles: next }),
+    })
+    if (res.ok) setPinnedTitles(next)
+    else alert((await res.json()).error ?? 'Nem sikerült a kitűzés')
+  }
+
   // törlés utáni undo-toast (a detail-oldal teszi be a sessionStorage-ba)
   const [undoBundle, setUndoBundle] = useState<{ anime: { titleRomaji: string } } | null>(null)
   const [aiAnswer, setAiAnswer] = useState<string | null>(null)
@@ -174,6 +197,7 @@ export default function ListaPage() {
               <Th k="studio" className="hidden md:table-cell">Stúdió</Th>
               <Th k="status">Státusz</Th>
               <Th k="myScore" className="text-right">Pont</Th>
+              <th className="w-10" />
             </tr>
           </thead>
           <tbody>
@@ -205,11 +229,24 @@ export default function ListaPage() {
                 <td className="px-3 py-2 pr-4 text-right font-mono text-xs text-text-2">
                   {a.myScore != null ? `${a.myScore}/10` : '–'}
                 </td>
+                <td className="pr-3 py-2 text-right">
+                  {pinnedTitles != null && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); togglePin(a.titleId) }}
+                      title={pinnedTitles.includes(a.titleId) ? 'Levétel a profilodról' : 'Kitűzés a profilodra (max 3)'}
+                      className={`text-sm transition-opacity ${
+                        pinnedTitles.includes(a.titleId) ? 'opacity-100' : 'opacity-25 hover:opacity-80'
+                      }`}
+                    >
+                      📌
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-text-3 text-sm">
+                <td colSpan={7} className="px-4 py-10 text-center text-text-3 text-sm">
                   {list.length === 0 ? <OnboardingCTA compact /> : 'Nincs találat.'}
                 </td>
               </tr>

@@ -36,6 +36,8 @@ export default function OwnerOverlay({
   const [finishScore, setFinishScore] = useState<number | null>(null)
   const [finishText, setFinishText] = useState('')
   const [sharedAdded, setSharedAdded] = useState(false)
+  const [pinnedTitles, setPinnedTitles] = useState<number[] | null>(null)
+  const [pinError, setPinError] = useState('')
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/anime/owned?titleId=${titleId}`)
@@ -52,6 +54,29 @@ export default function OwnerOverlay({
   }, [titleId])
 
   useEffect(() => { load() }, [load])
+
+  // kitűzés-állapot (csak listán lévő címnél érdekes)
+  useEffect(() => {
+    fetch('/api/pins')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { titles: { titleId: number }[] } | null) => {
+        if (j) setPinnedTitles(j.titles.map((t) => t.titleId))
+      })
+      .catch(() => { /* kitűzés nélkül is él az overlay */ })
+  }, [])
+
+  async function togglePin() {
+    if (pinnedTitles == null) return
+    const isPinned = pinnedTitles.includes(titleId)
+    const next = isPinned ? pinnedTitles.filter((t) => t !== titleId) : [...pinnedTitles, titleId]
+    setPinError('')
+    const res = await fetch('/api/pins', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ titles: next }),
+    })
+    if (res.ok) setPinnedTitles(next)
+    else setPinError((await res.json()).error ?? 'Nem sikerült a kitűzés')
+  }
 
   const a = owned?.anime ?? null
   const id = a?.id
@@ -194,6 +219,18 @@ export default function OwnerOverlay({
           />
           <span className="text-text-3">/ 10</span>
         </label>
+        {pinnedTitles != null && (
+          <button
+            onClick={togglePin}
+            title={pinnedTitles.includes(titleId) ? 'Levétel a profilodról' : 'Kitűzés a profilodra (max 3)'}
+            className={`btn-ghost border px-3.5 py-1.5 text-sm ${
+              pinnedTitles.includes(titleId) ? 'border-white/35 text-text-1' : 'border-white/10'
+            }`}
+          >
+            {pinnedTitles.includes(titleId) ? '📌 Kitűzve' : '📌 Kitűzés'}
+          </button>
+        )}
+        {pinError && <span className="text-xs text-[color:var(--status-dropped)]">{pinError}</span>}
         {a.status === 'completed' && (
           <button
             onClick={() => { if (confirm('Újranézed? A progressz nullázódik, a számláló nő.')) patch({ rewatch: true }) }}

@@ -8,6 +8,7 @@ import type { CharacterEntry } from '@/lib/anilist'
 export default function CharacterGrid({ anilistId, animeId, readOnly = false }: { anilistId: number; animeId?: number; readOnly?: boolean }) {
   const [characters, setCharacters] = useState<CharacterEntry[]>([])
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
+  const [pinned, setPinned] = useState<number[] | null>(null)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -20,6 +21,29 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
       .catch(() => { /* szereplők nélkül is él az oldal */ })
       .finally(() => setLoaded(true))
   }, [anilistId])
+
+  // kitűzött karakterek (csak owner-nézetben, a kedvenceken jelenik meg a gomb)
+  useEffect(() => {
+    if (readOnly) return
+    fetch('/api/pins')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: { chars: { charId: number }[] } | null) => {
+        if (j) setPinned(j.chars.map((c) => c.charId))
+      })
+      .catch(() => { /* kitűzés nélkül is él a rács */ })
+  }, [readOnly])
+
+  async function togglePin(charId: number) {
+    if (pinned == null) return
+    const isPinned = pinned.includes(charId)
+    const next = isPinned ? pinned.filter((c) => c !== charId) : [...pinned, charId]
+    const res = await fetch('/api/pins', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chars: next }),
+    })
+    if (res.ok) setPinned(next)
+    else alert((await res.json()).error ?? 'Nem sikerült a kitűzés')
+  }
 
   async function toggle(c: CharacterEntry) {
     if (animeId == null) return
@@ -71,6 +95,18 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
                     }`}
                   >
                     {fav ? '♥' : '♡'}
+                  </button>
+                )}
+                {!readOnly && fav && pinned != null && (
+                  <button
+                    onClick={() => togglePin(c.charId)}
+                    aria-label={pinned.includes(c.charId) ? 'Levétel a profilról' : 'Kitűzés a profilra (max 3)'}
+                    title={pinned.includes(c.charId) ? 'Levétel a profilról' : 'Kitűzés a profilra (max 3)'}
+                    className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full glass flex items-center justify-center text-xs transition-colors ${
+                      pinned.includes(c.charId) ? 'text-text-1' : 'text-text-3 hover:text-text-1'
+                    }`}
+                  >
+                    📌
                   </button>
                 )}
               </div>

@@ -2,8 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
-import { sortPublicList, type PublicAnime, type PublicSort } from '@/lib/public-view'
+import { sortPublicList, type PublicAnime, type PublicPinned, type PublicSort } from '@/lib/public-view'
 import CompatChip from '@/components/CompatChip'
+import PinnedShowcase from '@/components/PinnedShowcase'
 
 const SORT_OPTIONS: { id: PublicSort; label: string }[] = [
   { id: 'score', label: 'Pont ↓' },
@@ -15,6 +16,7 @@ type PublicData = {
   username: string | null
   stats: { total: number; completed: number; topGenres: { name: string; count: number }[] }
   anime: PublicAnime[]
+  pinned?: PublicPinned
 }
 
 export default function PublicProfilePage() {
@@ -63,6 +65,8 @@ export default function PublicProfilePage() {
           ))}
         </div>
       </div>
+
+      {data.pinned && <PinnedShowcase pinned={data.pinned} />}
 
       <div className="glass rounded-2xl px-3 py-2 flex flex-wrap items-center gap-1.5 text-xs">
         {SORT_OPTIONS.map((o) => (
