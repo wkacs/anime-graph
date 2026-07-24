@@ -228,10 +228,18 @@ export default function VsPage() {
 
       <section className="glass rounded-3xl p-6">
         <p className="label-mono mb-1">Klub-ajánló</p>
-        <p className="text-sm text-text-2 mb-4">
-          Mit nézzen a csoport? Add meg a többiek felhasználónevét vesszővel — a közös ízlés-metszetből ajánlunk
-          (vétó: ami valakinek kifejezetten nem jönne be, kiesik).
+        <p className="text-sm text-text-2 mb-2">
+          Mit nézzen a csoport? Add meg a többiek felhasználónevét vesszővel — a közös ízlés-metszetből ajánlunk.
         </p>
+        <details className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-text-2 mb-4">
+          <summary className="cursor-pointer text-text-1 select-none">Hogyan működik a klub-ajánló?</summary>
+          <p className="mt-2 leading-relaxed">
+            Minden tagra kiszámoljuk, mennyire illik a cím az ízléséhez (0–100). A csoport-pontszám
+            60% átlag + 40% minimum — a legalacsonyabb érték súlyozása a leggyengébb láncszemet védi,
+            hogy senkinek ne legyen rossz este. Ha valakinél 35 alá esne az egyezés, a cím kiesik (vétó).
+            Legalább 2 tagnál kell ismert ízlés-adat; a „–" azt jelenti, arról a tagról nincs elég adat.
+          </p>
+        </details>
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={groupNames}
@@ -258,9 +266,27 @@ export default function VsPage() {
                   {p.coverUrl && <img src={p.coverUrl} alt="" className="w-10 rounded-lg" />}
                   <div className="min-w-0 flex-1">
                     <a href={`/anime/${p.slug}`} className="text-sm font-medium hover:underline underline-offset-4">{p.title}</a>
-                    <p className="text-xs text-text-3">
-                      tagonként: {p.perMember.map((m) => (m == null ? '–' : `${m}%`)).join(' · ')}
-                    </p>
+                    <div className="flex flex-col gap-1 mt-1.5">
+                      {p.perMember.map((m, i) => (
+                        <div key={`${group.members[i] ?? i}`} className="flex items-center gap-2">
+                          <span className="label-mono !text-[9px] w-16 shrink-0 truncate">{group.members[i] ?? `${i + 1}. tag`}</span>
+                          {m == null ? (
+                            <span className="text-[10px] text-text-3">nincs adat</span>
+                          ) : (
+                            <>
+                              <span className="h-1.5 rounded-full bg-white/10 flex-1 max-w-36 overflow-hidden">
+                                <span
+                                  className={`block h-full rounded-full ${m < 45 ? 'bg-amber-400/70' : 'bg-white/60'}`}
+                                  style={{ width: `${m}%` }}
+                                  title={m < 45 ? 'vétó-közeli egyezés' : undefined}
+                                />
+                              </span>
+                              <span className={`font-mono text-[10px] shrink-0 ${m < 45 ? 'text-amber-300/90' : 'text-text-2'}`}>{m}%</span>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <span className="font-mono font-semibold shrink-0" style={{ color: p.groupScore >= 70 ? 'var(--status-watching)' : undefined }}>
                     {p.groupScore}%
