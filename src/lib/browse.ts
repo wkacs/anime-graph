@@ -5,6 +5,10 @@ export type BrowseFilters = {
   year?: number
   format?: string
   minScore?: number
+  // lokális browse-szűrők (AniList-ág nem használja őket)
+  studio?: string
+  season?: string
+  seasonYear?: number
   sort: 'POPULARITY_DESC' | 'SCORE_DESC' | 'START_DATE_DESC'
   page: number
 }

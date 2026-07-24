@@ -42,15 +42,21 @@ export default function BrowsePage() {
   const [page, setPage] = useState(0) // 0-based offset page
   const [hits, setHits] = useState<TitleHit[]>([])
   const [trending, setTrending] = useState<TrendingData | null>(null)
+  // linkelhető szűrők (?studio=…, ?season=current|next) — pl. a címoldali stúdió-chipről
+  const [studioFilter, setStudioFilter] = useState<string | null>(null)
+  const [seasonKey, setSeasonKey] = useState<'current' | 'next' | null>(null)
+  const [filtered, setFiltered] = useState<TitleHit[] | null>(null)
   const trendingHits = trending
     ? { seasonal: trending.seasonal.map(toHit), popular: trending.popular.map(toHit) }
     : null
   const fitScores = useFitScores(
     search.trim()
       ? hits.map((h) => h.anilistId)
-      : trendingHits
-        ? [...trendingHits.seasonal, ...trendingHits.popular].map((h) => h.anilistId)
-        : [],
+      : filtered
+        ? filtered.map((h) => h.anilistId)
+        : trendingHits
+          ? [...trendingHits.seasonal, ...trendingHits.popular].map((h) => h.anilistId)
+          : [],
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -72,6 +78,36 @@ export default function BrowsePage() {
       .then((j: TrendingData | null) => { if (j) setTrending(j) })
       .catch(() => { /* üres állapot marad a szöveges hint */ })
   }, [])
+
+  // induló szűrők a querystringből (?studio=…, ?season=current|next)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const st = sp.get('studio')
+    if (st) setStudioFilter(st)
+    const se = sp.get('season')
+    if (se === 'current' || se === 'next') setSeasonKey(se)
+  }, [])
+
+  // szűrt nézet a lokális browse-ból, keresés nélkül
+  useEffect(() => {
+    if (!studioFilter && !seasonKey) { setFiltered(null); return }
+    const qs = new URLSearchParams({ type, sort: 'SCORE_DESC' })
+    if (studioFilter) qs.set('studio', studioFilter)
+    if (seasonKey) qs.set('season', seasonKey)
+    fetch(`/api/browse?${qs}`)
+      .then((r) => (r.ok ? r.json() : { media: [] }))
+      .then((j: { media: TrendingRow[] }) => setFiltered((j.media ?? []).map(toHit)))
+      .catch(() => setFiltered([]))
+  }, [studioFilter, seasonKey, type])
+
+  // a szűrő-állapot visszaírása az URL-be, hogy linkelhető maradjon
+  function syncFilterUrl(studio: string | null, season: 'current' | 'next' | null) {
+    const sp = new URLSearchParams()
+    if (studio) sp.set('studio', studio)
+    if (season) sp.set('season', season)
+    const qs = sp.toString()
+    window.history.replaceState(null, '', qs ? `/bongeszo?${qs}` : '/bongeszo')
+  }
 
   useEffect(() => {
     const q = search.trim()
@@ -178,12 +214,60 @@ export default function BrowsePage() {
             </button>
           ))}
         </div>
+        {([['current', 'Aktuális szezon'], ['next', 'Következő szezon']] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => {
+              const next = seasonKey === k ? null : k
+              setSeasonKey(next)
+              syncFilterUrl(studioFilter, next)
+            }}
+            className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+              seasonKey === k ? 'border-white/40 text-text-1' : 'border-white/10 text-text-2 hover:text-text-1'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        {studioFilter && (
+          <button
+            onClick={() => { setStudioFilter(null); syncFilterUrl(null, seasonKey) }}
+            className="rounded-full border border-white/40 px-3 py-1.5 text-xs text-text-1"
+            title="Stúdió-szűrő törlése"
+          >
+            Stúdió: {studioFilter} ✕
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>}
 
       {!search.trim() ? (
-        trendingHits && (trendingHits.seasonal.length > 0 || trendingHits.popular.length > 0) ? (
+        (studioFilter || seasonKey) ? (
+          <section className="flex flex-col gap-3">
+            <p className="label-mono">
+              {[
+                studioFilter ? `Stúdió: ${studioFilter}` : null,
+                seasonKey === 'current' ? 'Aktuális szezon' : seasonKey === 'next' ? 'Következő szezon' : null,
+              ].filter(Boolean).join(' · ')}
+            </p>
+            {filtered == null ? (
+              <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
+                Betöltés…
+              </motion.p>
+            ) : filtered.length === 0 ? (
+              <p className="text-sm text-text-2">
+                {seasonKey === 'next'
+                  ? 'Még kevés bejelentett cím — a katalógus-sync bővíti majd.'
+                  : 'Nincs találat ezzel a szűrővel.'}
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {filtered.map(cardFor)}
+              </div>
+            )}
+          </section>
+        ) : trendingHits && (trendingHits.seasonal.length > 0 || trendingHits.popular.length > 0) ? (
           <>
             {trendingHits.seasonal.length > 0 && (
               <section className="flex flex-col gap-3">

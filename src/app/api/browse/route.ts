@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { title } from '@/db/schema'
 import { type BrowseFilters } from '@/lib/browse'
-import { browseWhere, browseOrder } from '@/lib/browse-local'
+import { browseWhere, browseOrder, resolveSeason } from '@/lib/browse-local'
 import { requireUserId } from '@/lib/session'
 import { sql } from 'drizzle-orm'
 
@@ -12,6 +12,8 @@ function parseFilters(sp: URLSearchParams): BrowseFilters {
   const type = sp.get('type') === 'MANGA' ? 'MANGA' as const : 'ANIME' as const
   const sortRaw = sp.get('sort')
   const sort = sortRaw === 'SCORE_DESC' || sortRaw === 'START_DATE_DESC' ? sortRaw : 'POPULARITY_DESC' as const
+  const sk = sp.get('season')
+  const season = sk === 'current' || sk === 'next' ? resolveSeason(sk, new Date()) : null
   return {
     type, sort,
     page: Math.max(1, Number(sp.get('page')) || 1),
@@ -20,6 +22,9 @@ function parseFilters(sp: URLSearchParams): BrowseFilters {
     format: sp.get('format') || undefined,
     year: Number(sp.get('year')) || undefined,
     minScore: Number(sp.get('minScore')) || undefined,
+    studio: sp.get('studio') || undefined,
+    season: season?.season,
+    seasonYear: season?.year,
   }
 }
 
