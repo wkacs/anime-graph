@@ -12,6 +12,21 @@ const BONGESZO_TOUR: TourStep[] = [
 ]
 import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
+import { SEASON_LABELS } from '@/lib/seasonal'
+
+// a /api/trending title-sorai TitleHit-alakra képezve, hogy a kártya-rács közös legyen
+type TrendingRow = {
+  id: number; anilistId: number; mediaType: string; slug: string
+  titleRomaji: string; titleEnglish: string | null; coverUrl: string | null
+  year: number | null; format: string | null; communityScore: number | null; popularity: number
+}
+type TrendingData = { seasonal: TrendingRow[]; popular: TrendingRow[]; season: { season: string; year: number } }
+
+const toHit = (t: TrendingRow): TitleHit => ({
+  titleId: t.id, anilistId: t.anilistId, mediaType: t.mediaType, slug: t.slug,
+  titleRomaji: t.titleRomaji, titleEnglish: t.titleEnglish, coverUrl: t.coverUrl,
+  year: t.year, format: t.format, communityScore: t.communityScore, popularity: t.popularity,
+})
 
 const ADD_OPTIONS = [
   { status: 'completed', label: 'Láttam' },
@@ -26,7 +41,17 @@ export default function BrowsePage() {
   const [type, setType] = useState<'ANIME' | 'MANGA'>('ANIME')
   const [page, setPage] = useState(0) // 0-based offset page
   const [hits, setHits] = useState<TitleHit[]>([])
-  const fitScores = useFitScores(hits.map((h) => h.anilistId))
+  const [trending, setTrending] = useState<TrendingData | null>(null)
+  const trendingHits = trending
+    ? { seasonal: trending.seasonal.map(toHit), popular: trending.popular.map(toHit) }
+    : null
+  const fitScores = useFitScores(
+    search.trim()
+      ? hits.map((h) => h.anilistId)
+      : trendingHits
+        ? [...trendingHits.seasonal, ...trendingHits.popular].map((h) => h.anilistId)
+        : [],
+  )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [added, setAdded] = useState<Set<number>>(new Set()) // titleId set
@@ -38,6 +63,14 @@ export default function BrowsePage() {
       .then((r) => (r.ok ? r.json() : { anime: [] }))
       .then((j: { anime: ApiAnime[] }) => setOwnIds(new Map(j.anime.map((a) => [a.anilistId, a.id]))))
       .catch(() => { /* linkek preview-ra esnek */ })
+  }, [])
+
+  // üres állapot: felkapott címek a lokális katalógusból
+  useEffect(() => {
+    fetch('/api/trending')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j: TrendingData | null) => { if (j) setTrending(j) })
+      .catch(() => { /* üres állapot marad a szöveges hint */ })
   }, [])
 
   useEffect(() => {
@@ -64,6 +97,41 @@ export default function BrowsePage() {
   // canonical page serves both owned and not-owned (owner controls via overlay)
   function hrefFor(h: TitleHit): string {
     return `/${h.mediaType === 'MANGA' ? 'manga' : 'anime'}/${h.slug}`
+  }
+
+  function cardFor(h: TitleHit) {
+    const owned = ownIds.has(h.anilistId) || added.has(h.titleId)
+    const fit = fitScores[h.anilistId]
+    return (
+      <MediaCard
+        key={h.titleId}
+        title={h.titleRomaji}
+        coverUrl={h.coverUrl}
+        genres={[]}
+        href={hrefFor(h)}
+        badge={fit != null ? (
+          <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px]" style={{ color: fitColor(fit) }} title="Ennyire illik az ízlésedhez">{fit}%</span>
+        ) : h.communityScore != null ? (
+          <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">{h.communityScore.toFixed(1)}</span>
+        ) : undefined}
+        footer={owned ? (
+          <span className="label-mono text-[color:var(--status-watching)]">✓ listán</span>
+        ) : (
+          <span className="flex gap-1">
+            {ADD_OPTIONS.map((o) => (
+              <button
+                key={o.status}
+                onClick={() => quickAdd(h, o.status)}
+                title={`Hozzáadás: ${o.label}`}
+                className="rounded-full border border-white/12 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-text-2 hover:text-text-1 hover:border-white/35 transition-colors"
+              >
+                {o.label}
+              </button>
+            ))}
+          </span>
+        )}
+      />
+    )
   }
 
   async function quickAdd(h: TitleHit, status: string) {
@@ -115,7 +183,30 @@ export default function BrowsePage() {
       {error && <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>}
 
       {!search.trim() ? (
-        <p className="text-sm text-text-2">Írj be egy címet a kereséshez.</p>
+        trendingHits && (trendingHits.seasonal.length > 0 || trendingHits.popular.length > 0) ? (
+          <>
+            {trendingHits.seasonal.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <p className="label-mono">
+                  Felkapott most — {trending ? `${SEASON_LABELS[trending.season.season] ?? trending.season.season} ${trending.season.year}` : ''}
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {trendingHits.seasonal.map(cardFor)}
+                </div>
+              </section>
+            )}
+            {trendingHits.popular.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <p className="label-mono">Nálunk népszerű</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {trendingHits.popular.map(cardFor)}
+                </div>
+              </section>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-text-2">Írj be egy címet a kereséshez.</p>
+        )
       ) : loading ? (
         <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
           Betöltés…
@@ -123,40 +214,7 @@ export default function BrowsePage() {
       ) : (
         <>
           <div data-tour="results" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {hits.map((h) => {
-              const owned = ownIds.has(h.anilistId) || added.has(h.titleId)
-              const fit = fitScores[h.anilistId]
-              return (
-                <MediaCard
-                  key={h.titleId}
-                  title={h.titleRomaji}
-                  coverUrl={h.coverUrl}
-                  genres={[]}
-                  href={hrefFor(h)}
-                  badge={fit != null ? (
-                    <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px]" style={{ color: fitColor(fit) }} title="Ennyire illik az ízlésedhez">{fit}%</span>
-                  ) : h.communityScore != null ? (
-                    <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">{h.communityScore.toFixed(1)}</span>
-                  ) : undefined}
-                  footer={owned ? (
-                    <span className="label-mono text-[color:var(--status-watching)]">✓ listán</span>
-                  ) : (
-                    <span className="flex gap-1">
-                      {ADD_OPTIONS.map((o) => (
-                        <button
-                          key={o.status}
-                          onClick={() => quickAdd(h, o.status)}
-                          title={`Hozzáadás: ${o.label}`}
-                          className="rounded-full border border-white/12 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-text-2 hover:text-text-1 hover:border-white/35 transition-colors"
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </span>
-                  )}
-                />
-              )
-            })}
+            {hits.map(cardFor)}
           </div>
           {hits.length === 0 && <p className="text-sm text-text-2">Nincs találat a katalógusban.</p>}
           <div className="flex items-center justify-center gap-4 text-sm">
