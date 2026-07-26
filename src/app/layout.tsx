@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, Geist_Mono, Noto_Sans_JP } from "next/font/google";
+import { Instrument_Sans, Instrument_Serif, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
 import "./globals.css";
 
 const instrument = Instrument_Sans({
   variable: "--font-instrument",
+  subsets: ["latin"],
+});
+
+// display-vágás: NEM variable font, a weight kötelező
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: "400",
   subsets: ["latin"],
 });
 
@@ -41,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${instrument.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
+        className={`${instrument.variable} ${instrumentSerif.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
         <IntlProvider>
           <TopNav />
