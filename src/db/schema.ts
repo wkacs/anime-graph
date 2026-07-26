@@ -167,6 +167,23 @@ export const tasteMemory = pgTable('taste_memory', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// Gépi ízlés-jelek: az extract kötött szókészletű kimenete. NEM keverjük a
+// taste_memory-ba, mert annak sorai megjelennek a felületen (TasteCard, ProfileReveal),
+// ezek viszont csak a rangsoroló vektort táplálják.
+export const tasteSignal = pgTable('taste_signal', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull(),
+  titleId: integer('title_id').notNull().references(() => title.id, { onDelete: 'cascade' }),
+  feature: text('feature').notNull(),
+  polarity: integer('polarity').notNull(), // 1 | -1
+  strength: real('strength').notNull().default(1), // 0..1
+  source: text('source').notNull(), // opinion | backfill
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('taste_signal_user').on(t.userId),
+  uniqueIndex('taste_signal_unique').on(t.userId, t.titleId, t.feature),
+])
+
 export const settings = pgTable('settings', {
   userId: integer('user_id').notNull().default(1),
   key: text('key').notNull(),
