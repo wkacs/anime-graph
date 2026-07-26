@@ -3,6 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import OnboardingCTA from '@/components/OnboardingCTA'
+import PageShell from '@/components/ui/PageShell'
+import Button from '@/components/ui/Button'
+import EmptyState from '@/components/ui/EmptyState'
 import { filterByMedia, type MediaMode } from '@/lib/graph-builder'
 import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
@@ -53,6 +56,19 @@ export default function ListaPage() {
     })
     if (res.ok) setPinnedTitles(next)
     else alert((await res.json()).error ?? 'Nem sikerült a kitűzés')
+  }
+
+  // egykattintasos haladas a soron: korabban ehhez meg kellett nyitni a
+  // detail-oldalt
+  async function bumpOne(a: ApiAnime) {
+    const res = await fetch(`/api/anime/${a.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ progress: a.progress + 1 }),
+    })
+    if (res.ok) {
+      setList((l) => l.map((x) => (x.id === a.id ? { ...x, progress: x.progress + 1 } : x)))
+    }
   }
 
   // törlés utáni undo-toast (a detail-oldal teszi be a sessionStorage-ba)
@@ -128,9 +144,9 @@ export default function ListaPage() {
   )
 
   return (
-    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16">
+    <PageShell width="wide">
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <h1 className="text-xl font-semibold tracking-tight mr-auto">Lista</h1>
+        <h1 className="display-l text-text-1 mr-auto">Lista</h1>
         <AddAnimeSearch onAdded={() => reload()} />
       </div>
       <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -187,16 +203,22 @@ export default function ListaPage() {
         </p>
       )}
 
-      <div className="glass rounded-3xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
+      {/* NINCS overflow-hidden: az scroll-kontenert csinal, ami elrontja a
+          <thead> position:sticky-jet. A sarok-lekerekites a tablan van. */}
+      <div className="surface-1 rounded-[var(--r-lg)]">
+        <table className="w-full text-sm rounded-[var(--r-lg)]">
+          <thead className="sticky top-[4.5rem] z-20 backdrop-blur-md bg-[#0d0d10]/95">
             <tr className="border-b border-white/8">
               <th className="w-14" />
               <Th k="titleRomaji">Cím</Th>
               <Th k="year" className="hidden sm:table-cell">Év</Th>
               <Th k="studio" className="hidden md:table-cell">Stúdió</Th>
               <Th k="status">Státusz</Th>
+              <th className="px-3 py-2.5 text-left hidden lg:table-cell">
+                <span className="label-mono">Haladás</span>
+              </th>
               <Th k="myScore" className="text-right">Pont</Th>
+              <th className="w-12" />
               <th className="w-10" />
             </tr>
           </thead>
@@ -205,11 +227,21 @@ export default function ListaPage() {
               <tr
                 key={a.id}
                 onClick={() => router.push(`/anime/${a.id}`)}
-                className="border-b border-white/5 last:border-0 hover:bg-white/4 cursor-pointer transition-colors"
+                className="group relative border-b border-white/5 last:border-0 hover:bg-white/[0.035] cursor-pointer transition-colors"
               >
-                <td className="pl-3 py-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  {a.coverUrl && <img src={a.coverUrl} alt="" className="w-9 h-12 object-cover rounded-md" />}
+                <td className="pl-3 py-2 relative">
+                  {a.coverUrl && (
+                    <>
+                      {/* a poszter sajat szine izzik a sor bal szelen hoverre */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={a.coverUrl} alt="" aria-hidden
+                        className="poster-glow opacity-0 group-hover:opacity-45"
+                      />
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={a.coverUrl} alt="" className="relative w-9 h-12 object-cover rounded-[var(--r-sm)]" />
+                    </>
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <p className="font-medium leading-tight">{a.titleRomaji}</p>
@@ -226,8 +258,34 @@ export default function ListaPage() {
                     {STATUS_LABELS[a.status] ?? a.status}
                   </span>
                 </td>
+                <td className="px-3 py-2 hidden lg:table-cell w-28">
+                  {a.episodes ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-1 flex-1 rounded-full bg-white/8 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-white/45"
+                          style={{ width: `${Math.min(100, Math.round((a.progress / a.episodes) * 100))}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-[10px] text-text-3 tabular-nums shrink-0">
+                        {a.progress}/{a.episodes}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-mono text-[10px] text-text-3">{a.progress || '–'}</span>
+                  )}
+                </td>
                 <td className="px-3 py-2 pr-4 text-right font-mono text-xs text-text-2">
                   {a.myScore != null ? `${a.myScore}/10` : '–'}
+                </td>
+                <td className="px-2 py-2 text-right">
+                  <Button
+                    onClick={(e) => { e.stopPropagation(); bumpOne(a) }}
+                    title="Megnéztem egy részt"
+                    className="opacity-40 group-hover:opacity-100 transition-opacity"
+                  >
+                    +1
+                  </Button>
                 </td>
                 <td className="pr-3 py-2 text-right">
                   {pinnedTitles != null && (
@@ -246,8 +304,21 @@ export default function ListaPage() {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-text-3 text-sm">
-                  {list.length === 0 ? <OnboardingCTA compact /> : 'Nincs találat.'}
+                <td colSpan={9} className="px-4 py-6">
+                  {list.length === 0 ? (
+                    <OnboardingCTA compact />
+                  ) : (
+                    <EmptyState
+                      eyebrow="Szűrő"
+                      title="Nincs találat"
+                      text="Erre a szűrőre és keresésre egy cím sem illik a listádon."
+                      action={
+                        <Button onClick={() => { setQ(''); setFilter('all'); setAiAnswer(null); setAiMatches(null) }}>
+                          Szűrők törlése
+                        </Button>
+                      }
+                    />
+                  )}
                 </td>
               </tr>
             )}
@@ -257,11 +328,12 @@ export default function ListaPage() {
       <p className="label-mono mt-3 text-right">{rows.length} / {list.length} cím</p>
 
       {undoBundle && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 glass-strong rounded-2xl px-5 py-3 flex items-center gap-4 text-sm">
+        // mobilon a toast a also tab-sav fole kerul, kulonben az fedne
+        <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 surface-3 rounded-[var(--r-md)] px-5 py-3 flex items-center gap-4 text-sm">
           <span className="text-text-2">Törölve: <span className="text-text-1">{undoBundle.anime.titleRomaji}</span></span>
           <button onClick={undoDelete} className="btn-solid px-4 py-1.5 text-xs">Visszavonás</button>
         </div>
       )}
-    </main>
+    </PageShell>
   )
 }
