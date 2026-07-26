@@ -47,7 +47,9 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
   return (
     <div className="glass rounded-2xl px-4 py-3 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <div className="flex items-center gap-1.5">
+        {/* flex-wrap: negy rendezes-chip 390px-en 420px-et adott -> vizszintes
+            lap-tulcsordulas. A tobbi sav mar tordelt, ez kimaradt. */}
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className="label-mono">Rendezés</span>
           {sorts.map((s) => (
             <Chip

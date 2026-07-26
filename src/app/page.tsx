@@ -1,83 +1,30 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
-import Countdown from '@/components/Countdown'
 import OnboardingCTA from '@/components/OnboardingCTA'
-import MediaCard from '@/components/MediaCard'
 import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
-import SeasonFilterBar from '@/components/SeasonFilterBar'
-import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
-import { useFitScores } from '@/lib/use-fit-scores'
-import ScoreBadge from '@/components/ui/ScoreBadge'
 import TourSpotlight from '@/components/TourSpotlight'
+import PageShell from '@/components/ui/PageShell'
+import EmptyState from '@/components/ui/EmptyState'
+import HeroToday from '@/components/home/HeroToday'
+import FollowedRow from '@/components/home/FollowedRow'
+import WeekCalendar from '@/components/home/WeekCalendar'
+import SeasonGrid from '@/components/home/SeasonGrid'
+import NextSeason from '@/components/home/NextSeason'
+import SocialFeed from '@/components/home/SocialFeed'
+import { useFitScores } from '@/lib/use-fit-scores'
+import { pickHero } from '@/lib/home-hero'
+import { applySeasonView, seasonFacets, EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
 import type { TourStep } from '@/lib/tour'
+import type {
+  NewsData, MineItem, NextSeasonRow, UpcomingItem, WatchItem, FeedItem,
+} from '@/components/home/types'
 
 const NEWS_TOUR: TourStep[] = [
   { selector: 'season', title: 'Szezon', text: 'Az aktuális szezon minden címe — a badge azt mutatja, mennyire illik az ízlésedhez. Lista nélkül is él.' },
   { selector: 'recommend', title: 'Ajánlj nekem', text: 'Egy gomb: az AI a listádból és a véleményeidből tanult ízlésed alapján ajánl. Ez a lényeg.' },
   { selector: 'tonight', title: 'Ma este?', text: 'Nincs kedved dönteni? Hangulat + idő alapján kiválasztja, mit nézz ma este.' },
 ]
-import { applySeasonView, seasonFacets, EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
-import { SEASON_LABELS, nextSeason } from '@/lib/seasonal'
-
-// a teljes next-season rács sorai a lokális katalógusból (/api/browse?season=next)
-type NextSeasonRow = {
-  id: number; anilistId: number; titleRomaji: string; coverUrl: string | null
-  genres: string[]; slug: string; mediaType: string; format: string | null
-}
-import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
-import type { FeedItem } from '@/lib/feed'
-
-type MineItem = {
-  animeId: number
-  anilistId: number
-  title: string
-  coverUrl: string | null
-  genres: string[]
-  description: string | null
-  status: string
-  progress: number
-  episodes: number | null
-  airingAt: number
-  nextEpisode: number
-}
-
-type SeasonItem = {
-  anilistId: number
-  title: string
-  coverUrl: string | null
-  genres: string[]
-  avgScore: number | null
-  episodes: number | null
-  format: string | null
-  description: string | null
-  airingAt: number | null
-  nextEpisode: number | null
-  owned: boolean
-  tasteScore: number | null
-  tasteReason: string | null
-  streaming?: { site: string; url: string }[]
-}
-
-type NewsData = {
-  season: { season: string; year: number }
-  mine: MineItem[]
-  seasonItems: SeasonItem[]
-}
-
-type WatchItem = {
-  id: number
-  anilistId: number
-  mediaType: string
-  title: string
-  coverUrl: string | null
-  addedBy: number
-  watchedEpisodes: number
-}
-
-type UpcomingItem = SeasonItem & { tasteScore: number; tasteReason: string }
 
 export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
@@ -101,7 +48,6 @@ export default function NewsPage() {
         setData(await r.json())
       })
       .catch((e) => setError(String(e.message ?? e)))
-    // digest külön csatornán jön, nem lassítja az oldalt
     fetch('/api/digest')
       .then((r) => r.json())
       .then((j) => setDigest(j.digest ?? null))
@@ -152,6 +98,14 @@ export default function NewsPage() {
   const seasonFit = useFitScores(visibleSeason.map((s) => s.anilistId))
   const nextFit = useFitScores((nextList ?? []).map((t) => t.anilistId))
 
+  // a hero-ban szereplo cim ne ismetlodjon a 'Amit kovetsz' racsban
+  const heroPick = useMemo(
+    () => (data ? pickHero(data.mine, seasonItems, Math.floor(Date.now() / 1000), seasonFit) : null),
+    [data, seasonItems, seasonFit],
+  )
+  const heroAnimeId =
+    heroPick && (heroPick.kind === 'airing' || heroPick.kind === 'watching') ? heroPick.item.animeId : undefined
+
   async function addToPlanned(anilistId: number) {
     const res = await fetch('/api/anime', {
       method: 'POST',
@@ -175,342 +129,92 @@ export default function NewsPage() {
     }
   }
 
-  if (error) {
-    return (
-      <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="glass rounded-3xl px-10 py-12 text-center">
-          <p className="label-mono mb-2">News</p>
-          <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>
-        </div>
-      </main>
-    )
+  async function watchBump(w: WatchItem) {
+    const res = await fetch('/api/watchlist', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: w.id, delta: 1 }),
+    })
+    if (res.ok) setWatchlist((l) => l.map((x) => (x.id === w.id ? { ...x, watchedEpisodes: x.watchedEpisodes + 1 } : x)))
   }
 
-  if (!data) {
+  async function watchRemove(w: WatchItem) {
+    const res = await fetch('/api/watchlist', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: w.id }),
+    })
+    if (res.ok) setWatchlist((l) => l.filter((x) => x.id !== w.id))
+  }
+
+  if (error) {
     return (
-      <main className="min-h-screen flex items-center justify-center">
-        <motion.p
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 1.6, repeat: Infinity }}
-          className="label-mono"
-        >
-          Adások betöltése…
-        </motion.p>
-      </main>
+      <PageShell>
+        <EmptyState eyebrow="Hírek" title="Nem sikerült betölteni" text={error} />
+      </PageShell>
     )
   }
 
   return (
-    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="label-mono mb-1">News</p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {data.season.year} {SEASON_LABELS[data.season.season] ?? data.season.season}
-          </h1>
-        </div>
-        <div className="flex items-start gap-2">
+    <PageShell className="flex flex-col gap-14">
+      {/* eszkoztar + hero egy blokkban: a gap-14 a blokkok kozott van, nem
+          a gombok es a hero kozott */}
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-end gap-2">
           <div data-tour="tonight"><TonightPicker /></div>
           <div data-tour="recommend"><RecommendMorph onAdded={() => { /* a lista frissül a következő betöltéskor */ }} /></div>
         </div>
+        <HeroToday
+          mine={data?.mine ?? null}
+          season={seasonItems}
+          fit={seasonFit}
+          digest={digest}
+          onBump={bumpProgress}
+          onPlan={addToPlanned}
+          planned={added}
+        />
       </div>
 
-      {data.mine.length === 0 && <OnboardingCTA />}
+      {data && data.mine.length === 0 && <OnboardingCTA />}
       <TourSpotlight
         page="news"
         steps={NEWS_TOUR}
         force={typeof window !== 'undefined' && window.location.search.includes('tour=1')}
       />
 
-      {digest && (
-        <motion.p
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass rounded-2xl px-5 py-3.5 text-sm text-text-1 leading-relaxed -mt-3"
-        >
-          <span className="label-mono mr-2">✦ ma</span>
-          {digest}
-        </motion.p>
+      {data && <FollowedRow mine={data.mine} excludeAnimeId={heroAnimeId} onBump={bumpProgress} />}
+      {data && <WeekCalendar mine={data.mine} />}
+
+      {data && (
+        <SeasonGrid
+          season={data.season}
+          items={seasonItems}
+          visible={visibleSeason}
+          fit={seasonFit}
+          view={view}
+          onView={setView}
+          facets={facets}
+          scored={scored}
+          scoresFailed={scoresFailed}
+          onPlan={addToPlanned}
+          planned={added}
+        />
       )}
 
-      {(feed.length > 0 || watchlist.length > 0) && (
-        <section>
-          <p className="label-mono mb-3">Társaság</p>
-          {feed.length > 0 && (
-          <div className="glass rounded-3xl p-4 flex flex-col gap-2.5">
-            {feed.slice(0, 12).map((f) => (
-              <div key={`${f.kind}-${f.userId}-${f.animeId}-${f.at}`} className="flex items-center gap-3 text-sm">
-                <span className="w-7 h-7 shrink-0 rounded-full bg-white/8 grid place-items-center font-mono text-[11px] uppercase text-text-1">
-                  {f.username.slice(0, 2)}
-                </span>
-                <p className="min-w-0 flex-1 text-text-2 truncate">
-                  <span className="text-text-1 font-medium">{f.username}</span>{' '}
-                  {f.kind === 'added' && <>hozzáadta: </>}
-                  {f.kind === 'opinion' && <>véleményt írt: </>}
-                  {f.kind === 'episodes' && <>{f.mediaType === 'MANGA' ? 'olvasott' : 'nézett'} ({f.count > 1 ? `${f.count} rész` : f.detail}): </>}
-                  {f.kind === 'favchar' && <>kedvence lett: {f.detail} — </>}
-                  <Link href={`/anime/preview/${f.anilistId}`} className="text-text-1 hover:underline">{f.title}</Link>
-                  {f.kind === 'opinion' && f.detail && <span className="text-text-3"> — „{f.detail}”</span>}
-                </p>
-                <span className="label-mono shrink-0">{new Date(f.at).toLocaleDateString('hu-HU', { month: 'short', day: 'numeric' })}</span>
-              </div>
-            ))}
-          </div>
-          )}
-          {watchlist.length > 0 && (
-            <div className="mt-4">
-              <p className="label-mono mb-2">Közös lista</p>
-              <ul className="flex flex-col gap-2">
-                {watchlist.map((w) => (
-                  <li key={w.id} className="glass rounded-2xl p-2.5 flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {w.coverUrl && <img src={w.coverUrl} alt="" className="w-8 h-11 object-cover rounded-md" />}
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/anime/preview/${w.anilistId}`} className="text-sm font-medium text-text-1 truncate block hover:underline">{w.title}</Link>
-                      <p className="label-mono">{wlUsers[w.addedBy] ?? '?'} tette fel · együtt: {w.watchedEpisodes} rész</p>
-                    </div>
-                    <button
-                      onClick={async () => {
-                        const res = await fetch('/api/watchlist', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: w.id, delta: 1 }) })
-                        if (res.ok) setWatchlist((l) => l.map((x) => (x.id === w.id ? { ...x, watchedEpisodes: x.watchedEpisodes + 1 } : x)))
-                      }}
-                      className="btn-ghost border border-white/10 px-2 py-0.5 text-xs" title="Együtt megnéztünk egy részt"
-                    >+1</button>
-                    <button
-                      onClick={async () => {
-                        const res = await fetch('/api/watchlist', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: w.id }) })
-                        if (res.ok) setWatchlist((l) => l.filter((x) => x.id !== w.id))
-                      }}
-                      className="btn-ghost px-2 py-0.5 text-xs text-text-3" title="Levétel"
-                    >✕</button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
+      <NextSeason
+        upcoming={upcoming}
+        upcomingSeason={upcomingSeason}
+        all={nextList}
+        allFit={nextFit}
+        onPlan={addToPlanned}
+        planned={added}
+      />
 
-      {data.mine.length > 0 && (
-        <section>
-          <p className="label-mono mb-3">Amit követsz — következő rész</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {data.mine.map((m, i) => (
-              <motion.div
-                key={m.animeId}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: Math.min(i * 0.05, 0.3) }}
-                className="h-full"
-              >
-                <MediaCard
-                  title={m.title}
-                  coverUrl={m.coverUrl}
-                  genres={m.genres}
-                  description={m.description}
-                  href={`/anime/${m.animeId}`}
-                  badge={
-                    <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">
-                      EP {m.nextEpisode} · <Countdown airingAt={m.airingAt} />
-                    </span>
-                  }
-                  footer={
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="label-mono flex items-center gap-1.5">
-                        <span
-                          className={`inline-block w-1.5 h-1.5 rounded-full ${m.status === 'watching' ? 'animate-pulse' : ''}`}
-                          style={{ background: STATUS_CSS_VARS[m.status] ?? 'white' }}
-                        />
-                        {STATUS_LABELS[m.status] ?? m.status}
-                        <span className="text-text-3">· {m.progress}{m.episodes ? `/${m.episodes}` : ''}</span>
-                      </p>
-                      <button
-                        onClick={() => bumpProgress(m)}
-                        title="Megnéztem egy részt"
-                        className="btn-ghost border border-white/10 px-2 py-0.5 text-xs whitespace-nowrap"
-                      >
-                        +1
-                      </button>
-                    </div>
-                  }
-                />
-              </motion.div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {data.mine.length > 0 && (
-        <section>
-          <p className="label-mono mb-3">Heti adásnaptár</p>
-          <div className="glass rounded-3xl p-4 grid grid-cols-7 gap-2">
-            {WEEKDAY_LABELS.map((label, day) => {
-              const todayIdx = weekdayIndexBudapest(Math.floor(Date.now() / 1000))
-              const items = data.mine.filter((m) => weekdayIndexBudapest(m.airingAt) === day)
-              return (
-                <div key={label} className={`rounded-xl p-2 min-h-24 ${day === todayIdx ? 'bg-white/8' : 'bg-white/3'}`}>
-                  <p className={`label-mono mb-2 text-center ${day === todayIdx ? '!text-text-1' : ''}`}>{label}</p>
-                  <div className="flex flex-col items-center gap-1.5">
-                    {items.map((m) => (
-                      <Link key={m.animeId} href={`/anime/${m.animeId}`} title={m.title}>
-                        {m.coverUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.coverUrl} alt={m.title} className="w-9 h-12 object-cover rounded-md hover:scale-110 transition-transform" />
-                        ) : (
-                          <span className="text-[10px] text-text-2">{m.title.slice(0, 8)}</span>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      <section>
-        <div className="flex items-baseline justify-between mb-3">
-          <p className="label-mono">A szezon</p>
-        </div>
-        <div className="mb-4">
-          <SeasonFilterBar
-            view={view}
-            onChange={setView}
-            facets={facets}
-            shown={visibleSeason.length}
-            total={seasonItems.length}
-            scored={scored}
-            scoresFailed={scoresFailed}
-          />
-        </div>
-        {visibleSeason.length === 0 && (
-          <p className="glass rounded-2xl px-5 py-4 text-sm text-text-2">
-            Nincs találat a szűrőkre.
-          </p>
-        )}
-        <div data-tour="season" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {visibleSeason.map((s, i) => (
-            <motion.article
-              key={s.anilistId}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: Math.min(i * 0.03, 0.4) }}
-              className="h-full"
-            >
-              <MediaCard
-                title={s.title}
-                coverUrl={s.coverUrl}
-                genres={s.genres}
-                description={s.description}
-                streaming={s.streaming}
-                badge={s.tasteScore != null ? (
-                  <ScoreBadge score={s.tasteScore} kind="taste" title={s.tasteReason ?? undefined} />
-                ) : seasonFit[s.anilistId] != null ? (
-                  <ScoreBadge
-                    score={seasonFit[s.anilistId]}
-                    suffix="%"
-                    title="Ennyire illik az ízlésedhez (lokális becslés)"
-                  />
-                ) : undefined}
-                footer={
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-mono text-[12px] text-text-1">
-                      {s.airingAt != null ? (
-                        <>EP {s.nextEpisode} · <Countdown airingAt={s.airingAt} /></>
-                      ) : (
-                        <span className="text-text-3">nincs adásban</span>
-                      )}
-                    </p>
-                    {s.owned ? (
-                      <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
-                    ) : (
-                      <button
-                        onClick={() => addToPlanned(s.anilistId)}
-                        disabled={added.has(s.anilistId)}
-                        className="btn-ghost border border-white/10 px-2.5 py-1 text-xs whitespace-nowrap disabled:text-[color:var(--status-watching)] disabled:border-transparent"
-                      >
-                        {added.has(s.anilistId) ? '✓' : '+ Tervezem'}
-                      </button>
-                    )}
-                  </div>
-                }
-              />
-            </motion.article>
-          ))}
-        </div>
-      </section>
-
-      {upcoming.length > 0 && upcomingSeason && (
-        <section>
-          <p className="label-mono mb-3">
-            Következő szezon — neked · {upcomingSeason.year} {SEASON_LABELS[upcomingSeason.season] ?? upcomingSeason.season}
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {upcoming.map((s) => (
-              <MediaCard
-                key={s.anilistId}
-                title={s.title}
-                coverUrl={s.coverUrl}
-                genres={s.genres}
-                description={s.tasteReason}
-                streaming={s.streaming}
-                badge={<ScoreBadge score={s.tasteScore} kind="taste" title={s.tasteReason} />}
-                footer={s.owned ? (
-                  <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
-                ) : (
-                  <button
-                    onClick={() => addToPlanned(s.anilistId)}
-                    disabled={added.has(s.anilistId)}
-                    className="btn-ghost border border-white/10 px-2.5 py-1 text-xs disabled:text-[color:var(--status-watching)] disabled:border-transparent"
-                  >
-                    {added.has(s.anilistId) ? '✓' : '+ Tervezem'}
-                  </button>
-                )}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {nextList != null && (() => {
-        const ns = nextSeason(new Date())
-        return (
-          <section>
-            <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-              <p className="label-mono">
-                Következő szezon — teljes kínálat · {ns.year} {SEASON_LABELS[ns.season] ?? ns.season}
-              </p>
-              <Link href="/bongeszo?season=next" className="text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20">
-                Mind a böngészőben →
-              </Link>
-            </div>
-            {nextList.length === 0 ? (
-              <p className="text-sm text-text-2">Még kevés bejelentett cím — a katalógus-sync bővíti majd.</p>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {nextList.map((t) => (
-                  <MediaCard
-                    key={t.id}
-                    title={t.titleRomaji}
-                    coverUrl={t.coverUrl}
-                    genres={t.genres}
-                    href={`/${t.mediaType === 'MANGA' ? 'manga' : 'anime'}/${t.slug}`}
-                    badge={nextFit[t.anilistId] != null ? (
-                      <ScoreBadge
-                        score={nextFit[t.anilistId]}
-                        suffix="%"
-                        title="Ennyire illik az ízlésedhez"
-                      />
-                    ) : undefined}
-                    footer={t.format ? <span className="label-mono">{t.format}</span> : undefined}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        )
-      })()}
-    </main>
+      <SocialFeed
+        feed={feed}
+        watchlist={watchlist}
+        usernames={wlUsers}
+        onWatchBump={watchBump}
+        onWatchRemove={watchRemove}
+      />
+    </PageShell>
   )
 }
