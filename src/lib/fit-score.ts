@@ -5,7 +5,10 @@
 
 export type TagEntryLite = { name: string; rank?: number }
 export type TasteItem = { genres: string[]; tags: TagEntryLite[]; status: string; myScore: number | null }
-export type FitTarget = { genres: string[]; tags: TagEntryLite[] }
+/** `extraKeys`: származtatott tengelyek (length/era/format/studio/source) kész kulcsként */
+export type FitTarget = { genres: string[]; tags: TagEntryLite[]; extraKeys?: string[] }
+/** Az extract kötött szókészletű kimenete — a szemantikus ág bemenete. */
+export type SignalInput = { feature: string; polarity: number; strength: number }
 export type TasteVector = { vector: Map<string, number>; sample: number }
 export type FitResult = {
   score: number
@@ -16,6 +19,13 @@ export type FitResult = {
 export const MIN_SAMPLE = 5
 const MIN_KNOWN_FEATURES = 1
 const TAG_FEATURE_WEIGHT = 0.6
+// A származtatott tengely gyengébb jel, mint egy műfaj, de erősebb a semminél.
+const EXTRA_FEATURE_WEIGHT = 0.5
+
+// A szemantikus jel súlya a kombinált vektorban. Kevés jelnél arányosan csökken,
+// hogy egy-két vélemény ne forgassa fel a listát.
+export const SIGNAL_ALPHA = 0.4
+export const SIGNAL_FULL_WEIGHT_AT = 20
 const STATUS_SIGNAL: Record<string, number> = { completed: 0.3, watching: 0.3, planned: 0.1, dropped: -0.8 }
 
 function itemWeight(it: TasteItem): number {
@@ -27,10 +37,21 @@ function targetFeatures(target: FitTarget): { key: string; name: string; fw: num
   return [
     ...target.genres.map((g) => ({ key: `g:${g.toLowerCase()}`, name: g, fw: 1 })),
     ...target.tags.map((t) => ({ key: `t:${t.name.toLowerCase()}`, name: t.name, fw: TAG_FEATURE_WEIGHT })),
+    ...(target.extraKeys ?? []).map((k) => ({
+      key: k.toLowerCase(), name: k.split(':')[1] ?? k, fw: EXTRA_FEATURE_WEIGHT,
+    })),
   ]
 }
 
-export function buildTasteVector(items: TasteItem[]): TasteVector {
+// normalizálás [-1, 1]-re, hogy a nagy listák ne szaladjanak el
+function normalize(vector: Map<string, number>): Map<string, number> {
+  let max = 0
+  for (const v of vector.values()) max = Math.max(max, Math.abs(v))
+  if (max > 0) for (const [k, v] of vector) vector.set(k, v / max)
+  return vector
+}
+
+function behaviouralVector(items: TasteItem[]): Map<string, number> {
   const vector = new Map<string, number>()
   for (const it of items) {
     const w = itemWeight(it)
@@ -44,11 +65,31 @@ export function buildTasteVector(items: TasteItem[]): TasteVector {
       vector.set(key, (vector.get(key) ?? 0) + w * TAG_FEATURE_WEIGHT)
     }
   }
-  // normalizálás [-1, 1]-re, hogy a nagy listák ne szaladjanak el
-  let max = 0
-  for (const v of vector.values()) max = Math.max(max, Math.abs(v))
-  if (max > 0) for (const [k, v] of vector) vector.set(k, v / max)
-  return { vector, sample: items.length }
+  return normalize(vector)
+}
+
+function semanticVector(signals: SignalInput[]): Map<string, number> {
+  const vector = new Map<string, number>()
+  for (const s of signals) {
+    const key = s.feature.toLowerCase()
+    vector.set(key, (vector.get(key) ?? 0) + (s.polarity >= 0 ? 1 : -1) * s.strength)
+  }
+  return normalize(vector)
+}
+
+export function buildTasteVector(items: TasteItem[], signals: SignalInput[] = []): TasteVector {
+  const behaviour = behaviouralVector(items)
+  if (signals.length === 0) return { vector: behaviour, sample: items.length }
+
+  // Külön-külön normalizálunk: több száz értékelés áll szemben pár tucat jellel,
+  // közös normalizálás elnyomná a szemantikát.
+  const semantic = semanticVector(signals)
+  const alpha = SIGNAL_ALPHA * Math.min(1, signals.length / SIGNAL_FULL_WEIGHT_AT)
+  const combined = new Map<string, number>()
+  for (const key of new Set([...behaviour.keys(), ...semantic.keys()])) {
+    combined.set(key, (behaviour.get(key) ?? 0) * (1 - alpha) + (semantic.get(key) ?? 0) * alpha)
+  }
+  return { vector: combined, sample: items.length }
 }
 
 // Drop-rizikó (D7): CSAK a droppolt címekből épített affinitás-vektor — „miket szoktál dobni".

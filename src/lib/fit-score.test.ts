@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTasteVector, computeFit, computeDropRisk, MIN_SAMPLE, MIN_DROP_SAMPLE } from './fit-score'
+import { buildTasteVector, computeFit, computeDropRisk, MIN_SAMPLE, MIN_DROP_SAMPLE, SIGNAL_ALPHA } from './fit-score'
 
 const item = (over: Partial<Parameters<typeof buildTasteVector>[0][number]> = {}) => ({
   genres: ['Action'], tags: [], status: 'completed', myScore: null, ...over,
@@ -100,5 +100,60 @@ describe('computeDropRisk', () => {
 
   it('MIN_DROP_SAMPLE exportált', () => {
     expect(MIN_DROP_SAMPLE).toBeGreaterThanOrEqual(2)
+  })
+})
+
+// --- szemantikus ag (izles-jelek) ---
+
+const many = Array.from({ length: 10 }, () => ({
+  genres: ['Action'], tags: [], status: 'completed', myScore: 8,
+}))
+
+describe('szemantikus ag', () => {
+  it('jel nelkul a vektor bitre azonos a mai viselkedessel', () => {
+    const a = buildTasteVector(many)
+    const b = buildTasteVector(many, [])
+    expect([...b.vector.entries()]).toEqual([...a.vector.entries()])
+  })
+
+  it('a jel uj kulcsot is behozhat, amit a viselkedes nem ismer', () => {
+    const v = buildTasteVector(many, [{ feature: 'length:short', polarity: 1, strength: 1 }])
+    expect(v.vector.has('length:short')).toBe(true)
+  })
+
+  it('negativ jel lehuzza a kulcsot', () => {
+    const withSignal = buildTasteVector(many, [{ feature: 'g:action', polarity: -1, strength: 1 }])
+    expect(withSignal.vector.get('g:action')!)
+      .toBeLessThan(buildTasteVector(many).vector.get('g:action')!)
+  })
+
+  it('keves jelnel az alfa aranyosan csokken', () => {
+    const few = buildTasteVector(many, [{ feature: 'length:short', polarity: 1, strength: 1 }])
+    const lots = buildTasteVector(many, Array.from({ length: 20 }, (_, i) => ({
+      feature: i === 0 ? 'length:short' : `t:x${i}`, polarity: 1, strength: 1,
+    })))
+    expect(lots.vector.get('length:short')!).toBeGreaterThan(few.vector.get('length:short')!)
+  })
+
+  it('az alfa a specben rogzitett ertek', () => {
+    expect(SIGNAL_ALPHA).toBe(0.4)
+  })
+})
+
+describe('kibovitett FitTarget', () => {
+  it('az uj tengelyek is szamitanak a pontszamban', () => {
+    const v = buildTasteVector(many, Array.from({ length: 20 }, () => ({
+      feature: 'length:short', polarity: 1, strength: 1,
+    })))
+    const fit = computeFit(v, { genres: [], tags: [], extraKeys: ['length:short'] })
+    expect(fit).not.toBeNull()
+    expect(fit!.score).toBeGreaterThan(50)
+  })
+
+  it('extraKeys nelkul a viselkedes valtozatlan', () => {
+    const v = buildTasteVector(many)
+    const a = computeFit(v, { genres: ['Action'], tags: [] })
+    const b = computeFit(v, { genres: ['Action'], tags: [], extraKeys: [] })
+    expect(a).toEqual(b)
   })
 })
