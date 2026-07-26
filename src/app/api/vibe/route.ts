@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, tasteMemory, recommendations } from '@/db/schema'
+import { anime, tasteMemory, recommendations, tasteSignal, title } from '@/db/schema'
 import { buildVibeMessages, parseVibe, type VibeOwnAnime } from '@/lib/vibe'
+import { chipFeatureKeys } from '@/lib/vibe-presets'
+import { buildTasteVector, computeFit } from '@/lib/fit-score'
+import { fitReason } from '@/lib/fit-reason'
 import { aiCacheKind } from '@/lib/ai-cache-key'
 import { userLocale } from '@/lib/user-locale'
 import { searchAnime } from '@/lib/anilist'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { glmChat } from '@/lib/glm'
 import { aiUserErrorMessage } from '@/lib/ai-error'
 
@@ -54,6 +57,45 @@ export async function POST(req: NextRequest) {
     .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   if (!rows.length) return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
   const factRows = await db.select().from(tasteMemory).where(eq(tasteMemory.userId, userId))
+
+  // Chip-only ut: ha nincs szabad szoveg es nincs kivalasztott anime, ES minden
+  // chip lekepezheto katalogus-feature-re, akkor nem kell modell.
+  const chipIds: string[] = Array.isArray(body?.chipIds) ? body.chipIds : []
+  const custom = String(body?.custom ?? '').trim()
+  const { keys, unmapped } = chipFeatureKeys(chipIds)
+  if (!custom && !animeIds.length && keys.length > 0 && unmapped.length === 0) {
+    const [signals, catalog] = await Promise.all([
+      db.select({
+        feature: tasteSignal.feature, polarity: tasteSignal.polarity, strength: tasteSignal.strength,
+      }).from(tasteSignal).where(eq(tasteSignal.userId, userId)),
+      db.select({
+        anilistId: title.anilistId, titleRomaji: title.titleRomaji, coverUrl: title.coverUrl,
+        genres: title.genres, tags: title.tags, year: title.year, description: title.description,
+      }).from(title)
+        .where(and(eq(title.mediaType, 'ANIME'), isNotNull(title.coverUrl)))
+        .orderBy(desc(title.popularity)).limit(500),
+    ])
+    const vector = buildTasteVector(rows, signals)
+    const ownedAnilist = new Set(rows.map((r) => r.anilistId))
+    const newPicks = catalog
+      .filter((c) => !ownedAnilist.has(c.anilistId))
+      .map((c) => {
+        const fit = computeFit(vector, { genres: c.genres, tags: c.tags, extraKeys: keys })
+        return fit ? {
+          score: fit.score,
+          pick: {
+            title: c.titleRomaji, reason: fitReason(fit, locale), anilistId: c.anilistId,
+            coverUrl: c.coverUrl, year: c.year, genres: c.genres, description: c.description,
+          },
+        } : null
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((x) => x.pick)
+    // a valasz-alak megegyezik az AI-agaeval, kulonben a /vibe oldal nem tudja megjeleniteni
+    return NextResponse.json({ ownPicks: [], newPicks })
+  }
 
   const selectedSet = new Set(animeIds)
   const own: VibeOwnAnime[] = rows.map((r) => ({
