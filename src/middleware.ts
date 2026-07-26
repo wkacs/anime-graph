@@ -6,7 +6,7 @@ import { createSession, verifySession, SESSION_DAYS, SESSION_RENEW_AFTER_MS } fr
 // tartozó olvasó-API-k anonim-biztosak (owned/fit: authed:false ágat adnak, sosem 500).
 const PUBLIC_PREFIXES = [
   '/login', '/api/auth', '/api/cron', '/p/', '/api/public/',
-  '/anime/', '/manga/', '/bongeszo', '/toplista',
+  '/anime/', '/manga/', '/bongeszo', '/toplista', '/u/',
   '/api/search', '/api/browse', '/api/characters/', '/api/themes/', '/api/links/',
   '/api/leaderboard',
   '/api/anime/owned', '/api/fit',

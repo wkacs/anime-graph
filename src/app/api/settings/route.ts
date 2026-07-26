@@ -33,6 +33,9 @@ export async function GET() {
     email: user?.email ?? null,
     emailVerified: user?.emailVerifiedAt != null,
     locale: user?.locale ?? 'en',
+    username: user?.username ?? null,
+    bio: user?.bio ?? '',
+    profileVisibility: map.profileVisibility ?? 'public',
   })
 }
 
@@ -49,6 +52,14 @@ export async function PUT(req: NextRequest) {
   // nyelv: a cookie a kliensen áll be, ez a sor teszi eszközök között követhetővé
   if (body.locale === 'en' || body.locale === 'hu') {
     await db.update(users).set({ locale: body.locale }).where(eq(users.id, userId))
+  }
+
+  if (typeof body.bio === 'string') {
+    await db.update(users).set({ bio: body.bio.slice(0, 500) }).where(eq(users.id, userId))
+  }
+
+  if (body.profileVisibility === 'public' || body.profileVisibility === 'private') {
+    await upsert(userId, 'profileVisibility', body.profileVisibility)
   }
 
   // e-mail-cím pótlása a nyílt regisztráció előtti fiókoknak (id=1):

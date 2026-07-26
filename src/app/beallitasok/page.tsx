@@ -6,6 +6,7 @@ import ProfileReveal from '@/components/ProfileReveal'
 import SyncAccounts from '@/components/SyncAccounts'
 import EmailPrompt from '@/components/EmailPrompt'
 import LocaleSwitcher from '@/components/LocaleSwitcher'
+import ProfileSettings from '@/components/ProfileSettings'
 
 const CONFIG_KEY = 'anime-graph-config'
 
@@ -125,6 +126,8 @@ export default function BeallitasokPage() {
         </div>
         <LocaleSwitcher />
       </section>
+
+      <ProfileSettings />
 
       <section className="glass rounded-3xl p-6">
         <p className="label-mono mb-1">Ízlés-profil</p>
