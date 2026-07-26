@@ -8,20 +8,34 @@ async function hmacHex(secret: string, data: string): Promise<string> {
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-// session token: "<userId>.<expiryMs>.<hmac>" — edge-safe (Web Crypto only)
-export async function createSession(secret: string, userId: number, days = 365): Promise<string> {
+export const SESSION_DAYS = 30
+/** a felezőpont után újítunk: az aktív user sosem esik ki, az inaktív token lejár */
+export const SESSION_RENEW_AFTER_MS = (SESSION_DAYS / 2) * 86400_000
+
+// session token: "<userId>.<tokenVersion>.<expiryMs>.<hmac>" — edge-safe (Web Crypto only).
+// A tokenVersion a jelszó-resetnél nő, így a régi tokenek érvénytelenné válnak.
+export async function createSession(
+  secret: string, userId: number, tokenVersion: number, days = SESSION_DAYS,
+): Promise<string> {
   const exp = Date.now() + days * 86400_000
-  const payload = `${userId}.${exp}`
+  const payload = `${userId}.${tokenVersion}.${exp}`
   return `${payload}.${await hmacHex(secret, payload)}`
 }
 
-export async function verifySession(secret: string, token: string | undefined): Promise<number | null> {
+export type SessionClaims = { userId: number; tokenVersion: number; expiresAt: number }
+
+export async function verifySession(
+  secret: string, token: string | undefined,
+): Promise<SessionClaims | null> {
   if (!token) return null
   const parts = token.split('.')
-  if (parts.length !== 3) return null
-  const [uid, exp, sig] = parts
-  if ((await hmacHex(secret, `${uid}.${exp}`)) !== sig) return null
+  if (parts.length !== 4) return null
+  const [uid, ver, exp, sig] = parts
+  if ((await hmacHex(secret, `${uid}.${ver}.${exp}`)) !== sig) return null
   if (!/^\d+$/.test(exp) || Number(exp) < Date.now()) return null
-  const id = Number(uid)
-  return Number.isInteger(id) && id > 0 ? id : null
+  const userId = Number(uid)
+  const tokenVersion = Number(ver)
+  if (!Number.isInteger(userId) || userId <= 0) return null
+  if (!Number.isInteger(tokenVersion) || tokenVersion < 0) return null
+  return { userId, tokenVersion, expiresAt: Number(exp) }
 }

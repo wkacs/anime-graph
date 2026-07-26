@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     .values({ username, passwordHash: hashPassword(password) })
     .returning()
 
-  const token = await createSession(process.env.SESSION_SECRET!, user.id)
+  const token = await createSession(process.env.SESSION_SECRET!, user.id, user.tokenVersion)
   const res = NextResponse.json({ ok: true, username: user.username })
   res.cookies.set('session', token, {
     httpOnly: true,
