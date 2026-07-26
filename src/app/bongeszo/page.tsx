@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores } from '@/lib/use-fit-scores'
 import ScoreBadge from '@/components/ui/ScoreBadge'
@@ -69,6 +69,7 @@ export default function BrowsePage() {
   const [added, setAdded] = useState<Set<number>>(new Set()) // titleId set
   // saját lista: anilistId → db-id, hogy a kártya a megfelelő oldalra linkeljen
   const [ownIds, setOwnIds] = useState<Map<number, number>>(new Map())
+  const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     fetch('/api/anime')
@@ -85,13 +86,18 @@ export default function BrowsePage() {
       .catch(() => { /* üres állapot marad a szöveges hint */ })
   }, [])
 
-  // induló szűrők a querystringből (?studio=…, ?season=current|next)
+  // induló szűrők a querystringből (?studio=…, ?season=current|next, ?focus=1)
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search)
     const st = sp.get('studio')
     if (st) setStudioFilter(st)
     const se = sp.get('season')
     if (se === 'current' || se === 'next') setSeasonKey(se)
+    // a nav kereső-ikonja ide navigál: fókuszáljuk a meglévő inputot
+    if (sp.get('focus') === '1') {
+      searchRef.current?.focus()
+      window.history.replaceState(null, '', '/bongeszo')
+    }
   }, [])
 
   // szűrt nézet a lokális browse-ból, keresés nélkül
@@ -205,6 +211,7 @@ export default function BrowsePage() {
         className="surface-3 sticky top-20 z-30 rounded-[var(--r-lg)] p-4 flex flex-wrap items-center gap-2 text-sm"
       >
         <input
+          ref={searchRef}
           value={search}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Keresés a katalógusban…"

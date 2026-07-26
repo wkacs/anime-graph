@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Instrument_Sans, Instrument_Serif, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
+import MobileTabBar from "@/components/MobileTabBar";
 import "./globals.css";
 
 const instrument = Instrument_Sans({
@@ -53,6 +54,7 @@ export default function RootLayout({
         <IntlProvider>
           <TopNav />
           {children}
+          <MobileTabBar />
         </IntlProvider>
       </body>
     </html>
