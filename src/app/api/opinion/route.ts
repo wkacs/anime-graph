@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, opinions, recommendations, tasteMemory } from '@/db/schema'
-import { extractFacts } from '@/lib/extract'
+import { anime, opinions, recommendations, tasteMemory, tasteSignal, title } from '@/db/schema'
+import { extractAll, filterSignals } from '@/lib/extract'
+import { titleFeatureKeys } from '@/lib/taste-features'
 import { userLocale } from '@/lib/user-locale'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
-import { and, eq, like } from 'drizzle-orm'
+import { and, eq, like, sql } from 'drizzle-orm'
 
 export async function GET(req: NextRequest) {
   const userId = await requireUserId()
@@ -49,7 +50,17 @@ export async function POST(req: NextRequest) {
   try {
     await consumeAiQuota(userId, 'opinion')
     const locale = await userLocale(userId)
-    const facts = await extractFacts(animeRow.titleRomaji, rawText, locale, { userId, endpoint: 'opinion' })
+    // a jelölt feature-ök a VÉLEMÉNY TÁRGYÁNAK saját készlete
+    const [titleRow] = await db.select({
+      id: title.id, genres: title.genres, tags: title.tags, format: title.format,
+      episodes: title.episodes, chapters: title.chapters, year: title.year,
+      studio: title.studio, mediaType: title.mediaType, relations: title.relations,
+    }).from(title).where(eq(title.id, animeRow.titleId))
+    const allowed = titleRow ? titleFeatureKeys(titleRow) : []
+
+    const { facts, signals } = await extractAll(
+      animeRow.titleRomaji, rawText, locale, allowed, { userId, endpoint: 'opinion' },
+    )
     await db.delete(tasteMemory).where(
       and(eq(tasteMemory.animeId, animeId), eq(tasteMemory.source, 'opinion')),
     )
@@ -57,6 +68,18 @@ export async function POST(req: NextRequest) {
     const inserted = await db.insert(tasteMemory).values(
       facts.map((f) => ({ userId, animeId, kind: f.kind, text: f.text, source: 'opinion', lang: locale })),
     ).returning()
+
+    // gépi jelek a rangsoroló vektorhoz — a szókészlet-őrön átszűrve
+    const clean = filterSignals(signals, allowed)
+    if (titleRow && clean.length) {
+      await db.insert(tasteSignal).values(clean.map((s) => ({
+        userId, titleId: titleRow.id, feature: s.feature,
+        polarity: s.polarity, strength: s.strength, source: 'opinion',
+      }))).onConflictDoUpdate({
+        target: [tasteSignal.userId, tasteSignal.titleId, tasteSignal.feature],
+        set: { polarity: sql`excluded.polarity`, strength: sql`excluded.strength` },
+      })
+    }
     await db.update(opinions).set({ extractStatus: 'done' }).where(eq(opinions.animeId, animeId))
     // új ízlés-tények → a korszak-cache elavult
     await db.delete(recommendations).where(

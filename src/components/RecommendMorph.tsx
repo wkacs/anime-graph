@@ -23,6 +23,37 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
   const [picks, setPicks] = useState<PickResult[]>([])
   const [error, setError] = useState('')
   const [added, setAdded] = useState<Set<number>>(new Set())
+  const [explaining, setExplaining] = useState(false)
+  const [explainNote, setExplainNote] = useState('')
+
+  // A rangsor lokalis (fit-vektor). Ez a gomb EGY AI-hivast inditi, es CSAK az
+  // indoklas szoveget csereli le — hiba eseten a lista es a lokalis indoklas marad.
+  async function explain() {
+    setExplaining(true)
+    setExplainNote('')
+    try {
+      const res = await fetch('/api/recommend/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          picks: picks.map((p) => ({ anilistId: p.anilistId, title: p.title, genres: p.genres, coverUrl: p.coverUrl, avgScore: null })),
+        }),
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) {
+        setExplainNote(json?.error ?? 'Most nem sikerült bővebb indoklás')
+        return
+      }
+      const byId = new Map<number, string>(
+        (json.picks as { anilistId: number; reason: string }[]).map((p) => [p.anilistId, p.reason]),
+      )
+      setPicks((prev) => prev.map((p) => ({ ...p, reason: byId.get(p.anilistId) ?? p.reason })))
+    } catch {
+      setExplainNote('Most nem sikerült bővebb indoklás')
+    } finally {
+      setExplaining(false)
+    }
+  }
 
   async function run() {
     setOpen(true)
@@ -125,6 +156,18 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
                   </motion.li>
                 ))}
               </motion.ul>
+              {picks.length > 0 && (
+                <div className="px-2 pt-2">
+                  <button
+                    onClick={explain}
+                    disabled={explaining}
+                    className="btn-ghost px-3 py-1.5 text-xs border border-white/10"
+                  >
+                    {explaining ? '…' : 'Mondd el bővebben'}
+                  </button>
+                  {explainNote && <p className="text-xs text-text-3 mt-1">{explainNote}</p>}
+                </div>
+              )}
             </div>
           </motion.div>
         )}

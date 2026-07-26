@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, recommendations, tasteMemory } from '@/db/schema'
+import { anime, recommendations, tasteSignal } from '@/db/schema'
 import { fetchSeason } from '@/lib/anilist'
 import { aiCacheKind } from '@/lib/ai-cache-key'
 import { userLocale } from '@/lib/user-locale'
-import { consumeAiQuota } from '@/lib/ai-quota'
-import { buildSeasonMessages, currentSeason, parseSeasonScores, seasonScoreKind } from '@/lib/seasonal'
-import { glmChat } from '@/lib/glm'
+import { currentSeason, seasonScoreKind } from '@/lib/seasonal'
+import { buildTasteVector, computeFit } from '@/lib/fit-score'
+import { fitReason } from '@/lib/fit-reason'
 import { requireUserId } from '@/lib/session'
 import { and, desc, eq } from 'drizzle-orm'
 
@@ -41,34 +41,34 @@ export async function GET() {
     }
   }
 
-  const [rows, facts, seasonList] = await Promise.all([
+  const [rows, signals, seasonList] = await Promise.all([
     db.select().from(anime).where(eq(anime.userId, userId)),
-    db.select().from(tasteMemory).where(eq(tasteMemory.userId, userId)).orderBy(desc(tasteMemory.createdAt)).limit(30),
+    db.select({
+      feature: tasteSignal.feature, polarity: tasteSignal.polarity, strength: tasteSignal.strength,
+    }).from(tasteSignal).where(eq(tasteSignal.userId, userId)),
     fetchSeason(season.season, season.year).catch(() => []),
   ])
   if (!seasonList.length) return NextResponse.json({ season, items: [] })
   if (!rows.length) return NextResponse.json({ season, items: [] })
 
   const candidates = seasonList.slice(0, MAX_SCORED)
-  const titleById = new Map(candidates.map((c) => [c.anilistId, c.title]))
-  try {
-    await consumeAiQuota(userId, 'season-scores')
-    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(candidates, facts.map((f) => f.text), await userLocale(userId)), { userId, endpoint: 'season-scores' }))
-    const items: StoredScore[] = scores
-      .filter((s) => titleById.has(s.anilistId))
-      .map((s) => ({ anilistId: s.anilistId, title: titleById.get(s.anilistId)!, score: s.score, reason: s.reason }))
-      .sort((a, b) => b.score - a.score)
-    await db.delete(recommendations)
-      .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, kind)))
-    await db.insert(recommendations).values({ userId, kind, input: season, result: { items } })
-    return NextResponse.json({ season, items, cached: false })
-  } catch (e) {
-    await db.delete(recommendations)
-      .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, kind)))
-      .catch(() => { /* a negatív cache best-effort */ })
-    await db.insert(recommendations)
-      .values({ userId, kind, input: season, result: { items: [], failed: true } })
-      .catch(() => { /* a negatív cache best-effort */ })
-    return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 502 })
-  }
+  const vector = buildTasteVector(rows, signals)
+  const locale = await userLocale(userId)
+
+  // Lokalis pontozas: nulla modellhivas. A cache marad, mert a fetchSeason
+  // tovabbra is kulso halozati hivas.
+  const items: StoredScore[] = candidates
+    .map((c) => {
+      const fit = computeFit(vector, { genres: c.genres, tags: c.tags ?? [] })
+      return fit
+        ? { anilistId: c.anilistId, title: c.title, score: fit.score, reason: fitReason(fit, locale) }
+        : null
+    })
+    .filter((s): s is StoredScore => s !== null)
+    .sort((a, b) => b.score - a.score)
+
+  await db.delete(recommendations)
+    .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, kind)))
+  await db.insert(recommendations).values({ userId, kind, input: season, result: { items } })
+  return NextResponse.json({ season, items, cached: false })
 }

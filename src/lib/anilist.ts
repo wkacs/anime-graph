@@ -166,6 +166,9 @@ export type RecCandidate = {
   title: string
   coverUrl: string | null
   genres: string[]
+  // opcionalis: az elo AniList-agak nem toltik, a lokalis katalogus-ut igen.
+  // A fit-vektor a tageken a legerosebb, ezert a jelolt-uton at kell vinni.
+  tags?: { name: string }[]
   avgScore: number | null
 }
 
@@ -213,6 +216,7 @@ query ($season: MediaSeason!, $seasonYear: Int!) {
       title { romaji }
       coverImage { large }
       genres
+      tags { name }
       averageScore
       episodes
       format
@@ -224,13 +228,15 @@ query ($season: MediaSeason!, $seasonYear: Int!) {
 }`
 
 export async function fetchSeason(season: string, seasonYear: number): Promise<SeasonMedia[]> {
-  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; averageScore: number | null; episodes: number | null; format: string | null; description: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null; externalLinks: RawExternalLink[] | null }[] } }
+  type R = { Page: { media: { id: number; title: { romaji: string }; coverImage: { large: string | null } | null; genres: string[]; tags: { name: string }[] | null; averageScore: number | null; episodes: number | null; format: string | null; description: string | null; nextAiringEpisode: { airingAt: number; episode: number } | null; externalLinks: RawExternalLink[] | null }[] } }
   const data = await anilistFetch<R>(SEASON_QUERY, { season, seasonYear })
   return data.Page.media.map((m) => ({
     anilistId: m.id,
     title: m.title.romaji,
     coverUrl: m.coverImage?.large ?? null,
     genres: m.genres,
+    // a fit-vektor a tageken a legerosebb — enelkul a lokalis szezon-pontozas felig vak
+    tags: m.tags ?? [],
     avgScore: m.averageScore,
     episodes: m.episodes,
     format: m.format,

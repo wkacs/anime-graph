@@ -78,7 +78,7 @@ export default function VibePage() {
     const res = await fetch('/api/vibe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, animeIds: [...selected] }),
+      body: JSON.stringify({ prompt, chipIds: [...chips], custom, animeIds: [...selected] }),
     })
     const json = await res.json()
     setLoading(false)
