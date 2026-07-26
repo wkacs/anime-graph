@@ -85,7 +85,7 @@ export default function VsPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-6">
+    <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">VS — ízlés-összehasonlítás</h1>
         <p className="text-sm text-text-2 mt-1">

@@ -29,7 +29,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
   const desc = stripHtml(media.description)
 
   return (
-    <main className="min-h-screen max-w-4xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-6">
+    <main className="min-h-screen max-w-4xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
       {media.bannerImage && (
         <div className="relative h-40 sm:h-56 rounded-3xl overflow-hidden">
           <Image src={media.bannerImage} alt="" fill sizes="896px" className="object-cover opacity-70" />

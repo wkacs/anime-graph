@@ -243,7 +243,7 @@ export default function StatsPage() {
   const completedCount = stats.statusCounts.find((s) => s.status === 'completed')?.count ?? 0
 
   return (
-    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-4">
+    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
         <div className="flex items-center gap-2">

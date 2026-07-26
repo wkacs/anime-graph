@@ -112,7 +112,7 @@ export default function BeallitasokPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-5">
+    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
       <h1 className="text-xl font-semibold tracking-tight">Beállítások</h1>
 
       <EmailPrompt />

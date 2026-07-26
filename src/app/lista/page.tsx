@@ -218,7 +218,9 @@ export default function ListaPage() {
                 <span className="label-mono">Haladás</span>
               </th>
               <Th k="myScore" className="text-right">Pont</Th>
-              <th className="w-12" />
+              {/* a +1 hover-affordancia: mobilon nincs hover, es a 48px-es
+                  oszlop 390px-en vizszintes tulcsordulast okozott */}
+              <th className="w-12 hidden sm:table-cell" />
               <th className="w-10" />
             </tr>
           </thead>
@@ -278,7 +280,7 @@ export default function ListaPage() {
                 <td className="px-3 py-2 pr-4 text-right font-mono text-xs text-text-2">
                   {a.myScore != null ? `${a.myScore}/10` : '–'}
                 </td>
-                <td className="px-2 py-2 text-right">
+                <td className="px-2 py-2 text-right hidden sm:table-cell">
                   <Button
                     onClick={(e) => { e.stopPropagation(); bumpOne(a) }}
                     title="Megnéztem egy részt"

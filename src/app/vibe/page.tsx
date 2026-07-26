@@ -89,7 +89,7 @@ export default function VibePage() {
   }
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-5">
+    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Vibe-keresés</h1>
         <p className="text-sm text-text-2 mt-1">

@@ -47,7 +47,7 @@ export default function VelemenyekPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-6">
+    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
       <div>
         <p className="label-mono mb-1">Vélemények</p>
         <h1 className="text-2xl font-semibold tracking-tight">

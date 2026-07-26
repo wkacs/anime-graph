@@ -180,6 +180,58 @@ fordítva volt súlyozva a költség.
 `Tempó` (2 chip) csoport, valamint a konkrét adaptáció-típusok (manga / light novel /
 játék) — ezekre az AniList-nek nincs megfelelője. Ilyen chipnél marad a modell.
 
+## 12/d. UI-redesign: cover-driven kinematografikus arculat (2026-07-26)
+
+Spec: `docs/superpowers/specs/2026-07-26-ui-redesign-design.md`,
+terv: `plans/2026-07-26-ui-redesign.md`.
+
+**Alapelv: a színt a tartalom adja.** A shell monokróm marad, a borítók adják a színt —
+nincs új brand-hue, nincs light téma, nincs új dependency, és nincs DB-migráció sem: a
+poszter-szín a kép CSS blur-kópiájából jön (`.poster-ambient` / `.poster-glow`), nem
+kinyert hex-értékből.
+
+**Token-réteg** (`globals.css`): `Instrument Serif` display-vágás (`.display-xl`,
+`.display-l`, `.h2`) az `Instrument Sans` törzs mellé; négyszintű felület-skála
+(`surface-1/2/3` + surface-0 = puszta whitespace) a `.glass` egyetlen szintje helyett;
+filmszemcse + vignetta a lapon; 4px-alapú térköz-, radiusz- és tipo-tokenek;
+`--ease-out` + `src/lib/motion.ts` presetek. A `.glass`, `.glass-strong` és `.label-mono`
+neve és látványa **változatlan**, mert 13 nem átírt oldal használja őket.
+
+**Primitívek** (`src/components/ui/`): `PageShell`, `SectionHeader`, `Button`, `Chip`,
+`ScoreBadge`, `PosterAmbient`, `Skeleton`, `EmptyState`. A `MediaCard` átírva:
+üveg-keret nélkül a poszter maga a kártya, a leírás csak hoverre csúszik be, és van
+`row` variánsa.
+
+**Shell**: kilenc tab egy húzható pillben → 5 elsődleges + `Több ▾` menü; mobilon a felső
+pill helyett **alsó tab-sáv** safe-area paddinggel (ez volt a legnagyobb mobil-hiányosság);
+gráf-mark + serif wordmark; kereső-ikon (`/bongeszo?focus=1`); scroll-érzékeny nav-sűrűség.
+
+**Négy átírt oldal**: címlap (új „Ma" hero + hat komponensre vágott `page.tsx` + új
+szekció-sorrend, a Társaság már nem a második blokk), címoldal (full-bleed poszter-hero,
+a fit-badge a heróba került), `/bongeszo` (sticky szűrő-sáv, vázak, `EmptyState`),
+`/lista` (sticky fejléc, haladás-sáv, `+1` a soron — a tábla **tábla maradt**, mert a
+rendezhető fejléc a fő funkciója).
+
+**Döntési logika lib-ben, TDD-vel** (+30 teszt: 361 → 391). A projektben csak
+node-környezetű `src/lib/*.test.ts` fut, komponens-teszt nincs — ezért a redesign minden
+döntése tiszta függvénybe került: `score-color.ts` (7), `nav.ts` (12), `home-hero.ts` (11).
+
+**Gotchák, amiket ez a kör kitermelt:**
+
+- Tailwind v4-ben a v3-as `rounded-[--r-lg]` rövidítés **némán nem működik** —
+  `rounded-[var(--r-lg)]` kell, különben szögletes sarok lesz.
+- Egy táblázat-wrapper `overflow-hidden`-je scroll-konténert csinál, ami **elrontja a
+  `<thead>` `position: sticky`-jét**.
+- Az AI-taste-pontszám és a lokális fit-becslés **nem ugyanazon a skálán van**
+  (`SCORE_THRESHOLDS`: 70 vs 75), ezért vegyesen rangsorolni hibás.
+- Az új alsó tab-sáv **minden** `pb-16`-os oldal alját elfedte → `pb-24 md:pb-16` kellett
+  9 oldalon, és `bottom-24 md:bottom-4` a `/graf` fix vezérlőin.
+
+**Scope-on kívül maradt** (szándékosan): a maradék 13 oldal layoutja — a token- és
+primitív-csere miatt változtak és jobbak lettek, de nem kaptak egyedi újratervezést;
+valamint az i18n-maradék (~30 tsx + 38 API-route). A `CatalogTitlePage` szekció-címkéi
+statikus magyar szövegek, mert az ISR-korlát miatt oda nem kerülhet `getTranslations`.
+
 ## 13. Mi NINCS még kész / nyitott pontok
 
 | Tétel | Állapot |

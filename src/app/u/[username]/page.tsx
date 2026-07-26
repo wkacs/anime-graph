@@ -67,7 +67,7 @@ export default async function Page({ params }: { params: Promise<{ username: str
   if (!data || data.visibility !== 'public') notFound()
 
   return (
-    <main className="min-h-screen pb-16">
+    <main className="min-h-screen pb-24 md:pb-16">
       <div className="max-w-3xl mx-auto px-4 pt-28 flex flex-col gap-6">
         <header className="flex items-center gap-5">
           <Avatar username={data.user.username} size={72} />

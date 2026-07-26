@@ -126,7 +126,7 @@ export default function OnboardingPage() {
   const stepLabel = ['Listád', 'Profilod', 'Értesítések', 'Indulás'][step - 1]
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-5">
+    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
       <div>
         <p className="label-mono mb-1">Első lépések · {step}/4 — {stepLabel}</p>
         <div className="flex gap-1.5">

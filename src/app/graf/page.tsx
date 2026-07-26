@@ -231,7 +231,8 @@ export default function GrafPage() {
         </div>
       )}
 
-      <div className="fixed bottom-4 left-4 z-20 flex items-end gap-2">
+      {/* mobilon az also tab-sav fole (bottom-24), desktopon a lap aljara */}
+      <div className="fixed bottom-24 md:bottom-4 left-4 z-20 flex items-end gap-2">
         {advanced && !timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
         <div className="glass rounded-full p-1 flex">
           {MEDIA_MODES.map((m) => (
@@ -306,7 +307,7 @@ export default function GrafPage() {
 
       {/* időutazás: így nőtt az univerzumod évről évre */}
       {!timelineMode && minYear < maxYear && (
-        <div className="fixed bottom-4 right-4 z-20 glass rounded-full px-4 py-2.5 flex items-center gap-3">
+        <div className="fixed bottom-24 md:bottom-4 right-4 z-20 glass rounded-full px-4 py-2.5 flex items-center gap-3">
           <span className="label-mono">Időutazás</span>
           <input
             type="range"

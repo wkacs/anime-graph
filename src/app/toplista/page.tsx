@@ -53,7 +53,7 @@ export default function ToplistaPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-5">
+    <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
       <div>
         <p className="label-mono mb-1">Toplista</p>
         <h1 className="text-2xl font-semibold tracking-tight">A legjobbra értékelt címek</h1>
