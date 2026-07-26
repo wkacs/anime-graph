@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 import path from "node:path";
+import createNextIntlPlugin from "next-intl/plugin";
+
+// routing nelkuli mod: a locale a cookie-bol jon, az URL valtozatlan
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   // stray lockfile in the user home dir confuses workspace-root inference
@@ -13,4 +17,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);
