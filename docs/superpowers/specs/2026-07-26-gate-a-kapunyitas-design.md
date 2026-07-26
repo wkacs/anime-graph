@@ -6,7 +6,15 @@
 
 A projekt ma publikus katalógust szolgál ki (133 840 indexelhető URL), de **regisztrálni senki nem tud**: a `/api/auth/register` `INVITE_CODE`-hoz kötött, és kód hiányában 503-mal zár. Amíg ez így van, minden további fejlesztés egyetlen felhasználónak készül.
 
-A második akadály a nyelv: a felület 100%-ban magyar (~229 string 27 `.tsx` fájlban), és 9 AI-modul is hardcode-olja a magyar kimenetet. A célközönség globális.
+A második akadály a nyelv: a felület 100%-ban magyar, és 9 AI-modul is hardcode-olja a magyar kimenetet. A célközönség globális.
+
+Mért méret (ripgrep, 2026-07-26):
+
+| Réteg | Előfordulás | Fájl |
+|---|---|---|
+| UI (`.tsx`) | 482 | 41 |
+| API-hibaüzenetek (`.ts`) | 141 | 38 |
+| **Összesen** | **~623** | **~79** |
 
 Ez a spec ezt a két akadályt bontja le, plusz a hozzájuk elkerülhetetlenül tartozó minimumot (email, jelszó-visszaállítás, profil).
 
@@ -151,11 +159,13 @@ A locale forrása belépve a `users.locale`, anonim látogatónál a cookie, ann
 
 `messages/en.json` és `messages/hu.json`, namespace-ekre bontva (`nav`, `auth`, `list`, `title`, `settings`, `wrapped` és így tovább). A kulcsok az **angol** forrásból képződnek, nem a magyarból.
 
-### A 27 fájl átvezetése
+### A ~79 fájl átvezetése
 
-Ez a kör legnagyobb mechanikus tétele. Fájlonként: string kiemelése, kulcs képzése, a meglévő magyar szöveg a `hu.json`-be, az angol fordítás az `en.json`-be. **Egy fájl egy commit**, hogy követhető maradjon, és egy elrontott kör ne vigyen magával 27 fájlt.
+Ez a kör legnagyobb mechanikus tétele: 41 `.tsx` (482 előfordulás) és 38 API-route (141 előfordulás, például „Ez a felhasználónév foglalt").
 
-Az API-hibaüzenetek is magyarok (például „Ez a felhasználónév foglalt"), ezek is átvezetendők.
+Fájlonként: string kiemelése, kulcs képzése, a meglévő magyar szöveg a `hu.json`-be, az angol fordítás az `en.json`-be. **Egy fájl egy commit**, hogy követhető maradjon, és egy elrontott kör ne vigyen magával 79 fájlt.
+
+A méret miatt az i18n szakasz a végrehajtási tervben külön, fájl-listás körként fut, és félbehagyható: a még át nem vezetett fájlok magyarul maradnak, az app végig működik.
 
 ### Az AI kimeneti nyelve
 
