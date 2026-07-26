@@ -74,3 +74,43 @@ export function buildVibePrompt(selectedIds: string[], custom: string): string {
   if (c) parts.push(c)
   return parts.join(', ')
 }
+
+// Chip → katalógus-feature. A `Hangulat` és a `Tempó` csoport SZÁNDÉKOSAN hiányzik:
+// ezekre az AniList-nek nincs megfelelője, tehát nem pontozhatók lokálisan.
+// A konkrét adaptáció-típusok (manga / light novel / játék) szintén kimaradnak:
+// a katalógusból csak az derül ki, HOGY adaptáció, az nem, hogy miből.
+const CHIP_FEATURES: Record<string, string> = {
+  'g-action': 'g:action', 'g-romance': 'g:romance', 'g-comedy': 'g:comedy',
+  'g-drama': 'g:drama', 'g-fantasy': 'g:fantasy', 'g-scifi': 'g:sci-fi',
+  'g-sol': 'g:slice of life', 'g-thriller': 'g:thriller',
+
+  'len-movie': 'format:movie', 'len-short': 'length:short',
+  'len-normal': 'length:standard', 'len-long': 'length:long',
+
+  'era-classic': 'era:1990s', 'era-2000s': 'era:2000s',
+  'era-2010s': 'era:2010s', 'era-fresh': 'era:2020s',
+
+  'set-school': 't:school', 'set-fantasy': 't:isekai', 'set-space': 't:space',
+  'set-historical': 't:historical', 'set-city': 't:urban fantasy',
+
+  'th-revenge': 't:revenge', 'th-sport': 'g:sports', 'th-music': 't:music',
+  'th-psych': 't:psychological', 'th-mecha': 't:mecha', 'th-isekai': 't:isekai',
+  'th-timetravel': 't:time manipulation', 'th-martial': 't:martial arts',
+
+  'demo-shounen': 't:shounen', 'demo-seinen': 't:seinen',
+  'demo-shoujo': 't:shoujo', 'demo-josei': 't:josei',
+
+  'src-original': 'source:original',
+}
+
+/** A leképezhető chipek feature-kulcsai, és amik nem képezhetők le. */
+export function chipFeatureKeys(ids: string[]): { keys: string[]; unmapped: string[] } {
+  const keys: string[] = []
+  const unmapped: string[] = []
+  for (const id of ids) {
+    const key = CHIP_FEATURES[id]
+    if (key) keys.push(key)
+    else unmapped.push(id)
+  }
+  return { keys: [...new Set(keys)], unmapped }
+}
