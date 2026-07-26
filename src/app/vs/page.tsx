@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { scoreColor } from '@/lib/score-color'
 import type { CompareResult } from '@/lib/compare'
 
 type Result = CompareResult & { username: string; otherUserId?: number | null }
@@ -288,7 +289,10 @@ export default function VsPage() {
                       ))}
                     </div>
                   </div>
-                  <span className="font-mono font-semibold shrink-0" style={{ color: p.groupScore >= 70 ? 'var(--status-watching)' : undefined }}>
+                  <span
+                    className="font-mono font-semibold shrink-0"
+                    style={{ color: scoreColor(p.groupScore, 'fit') }}
+                  >
                     {p.groupScore}%
                   </span>
                   <button

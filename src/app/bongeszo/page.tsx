@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import MediaCard from '@/components/MediaCard'
-import { useFitScores, fitColor } from '@/lib/use-fit-scores'
+import { useFitScores } from '@/lib/use-fit-scores'
+import ScoreBadge from '@/components/ui/ScoreBadge'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 
@@ -146,9 +147,11 @@ export default function BrowsePage() {
         genres={[]}
         href={hrefFor(h)}
         badge={fit != null ? (
-          <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px]" style={{ color: fitColor(fit) }} title="Ennyire illik az ízlésedhez">{fit}%</span>
+          <ScoreBadge score={fit} suffix="%" title="Ennyire illik az ízlésedhez" />
         ) : h.communityScore != null ? (
-          <span className="glass rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">{h.communityScore.toFixed(1)}</span>
+          <span className="surface-2 rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">
+            {h.communityScore.toFixed(1)}
+          </span>
         ) : undefined}
         footer={owned ? (
           <span className="label-mono text-[color:var(--status-watching)]">✓ listán</span>

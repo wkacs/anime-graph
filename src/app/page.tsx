@@ -9,7 +9,8 @@ import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
 import SeasonFilterBar from '@/components/SeasonFilterBar'
 import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
-import { useFitScores, fitColor } from '@/lib/use-fit-scores'
+import { useFitScores } from '@/lib/use-fit-scores'
+import ScoreBadge from '@/components/ui/ScoreBadge'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 
@@ -404,21 +405,13 @@ export default function NewsPage() {
                 description={s.description}
                 streaming={s.streaming}
                 badge={s.tasteScore != null ? (
-                  <span
-                    className="glass rounded-full px-2 py-0.5 font-mono text-sm font-semibold tabular-nums"
-                    title={s.tasteReason ?? undefined}
-                    style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}
-                  >
-                    {s.tasteScore}
-                  </span>
+                  <ScoreBadge score={s.tasteScore} kind="taste" title={s.tasteReason ?? undefined} />
                 ) : seasonFit[s.anilistId] != null ? (
-                  <span
-                    className="glass rounded-full px-2 py-0.5 font-mono text-[11px]"
+                  <ScoreBadge
+                    score={seasonFit[s.anilistId]}
+                    suffix="%"
                     title="Ennyire illik az ízlésedhez (lokális becslés)"
-                    style={{ color: fitColor(seasonFit[s.anilistId]) }}
-                  >
-                    {seasonFit[s.anilistId]}%
-                  </span>
+                  />
                 ) : undefined}
                 footer={
                   <div className="flex items-center justify-between gap-2">
@@ -462,12 +455,7 @@ export default function NewsPage() {
                 genres={s.genres}
                 description={s.tasteReason}
                 streaming={s.streaming}
-                badge={
-                  <span className="glass rounded-full px-2 py-0.5 font-mono text-sm font-semibold tabular-nums"
-                    style={{ color: s.tasteScore >= 75 ? 'var(--status-watching)' : 'var(--text-2)' }}>
-                    {s.tasteScore}
-                  </span>
-                }
+                badge={<ScoreBadge score={s.tasteScore} kind="taste" title={s.tasteReason} />}
                 footer={s.owned ? (
                   <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
                 ) : (
@@ -509,13 +497,11 @@ export default function NewsPage() {
                     genres={t.genres}
                     href={`/${t.mediaType === 'MANGA' ? 'manga' : 'anime'}/${t.slug}`}
                     badge={nextFit[t.anilistId] != null ? (
-                      <span
-                        className="glass rounded-full px-2 py-0.5 font-mono text-[11px]"
-                        style={{ color: fitColor(nextFit[t.anilistId]) }}
+                      <ScoreBadge
+                        score={nextFit[t.anilistId]}
+                        suffix="%"
                         title="Ennyire illik az ízlésedhez"
-                      >
-                        {nextFit[t.anilistId]}%
-                      </span>
+                      />
                     ) : undefined}
                     footer={t.format ? <span className="label-mono">{t.format}</span> : undefined}
                   />

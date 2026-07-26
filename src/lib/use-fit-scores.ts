@@ -25,9 +25,3 @@ export function useFitScores(anilistIds: number[]): Record<number, number> {
 
   return scores
 }
-
-export function fitColor(score: number): string {
-  if (score >= 70) return 'var(--status-watching)'
-  if (score >= 45) return 'rgba(255,255,255,0.85)'
-  return 'var(--status-dropped)'
-}
