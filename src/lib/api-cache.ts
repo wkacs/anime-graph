@@ -1,5 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { db } from '@/db/client'
+// dbStatic: az api_cache-et az ISR-elt katalógus-címoldal is olvassa (stáb-szekció),
+// ott a no-store kliens DYNAMIC_SERVER_USAGE-dzsel 500-at dobna. A frissesség-aggály
+// itt nem él: a cache-sorok maguk hordják a TTL-t (expires_at).
+import { dbStatic as db } from '@/db/client'
 import { apiCache } from '@/db/schema'
 
 export function isFresh(expiresAt: Date | null, now: Date): boolean {

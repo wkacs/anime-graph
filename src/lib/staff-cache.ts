@@ -22,14 +22,16 @@ export function prioritizeStaff(entries: StaffEntry[], limit = STAFF_LIMIT): Sta
 
 export async function getCachedStaff(anilistId: number, mediaType: string): Promise<StaffEntry[]> {
   const key = `staff:${mediaType}:${anilistId}`
-  const cached = await getCached<StaffEntry[]>(key)
-  if (cached) return cached
   try {
+    const cached = await getCached<StaffEntry[]>(key)
+    if (cached) return cached
     const staff = prioritizeStaff(await fetchStaff(anilistId))
     await setCached(key, staff, TTL_SEC)
     return staff
   } catch {
-    // stáb nélkül is él az oldal; a hibát nem cache-eljük, következő regenerálás újrapróbálja
+    // stáb nélkül is él az oldal; a cache-olvasás is a try-ban van, hogy egy DB-hiba
+    // ne 500-azza az egész publikus címoldalt. A hibát nem cache-eljük,
+    // következő regenerálás újrapróbálja.
     return []
   }
 }

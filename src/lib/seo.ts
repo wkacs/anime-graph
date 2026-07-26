@@ -3,8 +3,17 @@
 import { stripHtml } from './description'
 import type { TitleRow } from './catalog-page'
 
+// A kanonikus URL-ek (sitemap, robots, canonical, JSON-LD) alapja. APP_URL az
+// elsődleges; ha az env élesben hiányzik, a Vercel rendszer-változójából jön a
+// stabil prod-domain — enélkül az egész sitemap `http://localhost:3000`-ra mutatna.
+// VERCEL_URL-t szándékosan NEM használunk: az deploy-onként változik, a canonical
+// pedig legyen mindig a prod-domain (preview-deployokon is).
 export function siteUrl(): string {
-  return (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+  const prodHost = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  const raw = process.env.APP_URL
+    || (prodHost ? `https://${prodHost}` : '')
+    || 'http://localhost:3000'
+  return raw.replace(/\/$/, '')
 }
 
 export function metaDescription(t: Pick<TitleRow, 'description' | 'titleRomaji' | 'mediaType' | 'year' | 'genres'>): string {

@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { buildTitleJsonLd, metaDescription } from './seo'
+import { describe, it, expect, afterEach } from 'vitest'
+import { buildTitleJsonLd, metaDescription, siteUrl } from './seo'
 import { sitemapChunkCount, sitemapChunkBounds, sitemapIndexXml, sitemapXml, SITEMAP_CHUNK_SIZE } from './sitemap-chunks'
 import type { TitleRow } from './catalog-page'
 
@@ -82,5 +82,35 @@ describe('sitemap chunking', () => {
     expect(xml).toContain('https://site/anime/a&amp;b-1')
     expect(xml).toContain('<lastmod>2026-07-23</lastmod>')
     expect(xml.match(/<url>/g)).toHaveLength(2)
+  })
+})
+
+describe('siteUrl', () => {
+  const saved = { app: process.env.APP_URL, vercel: process.env.VERCEL_PROJECT_PRODUCTION_URL }
+  const setEnv = (app?: string, vercel?: string) => {
+    if (app == null) delete process.env.APP_URL; else process.env.APP_URL = app
+    if (vercel == null) delete process.env.VERCEL_PROJECT_PRODUCTION_URL
+    else process.env.VERCEL_PROJECT_PRODUCTION_URL = vercel
+  }
+  afterEach(() => setEnv(saved.app, saved.vercel))
+
+  it('APP_URL az elsodleges, zaro / nelkul', () => {
+    setEnv('https://anime-graph.example/')
+    expect(siteUrl()).toBe('https://anime-graph.example')
+  })
+
+  it('APP_URL nelkul a Vercel prod-domainre esik vissza, NEM localhostra', () => {
+    setEnv(undefined, 'anime-graph.vercel.app')
+    expect(siteUrl()).toBe('https://anime-graph.vercel.app')
+  })
+
+  it('ures APP_URL sem eredmenyez localhostot elesben', () => {
+    setEnv('', 'anime-graph.vercel.app')
+    expect(siteUrl()).toBe('https://anime-graph.vercel.app')
+  })
+
+  it('lokalisan (Vercel-env nelkul) localhost marad', () => {
+    setEnv(undefined, undefined)
+    expect(siteUrl()).toBe('http://localhost:3000')
   })
 })

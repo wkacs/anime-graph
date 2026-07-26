@@ -128,10 +128,12 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 | Tétel | Állapot |
 |---|---|
-| **Push + Vercel-deploy** | 3 commit ahead lokálisan; prod DB-migráció (search_vector is!) **backuppal, sorrendben** kötelező deploy előtt, különben a prod törik |
+| **Push + Vercel-deploy** | ✅ megtörtént: `master == origin/master` (`0a7bf18`), a prod él (`anime-graph.vercel.app`), DB-migrációk lefutottak |
+| 🔴 **`APP_URL` hiányzik a Vercel prod-envből** | emiatt a `sitemap.xml`, a `robots.txt` és a JSON-LD `http://localhost:3000`-t adott ki élesben (133 840 sitemap-URL mind rossz). A kód már visszaesik a Vercel prod-domainre, de az **`APP_URL`-t akkor is be kell állítani** — az OAuth-callbackek (`sync-oauth.ts`) is ezt olvassák |
 | **D3 élő szinkron** | MAL/AniList OAuth-app-regisztráció + env hiányzik, élő API nem tesztelt |
 | **D6 (differenciáló backlog)** | M4 (review-rendszer) utánra ütemezve |
 | **M4 review + follow** | a publikus-versenytárs irány következő nagy üteme |
 | **Fantom-duel bug** | gyökérok még nyitott |
+| ~~ISR-500 a címoldalakon~~ | ✅ javítva 2026-07-25: a stáb-szekció (`6cc0de6`) az `api_cache`-t a no-store `db` klienssel olvasta → `DYNAMIC_SERVER_USAGE` → **minden** `/anime|manga/[slug]` 500 volt prodon. Fix: `api-cache.ts` → `dbStatic`, a cache-olvasás bekerült a `getCachedStaff` try-jába, + forrás-szintű őrszem-teszt (`isr-db-client.test.ts`), mert ez a hiba csak `next build`+`next start` alatt látszik |
 | **Liquid-glass kezdőlap** | WIP, stash-ben (`stash@{0}`), `git stash pop`-pal hozható vissza |
 | **Első prod-regisztráció** | a usernek kell elsőként regisztrálnia prod-on (id=1 örökli a korábbi adatokat) |

@@ -25,7 +25,7 @@ A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-description
 | `AI_DAILY_LIMIT` | – | opcionális, default 20 (tier-limitek az `ai-limits.ts`-ben) |
 | `OPENROUTER_API_KEY` | – | GLM-429 failover |
 | `RESEND_API_KEY`, `NOTIFY_EMAIL`, `FROM_EMAIL` | – | napi e-mail digest |
-| `APP_URL` | szinkronhoz | a prod URL — OAuth-callbackekhez |
+| `APP_URL` | ✅ | a prod URL (pl. `https://anime-graph.vercel.app`). **Enélkül a sitemap/robots/canonical/JSON-LD localhost-URL-eket ad ki** (a kód a `VERCEL_PROJECT_PRODUCTION_URL`-re esik vissza, de az OAuth-callbackek ettől még ezt olvassák) |
 | `MAL_CLIENT_ID`, `MAL_CLIENT_SECRET` | – | kétirányú MAL-szinkron (myanimelist.net/apiconfig, redirect: `<APP_URL>/api/sync/mal/callback`) |
 | `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET` | – | kétirányú AniList-szinkron (anilist.co/settings/developer, redirect: `<APP_URL>/api/sync/anilist/callback`) |
 
