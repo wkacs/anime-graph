@@ -4,6 +4,10 @@ import { motion } from 'framer-motion'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores } from '@/lib/use-fit-scores'
 import ScoreBadge from '@/components/ui/ScoreBadge'
+import PageShell from '@/components/ui/PageShell'
+import SectionHeader from '@/components/ui/SectionHeader'
+import Button from '@/components/ui/Button'
+import Chip from '@/components/ui/Chip'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 
@@ -156,16 +160,16 @@ export default function BrowsePage() {
         footer={owned ? (
           <span className="label-mono text-[color:var(--status-watching)]">✓ listán</span>
         ) : (
-          <span className="flex gap-1">
+          <span className="flex flex-wrap gap-1">
             {ADD_OPTIONS.map((o) => (
-              <button
+              <Button
                 key={o.status}
                 onClick={() => quickAdd(h, o.status)}
                 title={`Hozzáadás: ${o.label}`}
-                className="rounded-full border border-white/12 px-2 py-1 text-[10px] font-mono uppercase tracking-wide text-text-2 hover:text-text-1 hover:border-white/35 transition-colors"
+                className="font-mono text-[10px] uppercase tracking-wide"
               >
                 {o.label}
-              </button>
+              </Button>
             ))}
           </span>
         )}
@@ -187,17 +191,18 @@ export default function BrowsePage() {
   }
 
   return (
-    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <p className="label-mono mb-1">Böngésző</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Katalógus-keresés</h1>
-        </div>
+    <PageShell className="flex flex-col gap-10">
+      <div>
+        <p className="label-mono mb-2">Böngésző</p>
+        <h1 className="display-l text-text-1">Katalógus-keresés</h1>
       </div>
 
       <TourSpotlight page="bongeszo" steps={BONGESZO_TOUR} />
 
-      <div data-tour="search" className="glass rounded-3xl p-4 flex flex-wrap items-center gap-2 text-sm">
+      <div
+        data-tour="search"
+        className="surface-3 sticky top-20 z-30 rounded-[var(--r-lg)] p-4 flex flex-wrap items-center gap-2 text-sm"
+      >
         <input
           value={search}
           onChange={(e) => setQuery(e.target.value)}
@@ -233,13 +238,22 @@ export default function BrowsePage() {
           </button>
         ))}
         {studioFilter && (
-          <button
-            onClick={() => { setStudioFilter(null); syncFilterUrl(null, seasonKey) }}
-            className="rounded-full border border-white/40 px-3 py-1.5 text-xs text-text-1"
+          <Chip
+            variant="link"
             title="Stúdió-szűrő törlése"
+            onDismiss={() => { setStudioFilter(null); syncFilterUrl(null, seasonKey) }}
           >
-            Stúdió: {studioFilter} ✕
-          </button>
+            Stúdió: {studioFilter}
+          </Chip>
+        )}
+        {(studioFilter || seasonKey) && (
+          <Chip
+            variant="link"
+            title="Minden szűrő törlése"
+            onDismiss={() => { setStudioFilter(null); setSeasonKey(null); syncFilterUrl(null, null) }}
+          >
+            Töröl mind
+          </Chip>
         )}
       </div>
 
@@ -247,13 +261,14 @@ export default function BrowsePage() {
 
       {!search.trim() ? (
         (studioFilter || seasonKey) ? (
-          <section className="flex flex-col gap-3">
-            <p className="label-mono">
-              {[
+          <section>
+            <SectionHeader
+              eyebrow="Szűrve"
+              title={[
                 studioFilter ? `Stúdió: ${studioFilter}` : null,
                 seasonKey === 'current' ? 'Aktuális szezon' : seasonKey === 'next' ? 'Következő szezon' : null,
               ].filter(Boolean).join(' · ')}
-            </p>
+            />
             {filtered == null ? (
               <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
                 Betöltés…
@@ -265,7 +280,7 @@ export default function BrowsePage() {
                   : 'Nincs találat ezzel a szűrővel.'}
               </p>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
                 {filtered.map(cardFor)}
               </div>
             )}
@@ -273,19 +288,20 @@ export default function BrowsePage() {
         ) : trendingHits && (trendingHits.seasonal.length > 0 || trendingHits.popular.length > 0) ? (
           <>
             {trendingHits.seasonal.length > 0 && (
-              <section className="flex flex-col gap-3">
-                <p className="label-mono">
-                  Felkapott most — {trending ? `${SEASON_LABELS[trending.season.season] ?? trending.season.season} ${trending.season.year}` : ''}
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <section>
+                <SectionHeader
+                  eyebrow="Felkapott most"
+                  title={trending ? `${SEASON_LABELS[trending.season.season] ?? trending.season.season} ${trending.season.year}` : 'Ebben a szezonban'}
+                />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
                   {trendingHits.seasonal.map(cardFor)}
                 </div>
               </section>
             )}
             {trendingHits.popular.length > 0 && (
-              <section className="flex flex-col gap-3">
-                <p className="label-mono">Nálunk népszerű</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <section>
+                <SectionHeader eyebrow="Katalógus" title="Nálunk népszerű" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
                   {trendingHits.popular.map(cardFor)}
                 </div>
               </section>
@@ -300,29 +316,23 @@ export default function BrowsePage() {
         </motion.p>
       ) : (
         <>
-          <div data-tour="results" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div data-tour="results" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
             {hits.map(cardFor)}
           </div>
           {hits.length === 0 && <p className="text-sm text-text-2">Nincs találat a katalógusban.</p>}
           <div className="flex items-center justify-center gap-4 text-sm">
-            <button
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page <= 0}
-              className="btn-ghost border border-white/10 rounded-full px-4 py-1.5 disabled:opacity-40"
-            >
+            <Button size="md" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page <= 0}>
               ← Előző
-            </button>
-            <span className="font-mono text-xs text-text-2">{page + 1}. oldal</span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={hits.length < PAGE_SIZE}
-              className="btn-ghost border border-white/10 rounded-full px-4 py-1.5 disabled:opacity-40"
-            >
+            </Button>
+            <span className="font-mono text-xs text-text-2 tabular-nums">
+              {page + 1}. oldal · {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + hits.length}
+            </span>
+            <Button size="md" onClick={() => setPage((p) => p + 1)} disabled={hits.length < PAGE_SIZE}>
               Következő →
-            </button>
+            </Button>
           </div>
         </>
       )}
-    </main>
+    </PageShell>
   )
 }
