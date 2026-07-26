@@ -46,6 +46,11 @@ export async function PUT(req: NextRequest) {
     await upsert(userId, 'hierarchyDefault', body.hierarchyDefault)
   }
 
+  // nyelv: a cookie a kliensen áll be, ez a sor teszi eszközök között követhetővé
+  if (body.locale === 'en' || body.locale === 'hu') {
+    await db.update(users).set({ locale: body.locale }).where(eq(users.id, userId))
+  }
+
   // e-mail-cím pótlása a nyílt regisztráció előtti fiókoknak (id=1):
   // enélkül nincs jelszó-visszaállításuk. Megerősítés újraindul.
   if (typeof body.email === 'string') {

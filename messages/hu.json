@@ -5,5 +5,17 @@
   },
   "locale": {
     "label": "Nyelv"
+  },
+  "nav": {
+    "news": "Hírek",
+    "graph": "Gráf",
+    "list": "Lista",
+    "opinions": "Vélemények",
+    "browse": "Böngésző",
+    "leaderboard": "Toplista",
+    "vibe": "Vibe",
+    "stats": "Stats",
+    "vs": "VS",
+    "settings": "Beállítások"
   }
 }

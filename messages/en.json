@@ -5,5 +5,17 @@
   },
   "locale": {
     "label": "Language"
+  },
+  "nav": {
+    "news": "News",
+    "graph": "Graph",
+    "list": "My list",
+    "opinions": "Reviews",
+    "browse": "Browse",
+    "leaderboard": "Top list",
+    "vibe": "Vibe",
+    "stats": "Stats",
+    "vs": "VS",
+    "settings": "Settings"
   }
 }
