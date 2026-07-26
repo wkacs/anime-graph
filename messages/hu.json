@@ -17,5 +17,20 @@
     "stats": "Stats",
     "vs": "VS",
     "settings": "Beállítások"
+  },
+  "fit": {
+    "title": "Neked való?",
+    "signInTeaser": "Jelentkezz be, és megmondjuk, mennyire illik az ízlésedhez →",
+    "for": "mellette: {list}",
+    "against": "ellene: {list}",
+    "dropRisk": "⚠ droppolás-rizikó {score}%",
+    "dropTooltip": "Hasonlókat szoktál dobni: {list}"
+  },
+  "onboardingCta": {
+    "kicker": "Kezdjük itt",
+    "headline": "Hozd át a listád — 30 másodperc, és megmondjuk, ki vagy animenézőként",
+    "body": "MAL- vagy AniList-importtal minden pontod és státuszod átjön, az AI pedig azonnal megírja az ízlés-profilod. A régi listád nem vész el.",
+    "primary": "Vezess végig →",
+    "secondary": "Vagy böngéssz a katalógusban"
   }
 }

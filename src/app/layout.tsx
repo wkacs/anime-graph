@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, Geist_Mono, Noto_Sans_JP } from "next/font/google";
-import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
 import "./globals.css";
 
@@ -21,34 +20,33 @@ const notoJp = Noto_Sans_JP({
   subsets: ["latin"],
 });
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("meta");
-  return {
-    title: t("title"),
-    description: t("description"),
-  };
-}
+// Statikus metaadat: a getTranslations() dinamikus API-t hívna, ami az ISR-elt
+// katalógus-oldalakat 500-azná (lásd src/i18n/request.ts).
+export const metadata: Metadata = {
+  title: "Anime Graph",
+  description: "3D anime map with an AI taste engine",
+};
 
 export const viewport = {
   themeColor: "#09090b",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+  // lang="en": a szerver-render kanonikus nyelve. Az IntlProvider hidratáláskor
+  // átállítja a document.documentElement.lang-ot, ha a cookie mást mond.
   return (
-    <html lang={locale}>
+    <html lang="en">
       <body
         className={`${instrument.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
-        <NextIntlClientProvider messages={messages}>
+        <IntlProvider>
           <TopNav />
           {children}
-        </NextIntlClientProvider>
+        </IntlProvider>
       </body>
     </html>
   );

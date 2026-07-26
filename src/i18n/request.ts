@@ -1,16 +1,17 @@
 import { getRequestConfig } from 'next-intl/server'
-import { cookies, headers } from 'next/headers'
-import { resolveLocale, LOCALE_COOKIE } from '@/lib/locale'
+import { DEFAULT_LOCALE } from '@/lib/locale'
+import messages from '../../messages/en.json'
 
-// next-intl "usage without i18n routing": a locale cookie-ból jön, az URL
-// változatlan marad. Így a 133 840 kanonikus katalógus-URL nem duplázódik.
-export default getRequestConfig(async () => {
-  const locale = resolveLocale({
-    cookie: (await cookies()).get(LOCALE_COOKIE)?.value,
-    acceptLanguage: (await headers()).get('accept-language'),
-  })
-  return {
-    locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
-  }
-})
+// 🔴 SZÁNDÉKOSAN NEM olvas cookie-t vagy fejlécet.
+//
+// A `cookies()` és a `headers()` dinamikus API: ha a szerver-oldali locale-feloldás
+// használná, MINDEN render dinamikussá válna, az ISR-elt katalógus-címoldalak
+// (`/anime|manga/[slug]`, revalidate=86400) pedig DYNAMIC_SERVER_USAGE-dzsel 500-at
+// dobnának. Az a 133 840 oldal a projekt SEO-magja, azt nem áldozzuk fel.
+//
+// Ezért a szerver-oldali alapnyelv fix `en` — ami egyben a kanonikus SEO-nyelv is —,
+// a tényleges nyelvváltás pedig kliens-oldalon történik (`IntlProvider`).
+export default getRequestConfig(async () => ({
+  locale: DEFAULT_LOCALE,
+  messages,
+}))
