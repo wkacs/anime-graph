@@ -6,6 +6,7 @@ export type CatalogRow = {
   titleRomaji: string
   coverUrl: string | null
   genres: string[]
+  tags: { name: string }[]
   communityScore: number | null
   avgScore: number | null
   relations: { anilistId: number }[]
@@ -49,6 +50,7 @@ export function buildLocalCandidates(
     title: c.titleRomaji,
     coverUrl: c.coverUrl,
     genres: c.genres,
+    tags: c.tags,
     avgScore: c.avgScore,
   }))
 }

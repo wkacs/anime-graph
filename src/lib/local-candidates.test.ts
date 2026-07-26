@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { buildLocalCandidates } from './local-candidates'
 
 const cat = (anilistId: number, genres: string[], communityScore: number | null, avgScore: number | null, relations: number[] = []) => ({
-  anilistId, titleRomaji: `T${anilistId}`, coverUrl: null, genres,
+  anilistId, titleRomaji: `T${anilistId}`, coverUrl: null, genres, tags: [],
   communityScore, avgScore,
   relations: relations.map((id) => ({ type: 'RELATED', anilistId: id, title: '' })),
 })
@@ -31,9 +31,21 @@ describe('buildLocalCandidates', () => {
   })
   it('a batch-cache-elt recIds is jelölt (relation-szintű súllyal)', () => {
     const only = [
-      { anilistId: 20, titleRomaji: 'T20', coverUrl: null, genres: ['Mystery'], communityScore: null, avgScore: 70, relations: [] },
+      { anilistId: 20, titleRomaji: 'T20', coverUrl: null, genres: ['Mystery'], tags: [], communityScore: null, avgScore: 70, relations: [] },
     ]
     const out = buildLocalCandidates([{ anilistId: 1, genres: [], relations: [] }], only, new Set(), 200, new Set([20]))
     expect(out.map((c) => c.anilistId)).toContain(20)
   })
+})
+
+it('a tageket atviszi a jeloltre — enelkul a vektor felig vakon pontozna', () => {
+  const out = buildLocalCandidates(
+    [{ anilistId: 1, genres: ['Action'], relations: [] }],
+    [{
+      anilistId: 2, titleRomaji: 'X', coverUrl: null, genres: ['Action'],
+      tags: [{ name: 'Time Manipulation' }], communityScore: 8, avgScore: 80, relations: [],
+    }],
+    new Set(),
+  )
+  expect(out[0].tags).toEqual([{ name: 'Time Manipulation' }])
 })
