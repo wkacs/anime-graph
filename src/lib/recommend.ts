@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { extractJson, type ChatMessage } from './glm'
 import type { RecCandidate } from './anilist'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 
 export const picksSchema = z.object({
   picks: z.array(z.object({
@@ -13,7 +15,7 @@ export type RecPick = z.infer<typeof picksSchema>['picks'][number]
 
 const SYSTEM = `Anime-ajánló vagy. A felhasználó ízlés-memóriája és kedvenc animéi alapján
 kiválasztod a jelöltlistából az 5-10 legjobban passzoló animét. Minden választáshoz rövid,
-SZEMÉLYES magyar indoklást írsz, ami a felhasználó konkrét ízlés-tényeire hivatkozik.
+SZEMÉLYES indoklást írsz, ami a felhasználó konkrét ízlés-tényeire hivatkozik.
 Válaszolj KIZÁRÓLAG JSON-nal: {"picks":[{"anilistId":szám,"reason":"indoklás"}]}
 Csak a jelöltlistában szereplő anilistId-ket használhatod.`
 
@@ -25,6 +27,7 @@ export function buildRecommendMessages(
   candidates: RecCandidate[],
   facts: { kind: string; text: string; title: string | null }[],
   topTitles: string[],
+  locale: Locale,
   extras: RecommendExtras = {},
 ): ChatMessage[] {
   const candLines = candidates.map((c) =>
@@ -37,7 +40,7 @@ export function buildRecommendMessages(
     extras.dropped?.length ? `Ezeket FÉLBEHAGYTAM (kerüld a hasonlókat):\n${extras.dropped.join(', ')}` : null,
   ].filter(Boolean).join('\n\n')
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}\n${languageInstruction(locale)}` },
     {
       role: 'user',
       content: `Kedvenc animéim (legjobbra értékelt): ${topTitles.join(', ') || 'nincs még'}\n\n` +

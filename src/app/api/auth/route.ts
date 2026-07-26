@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { users } from '@/db/schema'
-import { createSession } from '@/lib/auth'
+import { createSession, SESSION_DAYS } from '@/lib/auth'
 import { verifyPassword } from '@/lib/password'
 import { clientIp, rateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
@@ -12,7 +12,7 @@ function sessionResponse(token: string, body: object = { ok: true }) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 365,
+    maxAge: 60 * 60 * 24 * SESSION_DAYS,
     path: '/',
   })
   return res
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Hibás felhasználónév vagy jelszó' }, { status: 401 })
   }
   await clearRateLimit('login', ip)
-  const token = await createSession(process.env.SESSION_SECRET!, user.id)
+  const token = await createSession(process.env.SESSION_SECRET!, user.id, user.tokenVersion)
   return sessionResponse(token)
 }
 

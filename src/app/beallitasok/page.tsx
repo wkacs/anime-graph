@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation'
 import PushToggle from '@/components/PushToggle'
 import ProfileReveal from '@/components/ProfileReveal'
 import SyncAccounts from '@/components/SyncAccounts'
+import EmailPrompt from '@/components/EmailPrompt'
+import LocaleSwitcher from '@/components/LocaleSwitcher'
+import ProfileSettings from '@/components/ProfileSettings'
 
 const CONFIG_KEY = 'anime-graph-config'
 
@@ -111,6 +114,20 @@ export default function BeallitasokPage() {
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-5">
       <h1 className="text-xl font-semibold tracking-tight">Beállítások</h1>
+
+      <EmailPrompt />
+
+      <section className="glass rounded-3xl p-6 flex items-center justify-between gap-4">
+        <div>
+          <p className="label-mono mb-1">Nyelv / Language</p>
+          <p className="text-sm text-text-2">
+            Az alkalmazás és az AI-válaszok nyelve.
+          </p>
+        </div>
+        <LocaleSwitcher />
+      </section>
+
+      <ProfileSettings />
 
       <section className="glass rounded-3xl p-6">
         <p className="label-mono mb-1">Ízlés-profil</p>

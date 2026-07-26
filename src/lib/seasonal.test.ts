@@ -41,6 +41,7 @@ describe('buildSeasonMessages', () => {
     const msgs = buildSeasonMessages(
       [{ anilistId: 7, title: 'Uj Anime', coverUrl: null, genres: ['Action'], avgScore: 75 }],
       ['(like) gyors tempó'],
+      'hu',
     )
     expect(msgs[1].content).toContain('[7] Uj Anime')
     expect(msgs[1].content).toContain('gyors tempó')

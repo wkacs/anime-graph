@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "title": "Anime Graph",
+    "description": "3D anime map with an AI taste engine"
+  },
+  "locale": {
+    "label": "Language"
+  },
+  "nav": {
+    "news": "News",
+    "graph": "Graph",
+    "list": "My list",
+    "opinions": "Reviews",
+    "browse": "Browse",
+    "leaderboard": "Top list",
+    "vibe": "Vibe",
+    "stats": "Stats",
+    "vs": "VS",
+    "settings": "Settings"
+  },
+  "fit": {
+    "title": "Is it for you?",
+    "signInTeaser": "Sign in and we'll tell you how well it fits your taste →",
+    "for": "for: {list}",
+    "against": "against: {list}",
+    "dropRisk": "⚠ drop risk {score}%",
+    "dropTooltip": "You tend to drop similar ones: {list}"
+  },
+  "onboardingCta": {
+    "kicker": "Start here",
+    "headline": "Bring your list over — 30 seconds, and we'll tell you who you are as a viewer",
+    "body": "A MAL or AniList import carries over every score and status, and the AI writes your taste profile right away. Your old list stays intact.",
+    "primary": "Walk me through it →",
+    "secondary": "Or browse the catalogue"
+  }
+}

@@ -5,7 +5,7 @@ const item: NlItem = { id: 1, title: 'Gurren Lagann', genres: ['Mecha'], year: 2
 
 describe('buildNlMessages', () => {
   it('a listát és a kérdést is tartalmazza', () => {
-    const msgs = buildNlMessages([item], 'melyik volt a mecha?')
+    const msgs = buildNlMessages([item], 'melyik volt a mecha?', 'hu')
     expect(msgs[1].content).toContain('Gurren Lagann')
     expect(msgs[1].content).toContain('melyik volt a mecha?')
   })

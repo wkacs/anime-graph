@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, opinions, recommendations, tasteMemory } from '@/db/schema'
 import { extractFacts } from '@/lib/extract'
+import { userLocale } from '@/lib/user-locale'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, like } from 'drizzle-orm'
 
 export async function GET(req: NextRequest) {
   const userId = await requireUserId()
@@ -47,17 +48,19 @@ export async function POST(req: NextRequest) {
 
   try {
     await consumeAiQuota(userId, 'opinion')
-    const facts = await extractFacts(animeRow.titleRomaji, rawText, { userId, endpoint: 'opinion' })
+    const locale = await userLocale(userId)
+    const facts = await extractFacts(animeRow.titleRomaji, rawText, locale, { userId, endpoint: 'opinion' })
     await db.delete(tasteMemory).where(
       and(eq(tasteMemory.animeId, animeId), eq(tasteMemory.source, 'opinion')),
     )
+    // lang: a tény azon a nyelven él, amin kinyertük — a felületen így jelenik meg
     const inserted = await db.insert(tasteMemory).values(
-      facts.map((f) => ({ userId, animeId, kind: f.kind, text: f.text, source: 'opinion' })),
+      facts.map((f) => ({ userId, animeId, kind: f.kind, text: f.text, source: 'opinion', lang: locale })),
     ).returning()
     await db.update(opinions).set({ extractStatus: 'done' }).where(eq(opinions.animeId, animeId))
     // új ízlés-tények → a korszak-cache elavult
     await db.delete(recommendations).where(
-      and(eq(recommendations.userId, userId), eq(recommendations.kind, 'taste-eras')),
+      and(eq(recommendations.userId, userId), like(recommendations.kind, 'taste-eras%')),
     )
     return NextResponse.json({ extractStatus: 'done', facts: inserted })
   } catch (e) {

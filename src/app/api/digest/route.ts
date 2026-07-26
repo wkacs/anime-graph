@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory } from '@/db/schema'
 import { fetchAiringFor } from '@/lib/anilist'
+import { userLocale } from '@/lib/user-locale'
+import { aiCacheKind } from '@/lib/ai-cache-key'
 import { currentSeason, seasonScoreKind } from '@/lib/seasonal'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
@@ -15,9 +17,10 @@ export async function GET() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const today = new Date().toISOString().slice(0, 10)
+  const locale = await userLocale(userId)
 
   const cached = await db.select().from(recommendations)
-    .where(and(eq(recommendations.kind, 'digest'), eq(recommendations.userId, userId)))
+    .where(and(eq(recommendations.kind, aiCacheKind('digest', locale)), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
   if (cached[0] && (cached[0].input as { date?: string }).date === today) {
@@ -38,7 +41,7 @@ export async function GET() {
 
   const season = currentSeason(new Date())
   const seasonal = await db.select().from(recommendations)
-    .where(and(eq(recommendations.kind, seasonScoreKind(season)), eq(recommendations.userId, userId)))
+    .where(and(eq(recommendations.kind, aiCacheKind(seasonScoreKind(season), locale)), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
   // a kulcs már szezon-specifikus, külön input-ellenőrzés nem kell
@@ -70,7 +73,7 @@ export async function GET() {
     ], { retries: 1, userId, endpoint: 'digest' })).trim()
     await db.insert(recommendations).values({
       userId,
-      kind: 'digest',
+      kind: aiCacheKind('digest', locale),
       input: { date: today },
       result: { text },
     })

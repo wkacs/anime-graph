@@ -1,24 +1,38 @@
 import { describe, it, expect } from 'vitest'
-import { createSession, verifySession } from './auth'
+import { createSession, verifySession, SESSION_DAYS, SESSION_RENEW_AFTER_MS } from './auth'
 import { hashPassword, verifyPassword } from './password'
 
 describe('session', () => {
-  it('round-trips the user id', async () => {
-    const token = await createSession('secret', 42)
-    expect(await verifySession('secret', token)).toBe(42)
+  it('round-trips the user id and token version', async () => {
+    const token = await createSession('secret', 42, 3)
+    expect(await verifySession('secret', token)).toMatchObject({ userId: 42, tokenVersion: 3 })
+  })
+
+  it('a lejarat idopontja is visszajon (a csuszo megujitashoz kell)', async () => {
+    const before = Date.now()
+    const claims = await verifySession('secret', await createSession('secret', 7, 0, SESSION_DAYS))
+    expect(claims!.expiresAt).toBeGreaterThan(before + (SESSION_DAYS - 1) * 86400_000)
   })
 
   it('rejects tampering and wrong secret', async () => {
-    const token = await createSession('secret', 42)
+    const token = await createSession('secret', 42, 0)
     expect(await verifySession('other', token)).toBeNull()
     expect(await verifySession('secret', token.replace('42', '43'))).toBeNull()
     expect(await verifySession('secret', undefined)).toBeNull()
     expect(await verifySession('secret', 'garbage')).toBeNull()
   })
 
+  it('a regi, 3-reszes token-formatum nem ervenyes', async () => {
+    expect(await verifySession('secret', `7.${Date.now() + 86400_000}.abcdef`)).toBeNull()
+  })
+
   it('rejects expired sessions', async () => {
-    const token = await createSession('secret', 7, -1) // lejárt tegnap
+    const token = await createSession('secret', 7, 0, -1) // lejárt tegnap
     expect(await verifySession('secret', token)).toBeNull()
+  })
+
+  it('a megujitasi kuszob a felezopont', () => {
+    expect(SESSION_RENEW_AFTER_MS).toBe((SESSION_DAYS / 2) * 86400_000)
   })
 })
 

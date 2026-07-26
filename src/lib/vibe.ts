@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { extractJson, type ChatMessage } from './glm'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 
 export const vibeSchema = z.object({
   ownPicks: z.array(z.object({
@@ -22,7 +24,7 @@ A FŐ EREDMÉNY az ÚJ felfedezés:
 - "ownPicks": mellé max 3-4 HASONLÓ cím a saját listájáról, referenciának
   ("ilyesmit már ismersz") — az indoklás mondja meg, miben hasonlít a kérésre.
   Csak a megadott animeId-ket használhatod.
-Minden indoklás rövid, magyar, az ízlés-tényekre hivatkozik.
+Minden indoklás rövid, az ízlés-tényekre hivatkozik.
 Válaszolj KIZÁRÓLAG JSON-nal:
 {"newPicks":[{"title":"…","reason":"…"}],"ownPicks":[{"animeId":szám,"reason":"…"}]}`
 
@@ -38,6 +40,7 @@ export function buildVibeMessages(
   prompt: string,
   own: VibeOwnAnime[],
   globalFacts: string[],
+  locale: Locale,
 ): ChatMessage[] {
   const selected = own.filter((a) => a.selected)
   const selectedBlock = selected.length
@@ -48,7 +51,7 @@ export function buildVibeMessages(
   const listBlock = own.map((a) => `[${a.id}] ${a.title}`).join('\n')
   const factsBlock = globalFacts.length ? globalFacts.map((f) => `- ${f}`).join('\n') : '- (üres)'
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}\n${languageInstruction(locale)}` },
     {
       role: 'user',
       content: `Kérés: ${prompt}\n\n${selectedBlock}Ízlés-memóriám:\n${factsBlock}\n\nSaját listám:\n${listBlock}`,

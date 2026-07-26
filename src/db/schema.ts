@@ -17,8 +17,31 @@ export const users = pgTable('users', {
   username: text('username').notNull().unique(),
   passwordHash: text('password_hash').notNull(), // scrypt: salt:hash hex
   tier: text('tier').notNull().default('free'), // free | paid
+  // nullable: a nyílt regisztráció előtti fiókoknak (id=1) nincs e-mailje
+  email: text('email'),
+  emailVerifiedAt: timestamp('email_verified_at'), // null = nem megerősített
+  // jelszó-resetnél nő → a régi session-tokenek érvénytelenné válnak
+  tokenVersion: integer('token_version').notNull().default(0),
+  locale: text('locale').notNull().default('en'), // en | hu
+  bio: text('bio'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
+
+// E-mail-megerősítés és jelszó-visszaállítás tokenjei. A nyers token CSAK a
+// linkbe kerül; itt kizárólag a sha256-hash-e él, hogy egy adatbázis-szivárgás
+// ne jelentsen fiók-átvételt.
+export const authTokens = pgTable('auth_tokens', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: text('kind').notNull(), // verify | reset
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('auth_tokens_hash_unique').on(t.tokenHash),
+  index('auth_tokens_user_kind').on(t.userId, t.kind),
+])
 
 // GLOBAL catalog: one row per AniList title, shared across all users.
 export const title = pgTable('title', {
@@ -139,6 +162,8 @@ export const tasteMemory = pgTable('taste_memory', {
   text: text('text').notNull(),
   source: text('source').notNull(), // opinion | settings | duel
   weight: real('weight').notNull().default(1),
+  // a tény abban a nyelvben él, amiben kinyertük — a meglévő sorok magyarok
+  lang: text('lang').notNull().default('hu'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 

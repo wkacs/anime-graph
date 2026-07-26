@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory } from '@/db/schema'
 import { fetchSeason } from '@/lib/anilist'
+import { aiCacheKind } from '@/lib/ai-cache-key'
+import { userLocale } from '@/lib/user-locale'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
 import { buildSeasonMessages, nextSeason, parseSeasonScores } from '@/lib/seasonal'
@@ -18,7 +20,7 @@ export async function GET() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const season = nextSeason(new Date())
-  const kind = `seasonal-ai:${season.year}-${season.season}`
+  const kind = aiCacheKind(`seasonal-ai:${season.year}-${season.season}`, await userLocale(userId))
 
   const cachedRows = await db.select().from(recommendations)
     .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, kind)))
@@ -44,7 +46,7 @@ export async function GET() {
   if (!pre.length) return NextResponse.json({ season, items: [] })
   try {
     await consumeAiQuota(userId, 'upcoming')
-    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(pre, facts.map((f) => f.text)), { userId, endpoint: 'upcoming' }))
+    const scores = parseSeasonScores(await glmChat(buildSeasonMessages(pre, facts.map((f) => f.text), await userLocale(userId)), { userId, endpoint: 'upcoming' }))
     const byId = new Map(seasonList.map((s) => [s.anilistId, s]))
     const items = scores
       .sort((a, b) => b.score - a.score).slice(0, 8)

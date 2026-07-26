@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { extractJson, type ChatMessage } from './glm'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 
 export type MonthPoint = { month: string; count: number; avgScore: number | null }
 
@@ -34,13 +36,16 @@ export const erasSchema = z.object({
 export type TasteEra = z.infer<typeof erasSchema>['eras'][number]
 
 const SYSTEM = `A felhasználó időrendbe rakott ízlés-tényeiből 2-5 "ízlés-korszakot" azonosítasz.
-Minden korszaknak: rövid magyar címke, 2-3 mondatos magyar összefoglaló, from/to (ÉÉÉÉ-HH).
+Minden korszaknak: rövid címke, 2-3 mondatos összefoglaló, from/to (ÉÉÉÉ-HH).
 Válaszolj KIZÁRÓLAG JSON-nal: {"eras":[{"label":"…","summary":"…","from":"ÉÉÉÉ-HH","to":"ÉÉÉÉ-HH"}]}`
 
-export function buildErasMessages(facts: { text: string; at: string }[]): ChatMessage[] {
+export function buildErasMessages(
+  facts: { text: string; at: string }[], locale: Locale,
+): ChatMessage[] {
   const lines = facts.map((f) => `${f.at.slice(0, 7)}: ${f.text}`).join('\n')
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}
+${languageInstruction(locale)}` },
     { role: 'user', content: `Ízlés-tényeim időrendben:\n${lines}` },
   ]
 }

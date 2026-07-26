@@ -21,7 +21,7 @@ describe('parseFacts', () => {
 
 describe('buildExtractMessages', () => {
   it('includes title and opinion in the user message', () => {
-    const msgs = buildExtractMessages('Steins;Gate', 'nagyon tetszett a vége')
+    const msgs = buildExtractMessages('Steins;Gate', 'nagyon tetszett a vége', 'hu')
     expect(msgs[0].role).toBe('system')
     expect(msgs[1].content).toContain('Steins;Gate')
     expect(msgs[1].content).toContain('nagyon tetszett a vége')

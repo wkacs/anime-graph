@@ -2,20 +2,23 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import LocaleSwitcher from './LocaleSwitcher'
 
-const TABS: { href: string; label: string; soon?: boolean; pendingBadge?: boolean }[] = [
-  { href: '/', label: 'News' },
-  { href: '/graf', label: 'Gráf' },
-  { href: '/lista', label: 'Lista' },
-  { href: '/velemenyek', label: 'Vélemények', pendingBadge: true },
-  { href: '/bongeszo', label: 'Böngésző' },
-  { href: '/toplista', label: 'Toplista' },
-  { href: '/vibe', label: 'Vibe' },
-  { href: '/stats', label: 'Stats' },
-  { href: '/vs', label: 'VS' },
+const TABS: { href: string; key: string; soon?: boolean; pendingBadge?: boolean }[] = [
+  { href: '/', key: 'news' },
+  { href: '/graf', key: 'graph' },
+  { href: '/lista', key: 'list' },
+  { href: '/velemenyek', key: 'opinions', pendingBadge: true },
+  { href: '/bongeszo', key: 'browse' },
+  { href: '/toplista', key: 'leaderboard' },
+  { href: '/vibe', key: 'vibe' },
+  { href: '/stats', key: 'stats' },
+  { href: '/vs', key: 'vs' },
 ]
 
 export default function TopNav() {
+  const t = useTranslations('nav')
   const pathname = usePathname()
   const [pendingCount, setPendingCount] = useState(0)
   const hidden = pathname === '/login' || pathname.startsWith('/p/')
@@ -42,23 +45,23 @@ export default function TopNav() {
       </Link>
       <div className="h-4 w-px bg-white/10" />
       <ul className="flex items-center gap-0.5">
-        {TABS.map((t) => (
-          <li key={t.href}>
+        {TABS.map((tab) => (
+          <li key={tab.href}>
             <Link
-              href={t.href}
+              href={tab.href}
               className={`relative px-3 py-1.5 rounded-full text-sm transition-colors ${
-                isActive(t.href)
+                isActive(tab.href)
                   ? 'bg-white/10 text-text-1'
                   : 'text-text-2 hover:text-text-1 hover:bg-white/5'
               }`}
             >
-              {t.label}
-              {t.soon && (
+              {t(tab.key)}
+              {tab.soon && (
                 <span className="ml-1 align-super text-[8px] font-mono uppercase tracking-widest text-text-3">
                   soon
                 </span>
               )}
-              {t.pendingBadge && pendingCount > 0 && (
+              {tab.pendingBadge && pendingCount > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/15 px-1.5 min-w-[18px] h-[18px] text-[10px] font-mono text-text-1 align-middle">
                   {pendingCount > 99 ? '99+' : pendingCount}
                 </span>
@@ -68,9 +71,10 @@ export default function TopNav() {
         ))}
       </ul>
       <div className="h-4 w-px bg-white/10" />
+      <LocaleSwitcher compact />
       <Link
         href="/beallitasok"
-        aria-label="Beállítások"
+        aria-label={t('settings')}
         className={`btn-ghost p-2 ${pathname.startsWith('/beallitasok') ? 'bg-white/10 text-text-1' : ''}`}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

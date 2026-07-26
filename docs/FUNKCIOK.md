@@ -124,12 +124,39 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 ---
 
+## 12/b. Kapunyitás (Gate A, 2026-07-26)
+
+Spec: `docs/superpowers/specs/2026-07-26-gate-a-kapunyitas-design.md`,
+terv: `docs/superpowers/plans/2026-07-26-gate-a-kapunyitas.md`.
+
+- **Nyílt regisztráció**: e-mail + felhasználónév + jelszó (min. 8 karakter), `REGISTRATION_MODE`
+  env (`open` \| `invite` \| `closed`). A fiók azonnal használható, a megerősítő levél
+  párhuzamosan megy. Rate-limit: IP 5/óra és e-mail 3/óra.
+- **E-mail-megerősítés** (`/api/auth/verify`, 24 órás token) és **újraküldés** (3/óra).
+- **Jelszó-visszaállítás**: `/api/auth/forgot` **mindig 200-at ad** (user-enumeration ellen),
+  `/api/auth/reset` egyszer-használatos, 1 órás tokennel.
+- **Session-érvénytelenítés**: a token payloadja `uid.ver.exp.hmac`; a reset növeli a
+  `users.token_version`-t, a `requireUserId` egyezteti (60 s-os process-cache), így a reset
+  kilépteti a többi eszközt. Élettartam 30 nap, a felezőpont után csúszó megújítással
+  (a middleware-ben, adatbázis nélkül).
+- **Tokenek tárolása**: `auth_tokens` tábla, kizárólag sha256-hash — nyers token sosem kerül DB-be.
+- **i18n**: next-intl routing nélkül, a locale a `NEXT_LOCALE` cookie-ból (fallback
+  `Accept-Language`, majd `en`), az URL változatlan. Nyelvváltó a TopNavban és a Beállításokon,
+  belépve a `users.locale` is őrzi.
+- **Az AI a felhasználó nyelvén válaszol**: mind a 9 prompt-építő `locale`-t kap
+  (`prompt-locale.ts`), és a locale bekerül az AI-cache kulcsokba (`ai-cache-key.ts`),
+  hogy nyelvváltás után ne a régi nyelvű válasz jöjjön vissza.
+- **Profil**: monogram-avatar a felhasználónévből (nincs feltöltés, nincs tároló), bio,
+  láthatóság-kapcsoló, és a publikus `/u/[username]` oldal (privátnál 404, `noindex`,
+  nincs a sitemapban).
+
 ## 13. Mi NINCS még kész / nyitott pontok
 
 | Tétel | Állapot |
 |---|---|
 | **Push + Vercel-deploy** | ✅ megtörtént: `master == origin/master` (`0a7bf18`), a prod él (`anime-graph.vercel.app`), DB-migrációk lefutottak |
 | 🔴 **`APP_URL` hiányzik a Vercel prod-envből** | emiatt a `sitemap.xml`, a `robots.txt` és a JSON-LD `http://localhost:3000`-t adott ki élesben (133 840 sitemap-URL mind rossz). A kód már visszaesik a Vercel prod-domainre, de az **`APP_URL`-t akkor is be kell állítani** — az OAuth-callbackek (`sync-oauth.ts`) is ezt olvassák |
+| 🔴 **i18n szöveg-átvezetés félkész** | A next-intl infrastruktúra, a nyelvváltó és az AI-nyelv KÉSZ. A felületi stringek átvezetése a szótárakba viszont még tart: kész a `TopNav`, `FitBadge`, `OnboardingCTA`; hátra ~36 `.tsx` (≈420 sor) és 38 API-route (≈89 hibaüzenet). Az át nem vezetett fájlok magyarul maradnak, az app végig működik. Recept: a terv Task 12-je |
 | **D3 élő szinkron** | MAL/AniList OAuth-app-regisztráció + env hiányzik, élő API nem tesztelt |
 | **D6 (differenciáló backlog)** | M4 (review-rendszer) utánra ütemezve |
 | **M4 review + follow** | a publikus-versenytárs irány következő nagy üteme |

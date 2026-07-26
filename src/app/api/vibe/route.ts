@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, tasteMemory, recommendations } from '@/db/schema'
 import { buildVibeMessages, parseVibe, type VibeOwnAnime } from '@/lib/vibe'
+import { aiCacheKind } from '@/lib/ai-cache-key'
+import { userLocale } from '@/lib/user-locale'
 import { searchAnime } from '@/lib/anilist'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Írj be egy kérést vagy válassz animét' }, { status: 400 })
   }
 
+  const locale = await userLocale(userId)
   const rows = await db.select().from(anime)
     .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   if (!rows.length) return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
@@ -68,7 +71,10 @@ export async function POST(req: NextRequest) {
   try {
     await consumeAiQuota(userId, 'vibe')
     const raw = await glmChat(
-      buildVibeMessages(prompt || 'a kiválasztott animékhez hasonlót keresek', own, globalFacts),
+      buildVibeMessages(
+        prompt || 'a kiválasztott animékhez hasonlót keresek',
+        own, globalFacts, locale,
+      ),
       { userId, endpoint: 'vibe' },
     )
     const parsed = parseVibe(raw)
@@ -100,7 +106,7 @@ export async function POST(req: NextRequest) {
     }
     await db.insert(recommendations).values({
       userId,
-      kind: 'vibe',
+      kind: aiCacheKind('vibe', locale),
       input: { prompt, animeIds },
       result,
     })

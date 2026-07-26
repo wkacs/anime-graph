@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, Geist_Mono, Noto_Sans_JP } from "next/font/google";
+import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
 import "./globals.css";
 
@@ -19,9 +20,11 @@ const notoJp = Noto_Sans_JP({
   subsets: ["latin"],
 });
 
+// Statikus metaadat: a getTranslations() dinamikus API-t hívna, ami az ISR-elt
+// katalógus-oldalakat 500-azná (lásd src/i18n/request.ts).
 export const metadata: Metadata = {
   title: "Anime Graph",
-  description: "Személyes 3D anime-térkép",
+  description: "3D anime map with an AI taste engine",
 };
 
 export const viewport = {
@@ -33,13 +36,17 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // lang="en": a szerver-render kanonikus nyelve. Az IntlProvider hidratáláskor
+  // átállítja a document.documentElement.lang-ot, ha a cookie mást mond.
   return (
-    <html lang="hu">
+    <html lang="en">
       <body
         className={`${instrument.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
-        <TopNav />
-        {children}
+        <IntlProvider>
+          <TopNav />
+          {children}
+        </IntlProvider>
       </body>
     </html>
   );
