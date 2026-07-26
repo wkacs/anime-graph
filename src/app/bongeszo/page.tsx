@@ -1,6 +1,5 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores } from '@/lib/use-fit-scores'
 import ScoreBadge from '@/components/ui/ScoreBadge'
@@ -8,6 +7,8 @@ import PageShell from '@/components/ui/PageShell'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
+import Skeleton from '@/components/ui/Skeleton'
+import EmptyState from '@/components/ui/EmptyState'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 
@@ -270,15 +271,22 @@ export default function BrowsePage() {
               ].filter(Boolean).join(' · ')}
             />
             {filtered == null ? (
-              <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
-                Betöltés…
-              </motion.p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
+                <Skeleton variant="poster" count={12} />
+              </div>
             ) : filtered.length === 0 ? (
-              <p className="text-sm text-text-2">
-                {seasonKey === 'next'
-                  ? 'Még kevés bejelentett cím — a katalógus-sync bővíti majd.'
-                  : 'Nincs találat ezzel a szűrővel.'}
-              </p>
+              <EmptyState
+                eyebrow="Szűrő"
+                title={seasonKey === 'next' ? 'Még kevés bejelentett cím' : 'Nincs találat'}
+                text={seasonKey === 'next'
+                  ? 'A következő szezon kínálatát a katalógus-sync fokozatosan bővíti.'
+                  : 'Próbáld más stúdióval vagy szezonnal.'}
+                action={
+                  <Button onClick={() => { setStudioFilter(null); setSeasonKey(null); syncFilterUrl(null, null) }}>
+                    Szűrők törlése
+                  </Button>
+                }
+              />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
                 {filtered.map(cardFor)}
@@ -307,30 +315,51 @@ export default function BrowsePage() {
               </section>
             )}
           </>
+        ) : trending == null ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
+            <Skeleton variant="poster" count={12} />
+          </div>
         ) : (
-          <p className="text-sm text-text-2">Írj be egy címet a kereséshez.</p>
+          <EmptyState
+            eyebrow="Katalógus"
+            title="Mit keresel?"
+            text="130 ezer anime és manga a saját adatbázisunkból. Írj be egy címet, vagy szűrj szezonra."
+          />
         )
       ) : loading ? (
-        <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
-          Betöltés…
-        </motion.p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
+          <Skeleton variant="poster" count={12} />
+        </div>
       ) : (
         <>
           <div data-tour="results" className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
             {hits.map(cardFor)}
           </div>
-          {hits.length === 0 && <p className="text-sm text-text-2">Nincs találat a katalógusban.</p>}
-          <div className="flex items-center justify-center gap-4 text-sm">
-            <Button size="md" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page <= 0}>
-              ← Előző
-            </Button>
-            <span className="font-mono text-xs text-text-2 tabular-nums">
-              {page + 1}. oldal · {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + hits.length}
-            </span>
-            <Button size="md" onClick={() => setPage((p) => p + 1)} disabled={hits.length < PAGE_SIZE}>
-              Következő →
-            </Button>
-          </div>
+          {hits.length === 0 && (
+            <EmptyState
+              eyebrow="Keresés"
+              title="Nincs találat"
+              text={`A „${search.trim()}” kifejezésre nincs cím a katalógusban. Próbáld a romaji címmel, vagy váltsd át ${type === 'ANIME' ? 'mangára' : 'animére'}.`}
+              action={
+                <Button onClick={() => setKind(type === 'ANIME' ? 'MANGA' : 'ANIME')}>
+                  Váltás {type === 'ANIME' ? 'mangára' : 'animére'}
+                </Button>
+              }
+            />
+          )}
+          {hits.length > 0 && (
+            <div className="flex items-center justify-center gap-4 text-sm">
+              <Button size="md" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page <= 0}>
+                ← Előző
+              </Button>
+              <span className="font-mono text-xs text-text-2 tabular-nums">
+                {page + 1}. oldal · {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + hits.length}
+              </span>
+              <Button size="md" onClick={() => setPage((p) => p + 1)} disabled={hits.length < PAGE_SIZE}>
+                Következő →
+              </Button>
+            </div>
+          )}
         </>
       )}
     </PageShell>
