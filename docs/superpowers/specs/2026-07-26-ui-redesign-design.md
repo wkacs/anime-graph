@@ -166,11 +166,25 @@ Ma 8 egyenrangú szekció, és a **sorrend is rossz**: a „Társaság" feed a m
 
 ### 6.3 `/bongeszo`
 
-Sticky szűrő-sáv `surface-3`-ban; az aktív szűrők chipként jelennek meg + „töröl mind"; sűrűbb rács (6 kolumna `2xl`-en); `Skeleton` vázak betöltésre; `EmptyState` nulla találatra; végtelen-scroll állapotjelző.
+- Sticky szűrő-sáv `surface-3`-ban; az aktív szűrők chipként (`Chip variant="link"`) + „töröl mind".
+- Sűrűbb rács: 6 kolumna `2xl`-en (ma max 5 `xl`-en).
+- `Skeleton` poszter-vázak a három betöltési ág mindegyikére (ma három helyen ugyanaz a villogó „Betöltés…" `<motion.p>`: `bongeszo/page.tsx:254-257`, `294-297`).
+- `EmptyState` a négy üres-ág mindegyikére (ma csupasz `<p>`: „Írj be egy címet…", „Nincs találat a katalógusban.", „Nincs találat ezzel a szűrővel.", „Még kevés bejelentett cím…").
+- **A lapozás marad lapozás.** A `prev/next` gomb-pár (`page` state + `PAGE_SIZE = 24` offset) megmarad, csak `Button`-primitívre cserélve és lapszám-kontextussal. Végtelen-scroll **nincs** bevezetve — az funkció-változás lenne, nem redesign.
+- Új: a `?focus=1` query-param a meglévő kereső-inputot fókuszálja (a nav kereső-ikonjához).
 
 ### 6.4 `/lista`
 
-Ez a napi munkalap → itt a **sűrűség** a design, nem a levegő. `row`-variant, status szerint csoportosítva, vékony progress-sáv a soron, egykattintásos +1, poszter-hover glow.
+Ez a napi munkalap → itt a **sűrűség** a design, nem a levegő.
+
+**A `<table>` marad táblázat.** Ma rendezhető fejléc-oszlopokkal működik (`sortBy`, `sortKey`, `sortDir` — `lista/page.tsx:83-86, 122-128`); kártya-rácsra vagy status-szerinti csoportosításra cserélve elveszne a rendezhetőség. Ez regresszió lenne, nem redesign. Ami változik:
+
+- A tábla-wrapper `glass rounded-3xl` → `surface-1`, hairline sor-elválasztókkal.
+- Sticky `<thead>` a hosszú listához (ma elscrollozik).
+- Sor-hover: `poster-glow` a sor bal szélén a borító színéből (nem a mai sík `hover:bg-white/4`).
+- Új oszlop: vékony progress-sáv (`progress`/`episodes`) — ma a haladás csak a detail-oldalon látszik.
+- Új: egykattintásos `+1` a soron. Ma ehhez meg kell nyitni a detail-oldalt.
+- `EmptyState` a „Nincs találat." helyére (a `list.length === 0` ág marad `OnboardingCTA compact`).
 
 ## 7. Adatfolyam, hibakezelés
 
@@ -181,7 +195,11 @@ Az adatfolyam nem változik: ugyanazok az API-végpontok, ugyanazok a fetch-ek �
 Sorban mind a négy, kihagyás nélkül:
 
 1. `npx tsc --noEmit` — 0 hiba
-2. `npm test` — a teljes teszt-készlet zöld. A baseline-darabszámot az implementáció **első** lépése rögzíti (`npm test` a `master`-en, még kódváltozás előtt), és a végén ugyanannyi vagy több tesztnek kell zöldnek lennie. A class-nevekre hivatkozó komponens-tesztek **javítva**, nem kikommentelve.
+2. `npm test` — a teljes teszt-készlet zöld. A baseline-darabszámot az implementáció **első** lépése rögzíti (`npm test` a `master`-en, még kódváltozás előtt), és a végén ugyanannyi vagy több tesztnek kell zöldnek lennie.
+
+   **Fontos a teszt-környezetről:** a `vitest.config.ts` `environment: 'node'` és `include: ['src/**/*.test.ts']` — kizárólag `.ts`, nem `.tsx`. A 60+ teszt mind **tiszta lib-logika** (`src/lib/*.test.ts`); komponens-teszt, jsdom és React Testing Library **nincs** a projektben. Két következmény:
+   - A vizuális átírás önmagában nem tud tesztet elrontani (nincs class-névre hivatkozó teszt) — de nem is tud tesztet nyújtani. A vizuális ellenőrzés a 4. pont (screenshot), nem a 2.
+   - Ezért ahol a redesign **döntési logikát** hoz (hero fallback-lánc, ScoreBadge színskála, nav-csoportosítás, PageShell szélességek), az a logika **`src/lib/`-be kerül tiszta függvényként és TDD-vel készül**. Nem a komponensbe ágyazva. Ez a terv gerince.
 3. `npm run build && npm start` — **nem** csak `next dev`. A címoldal ISR-500-a dev-ben nem jön elő; a prod-build az egyetlen kapu.
 4. Playwright-screenshot a 4 oldalról 390px és 1440px szélességen, és a képek **tényleges megtekintése**, mielőtt bármi késznek minősül.
 
