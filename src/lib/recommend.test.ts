@@ -22,6 +22,7 @@ describe('buildRecommendMessages', () => {
       cands,
       [{ kind: 'like', text: 'gyors tempó tetszett', title: 'FMA:B' }],
       ['FMA:B'],
+      'hu',
     )
     expect(msgs[1].content).toContain('[5] Monogatari')
     expect(msgs[1].content).toContain('gyors tempó tetszett')
@@ -33,6 +34,7 @@ describe('buildRecommendMessages', () => {
       [{ anilistId: 5, title: 'X', coverUrl: null, genres: [], avgScore: null }],
       [],
       [],
+      'hu',
       { dropped: ['Rail Wars!'] },
     )
     expect(msgs[1].content).toContain('FÉLBEHAGYTAM')

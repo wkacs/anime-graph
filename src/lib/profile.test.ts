@@ -16,7 +16,7 @@ describe('parseProfile', () => {
 
 describe('buildProfileMessages', () => {
   it('includes facts and genres', () => {
-    const msgs = buildProfileMessages(['(like) time-travel'], ['Sci-Fi', 'Drama'], ['Steins;Gate'], 42)
+    const msgs = buildProfileMessages(['(like) time-travel'], ['Sci-Fi', 'Drama'], ['Steins;Gate'], 42, 'hu')
     expect(msgs[1].content).toContain('time-travel')
     expect(msgs[1].content).toContain('Sci-Fi')
     expect(msgs[1].content).toContain('42')

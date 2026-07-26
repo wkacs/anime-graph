@@ -1,4 +1,6 @@
 import type { ChatMessage } from './glm'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 import type { RecCandidate } from './anilist'
 import { parsePicks, type RecPick } from './recommend'
 
@@ -27,7 +29,7 @@ export function buildDuoCandidates(pool: DuoPool): RecCandidate[] {
 
 const SYSTEM = `Közös anime-est tanácsadó vagy. KÉT felhasználó ízlés-memóriája alapján
 kiválasztod a jelöltlistából az 5 animét, ami MINDKETTŐJÜKNEK élmény lenne. Minden
-választáshoz rövid magyar indoklást írsz, ami MINDKÉT fél ízlésére kitér
+választáshoz rövid indoklást írsz, ami MINDKÉT fél ízlésére kitér
 ("neked azért..., neki azért...").
 Válaszolj KIZÁRÓLAG JSON-nal: {"picks":[{"anilistId":szám,"reason":"indoklás"}]}
 Pontosan 5 pick, csak a jelöltlistában szereplő anilistId-kkel.`
@@ -38,13 +40,15 @@ export function buildDuoMessages(
   theirFacts: string[],
   myName: string,
   theirName: string,
+  locale: Locale,
 ): ChatMessage[] {
   const candLines = candidates.map((c) =>
     `[${c.anilistId}] ${c.title} — műfaj: ${c.genres.join(', ')}; AniList-átlag: ${c.avgScore ?? '?'}`,
   ).join('\n')
   const facts = (fs: string[]) => (fs.length ? fs.map((f) => `- ${f}`).join('\n') : '- (üres)')
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}
+${languageInstruction(locale)}` },
     {
       role: 'user',
       content: `${myName} ízlése:\n${facts(myFacts)}\n\n${theirName} ízlése:\n${facts(theirFacts)}\n\nJelöltlista:\n${candLines}`,

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { recommendations, tasteMemory } from '@/db/schema'
 import { consumeAiQuota } from '@/lib/ai-quota'
+import { aiCacheKind } from '@/lib/ai-cache-key'
+import { userLocale } from '@/lib/user-locale'
 import { buildErasMessages, parseEras } from '@/lib/evolution'
 import { glmChat } from '@/lib/glm'
 import { requireUserId } from '@/lib/session'
@@ -12,8 +14,9 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const locale = await userLocale(userId)
   const rows = await db.select().from(recommendations)
-    .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, 'taste-eras')))
+    .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, aiCacheKind('taste-eras', locale))))
     .orderBy(desc(recommendations.createdAt)).limit(1)
   return NextResponse.json({ eras: rows[0] ? (rows[0].result as { eras: unknown }).eras : null })
 }
@@ -21,6 +24,7 @@ export async function GET() {
 export async function POST() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const locale = await userLocale(userId)
   const facts = await db.select().from(tasteMemory)
     .where(eq(tasteMemory.userId, userId))
     .orderBy(asc(tasteMemory.createdAt))
@@ -29,10 +33,11 @@ export async function POST() {
     await consumeAiQuota(userId, 'taste-eras')
     const eras = parseEras(await glmChat(buildErasMessages(
       facts.map((f) => ({ text: f.text, at: f.createdAt.toISOString() })),
+      locale,
     ), { userId, endpoint: 'taste-eras' }))
     await db.delete(recommendations)
-      .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, 'taste-eras')))
-    await db.insert(recommendations).values({ userId, kind: 'taste-eras', input: { factCount: facts.length }, result: { eras } })
+      .where(and(eq(recommendations.userId, userId), eq(recommendations.kind, aiCacheKind('taste-eras', locale))))
+    await db.insert(recommendations).values({ userId, kind: aiCacheKind('taste-eras', locale), input: { factCount: facts.length }, result: { eras } })
     return NextResponse.json({ eras })
   } catch (e) {
     return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 502 })

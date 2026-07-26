@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { extractJson, type ChatMessage } from './glm'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 import type { RecCandidate } from './anilist'
 
 export const SEASON_LABELS: Record<string, string> = {
@@ -49,13 +51,15 @@ Minden jelöltet pontozz, csak a megadott anilistId-ket használhatod.`
 export function buildSeasonMessages(
   candidates: RecCandidate[],
   tasteFacts: string[],
+  locale: Locale,
 ): ChatMessage[] {
   const candLines = candidates.map((c) =>
     `[${c.anilistId}] ${c.title} — műfaj: ${c.genres.join(', ')}; AniList-átlag: ${c.avgScore ?? '?'}`,
   ).join('\n')
   const factLines = tasteFacts.length ? tasteFacts.map((f) => `- ${f}`).join('\n') : '- (üres)'
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}
+${languageInstruction(locale)}` },
     { role: 'user', content: `Ízlés-memóriám:\n${factLines}\n\nSzezonos jelöltek:\n${candLines}` },
   ]
 }

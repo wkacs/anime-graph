@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { extractJson, type ChatMessage } from './glm'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 
 export const profileSchema = z.object({
   portrait: z.string().min(20).max(600),
@@ -10,8 +12,8 @@ export type TasteProfile = z.infer<typeof profileSchema>
 
 const SYSTEM = `Anime-ízlés elemző vagy. A felhasználó ízlés-memóriája alapján megírod,
 ki ő animenézőként. Válaszolj KIZÁRÓLAG JSON-nal:
-{"portrait":"2-3 mondatos személyes, találó magyar portré (tegeződve)","badges":["emoji + 2-3 szavas title", …]}
-3-5 badge, mindegyik egy emoji + rövid, frappáns magyar címke (pl. "🌀 plot-twist vadász").
+{"portrait":"2-3 mondatos személyes, találó portré (tegeződve)","badges":["emoji + 2-3 szavas title", …]}
+3-5 badge, mindegyik egy emoji + rövid, frappáns címke (pl. "🌀 plot-twist vadász").
 Ne általánosíts üresen — a konkrét tényekre építs.`
 
 export function buildProfileMessages(
@@ -19,9 +21,10 @@ export function buildProfileMessages(
   topGenres: string[],
   topTitles: string[],
   animeCount: number,
+  locale: Locale,
 ): ChatMessage[] {
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}\n${languageInstruction(locale)}` },
     {
       role: 'user',
       content:

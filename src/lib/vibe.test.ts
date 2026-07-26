@@ -27,6 +27,7 @@ describe('buildVibeMessages', () => {
         { id: 2, title: 'FMA:B', genres: ['Action'], facts: [], selected: false },
       ],
       ['gyors tempó tetszik'],
+      'hu',
     )
     expect(msgs[1].content).toContain('Kiemelt animék')
     expect(msgs[1].content).toContain('[1] Steins;Gate')

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory } from '@/db/schema'
 import { buildProfileMessages, parseProfile } from '@/lib/profile'
+import { aiCacheKind } from '@/lib/ai-cache-key'
+import { userLocale } from '@/lib/user-locale'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { glmChat } from '@/lib/glm'
@@ -23,14 +25,15 @@ async function generate(userId: number) {
   const facts = factRows.map((f) => `(${f.kind}) ${f.text}`).slice(0, 60)
 
   await consumeAiQuota(userId, 'profile')
+  const locale = await userLocale(userId)
   const raw = await glmChat(
-    buildProfileMessages(facts, topGenres, topTitles, rows.length),
+    buildProfileMessages(facts, topGenres, topTitles, rows.length, locale),
     { userId, endpoint: 'profile' },
   )
   const profile = parseProfile(raw)
   await db.insert(recommendations).values({
     userId,
-    kind: 'profile',
+    kind: aiCacheKind('profile', locale),
     input: { factCount: factRows.length },
     result: profile,
   })
@@ -40,8 +43,9 @@ async function generate(userId: number) {
 export async function GET() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const locale = await userLocale(userId)
   const cached = await db.select().from(recommendations)
-    .where(and(eq(recommendations.kind, 'profile'), eq(recommendations.userId, userId)))
+    .where(and(eq(recommendations.kind, aiCacheKind('profile', locale)), eq(recommendations.userId, userId)))
     .orderBy(desc(recommendations.createdAt))
     .limit(1)
   const factCount = (await db.select({ id: tasteMemory.id }).from(tasteMemory)

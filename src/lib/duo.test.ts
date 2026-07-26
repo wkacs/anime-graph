@@ -31,7 +31,7 @@ describe('buildDuoCandidates', () => {
 
 describe('buildDuoMessages', () => {
   it('mindkét user tényeit és nevét tartalmazza', () => {
-    const msgs = buildDuoMessages([c(1)], ['szeretem a mechát'], ['utálom a fillert'], 'en', 'o')
+    const msgs = buildDuoMessages([c(1)], ['szeretem a mechát'], ['utálom a fillert'], 'en', 'o', 'hu')
     const user = msgs[1].content
     expect(user).toContain('szeretem a mechát')
     expect(user).toContain('utálom a fillert')

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { extractJson, type ChatMessage } from './glm'
+import type { Locale } from './locale'
+import { languageInstruction } from './prompt-locale'
 
 export type NlItem = {
   id: number
@@ -13,16 +15,19 @@ export type NlItem = {
 }
 
 const SYSTEM = `A felhasználó SAJÁT anime/manga-listájában keresel. A kérdésére a listából
-válaszolsz: visszaadod a passzoló tételek id-jait és egy rövid magyar választ.
+válaszolsz: visszaadod a passzoló tételek id-jait és egy rövid választ.
 Ha semmi nem passzol, üres matchIds és ezt megmondó answer.
-Válaszolj KIZÁRÓLAG JSON-nal: {"matchIds":[szám],"answer":"rövid magyar válasz"}`
+Válaszolj KIZÁRÓLAG JSON-nal: {"matchIds":[szám],"answer":"rövid válasz"}`
 
-export function buildNlMessages(items: NlItem[], query: string): ChatMessage[] {
+export function buildNlMessages(
+  items: NlItem[], query: string, locale: Locale,
+): ChatMessage[] {
   const lines = items.map((i) =>
     `[${i.id}] ${i.title} (${i.mediaType === 'MANGA' ? 'manga' : 'anime'}, ${i.year ?? '?'}) — ${i.genres.join('/')}; státusz: ${i.status}; pont: ${i.myScore ?? '-'}${i.opinion ? `; vélemény: ${i.opinion}` : ''}`,
   ).join('\n')
   return [
-    { role: 'system', content: SYSTEM },
+    { role: 'system', content: `${SYSTEM}
+${languageInstruction(locale)}` },
     { role: 'user', content: `A listám:\n${lines}\n\nKérdés: ${query}` },
   ]
 }

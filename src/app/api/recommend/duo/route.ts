@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, recommendations, tasteMemory, users } from '@/db/schema'
 import { fetchRecommendationsFor, type RecCandidate } from '@/lib/anilist'
+import { aiCacheKind } from '@/lib/ai-cache-key'
+import { userLocale } from '@/lib/user-locale'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { buildDuoCandidates, buildDuoMessages, parseDuoPicks } from '@/lib/duo'
 import { glmChat } from '@/lib/glm'
@@ -25,7 +27,8 @@ export async function POST(req: NextRequest) {
   const [other] = await db.select().from(users).where(eq(users.id, otherUserId))
   if (!other) return NextResponse.json({ error: 'Nincs ilyen user' }, { status: 404 })
 
-  const kind = `duo:${Math.min(userId, otherUserId)}:${Math.max(userId, otherUserId)}`
+  const locale = await userLocale(userId)
+  const kind = aiCacheKind(`duo:${Math.min(userId, otherUserId)}:${Math.max(userId, otherUserId)}`, locale)
   const cachedRows = await db.select().from(recommendations)
     .where(eq(recommendations.kind, kind))
     .orderBy(desc(recommendations.createdAt)).limit(1)
@@ -64,6 +67,7 @@ export async function POST(req: NextRequest) {
     myFactRows.map((f) => f.text),
     theirFactRows.map((f) => f.text),
     'a kérdező', other.username,
+    locale,
   )
   const picks = parseDuoPicks(await glmChat(messages, { userId, endpoint: 'duo' }))
   const byId = new Map(candidates.map((c) => [c.anilistId, c]))

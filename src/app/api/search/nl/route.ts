@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, opinions } from '@/db/schema'
 import { consumeAiQuota } from '@/lib/ai-quota'
+import { userLocale } from '@/lib/user-locale'
 import { glmChat } from '@/lib/glm'
 import { buildNlMessages, parseNlResult, type NlItem } from '@/lib/nl-search'
 import { requireUserId } from '@/lib/session'
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
   }))
   try {
     await consumeAiQuota(userId, 'nl-search')
-    const raw = await glmChat(buildNlMessages(items, query), { userId, endpoint: 'nl-search' })
+    const raw = await glmChat(buildNlMessages(items, query, await userLocale(userId)), { userId, endpoint: 'nl-search' })
     return NextResponse.json(parseNlResult(raw, new Set(items.map((i) => i.id))))
   } catch (e) {
     return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 502 })

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, title, titleRecommendations, tasteMemory, recommendations } from '@/db/schema'
 import { genreWeights, rankCandidates } from '@/lib/candidates'
+import { aiCacheKind } from '@/lib/ai-cache-key'
+import { userLocale } from '@/lib/user-locale'
 import { buildLocalCandidates } from '@/lib/local-candidates'
 import { buildRecommendMessages, parsePicks } from '@/lib/recommend'
 import { consumeAiQuota } from '@/lib/ai-quota'
@@ -62,10 +64,12 @@ export async function POST() {
     dropped: rows.filter((r) => r.status === 'dropped').slice(0, 8).map((r) => r.titleRomaji),
   }
 
+  const locale = await userLocale(userId)
+
   try {
     await consumeAiQuota(userId, 'recommend')
     const raw = await glmChat(
-      buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji), extras),
+      buildRecommendMessages(ranked, facts, top.map((t) => t.titleRomaji), locale, extras),
       { userId, endpoint: 'recommend' },
     )
     const picks = parsePicks(raw)
@@ -75,7 +79,7 @@ export async function POST() {
       .map((p) => ({ ...byId.get(p.anilistId)!, reason: p.reason }))
     await db.insert(recommendations).values({
       userId,
-      kind: 'recommend',
+      kind: aiCacheKind('recommend', locale),
       input: { topTitles: top.map((t) => t.titleRomaji), candidateCount: ranked.length },
       result,
     })
