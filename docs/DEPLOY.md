@@ -12,6 +12,15 @@ táblát és a `taste_memory.lang` mezőt.
 🔴 A deploy után **mindenki egyszer kilép**: a session-token formátuma
 `uid.exp.hmac`-ról `uid.ver.exp.hmac`-ra váltott, a régi sütik érvénytelenek.
 
+## 0/b. Ízlés-jel migráció (2026-07-26)
+
+`DATABASE_URL="<prod>" node scripts/migrate-taste-signal.mjs` — a `taste_signal` tábla
+(additív, idempotens). Utána egyszer: `node scripts/backfill-taste-signals.mjs`.
+
+A backfill AI nélkül dolgozik, és a jelenlegi adaton **nulla jelet talált** (a tények
+magyar prózában vannak, az AniList tagnevei angolul). A valódi jelek az új vélemények
+`extract`-jéből jönnek — a lokális rangsor addig is a viselkedési vektorral működik.
+
 ## 0. Előfeltétel — DB-adatlánc kész
 
 A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-descriptions.mjs --only-missing` → `sync-title-recs.mjs` → `recompute-scores.mjs`, majd app-smoke. Amíg nincs kész, a recommend/browse kevés jelöltet ad (502 „nincs elég katalógus-adat", nem crash).

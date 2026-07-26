@@ -150,6 +150,36 @@ terv: `docs/superpowers/plans/2026-07-26-gate-a-kapunyitas.md`.
   láthatóság-kapcsoló, és a publikus `/u/[username]` oldal (privátnál 404, `noindex`,
   nincs a sitemapban).
 
+## 12/c. Ízlés-jelek és lokális rangsor (2026-07-26)
+
+Spec: `docs/superpowers/specs/2026-07-26-izles-jelek-lokalis-rangsor-design.md`,
+terv: `plans/2026-07-26-izles-jelek-lokalis-rangsor.md`.
+
+**Alapelv: az AI tanul, a matek alkalmaz.** A tanulás ritka és emberi tempóhoz kötött
+(egy hívás per megírt vélemény), az alkalmazás gyakori és böngészéshez kötött — eddig
+fordítva volt súlyozva a költség.
+
+- **Strukturált ízlés-jelek**: az `extract` a szabad szöveges tények mellé kötött
+  szókészletű jeleket is ad (`taste-features.ts`: műfaj, tag, format, hossz-sáv, korszak,
+  stúdió, forrás). A szókészletet a vélemény tárgyának saját feature-készlete adja, és egy
+  szókészlet-őr (`filterSignals`) eldobja, ami nem illik bele. Tárolás: `taste_signal` tábla.
+- **Egyesített vektor**: a `buildTasteVector` a viselkedési jel (pont, státusz) mellé
+  szemantikus vektort épít a jelekből, külön normalizálva, `α = 0.4` súllyal, ami kevés
+  jelnél arányosan csökken. Jel nélkül a kimenet bitre azonos a korábbival.
+- **Egy rangsoroló maradt**: a `fit-score`. A gyengébb `candidates.ts`
+  (`genreWeights`/`rankCandidates`) törölve — az hajtotta eddig a recommendet, miközben a
+  jobbik modell csak a `FitBadge`-et.
+- **Lokálisra váltott**: `recommend`, `season-scores`, `upcoming`, és a `vibe`
+  leképezhető chipekkel. Az indoklás a vektorból jön (`fit-reason.ts`), nulla modellhívás.
+- **AI-próza igényre**: `/api/recommend/explain` — egyetlen hívás gombnyomásra, a rangsort
+  nem változtatja. Hiba esetén a lokális indoklás marad, a lista sosem tűnik el.
+- **Változatlanul AI-on** (ez a tanulás): `extract`, `profile`, `taste-eras`, `digest`,
+  `nl-search`, `duo`, `group-pick`.
+
+**Amit a `vibe` chipekből nem lehet lokálisan pontozni:** a `Hangulat` (5 chip) és a
+`Tempó` (2 chip) csoport, valamint a konkrét adaptáció-típusok (manga / light novel /
+játék) — ezekre az AniList-nek nincs megfelelője. Ilyen chipnél marad a modell.
+
 ## 13. Mi NINCS még kész / nyitott pontok
 
 | Tétel | Állapot |
