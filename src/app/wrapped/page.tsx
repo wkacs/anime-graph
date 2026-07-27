@@ -11,7 +11,7 @@ type Data = WrappedData & { years: number[] }
 
 function Slide({ children }: { children: React.ReactNode }) {
   return (
-    <section className="min-h-screen snap-start grid place-items-center px-4">
+    <section className="min-h-[100dvh] snap-start grid place-items-center px-4">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -45,7 +45,7 @@ export default function WrappedPage() {
   if (!data) return <main className="min-h-screen grid place-items-center"><p className="label-mono">Összefoglaló készül…</p></main>
 
   return (
-    <main className="h-screen overflow-y-auto snap-y snap-mandatory">
+    <main className="h-[100dvh] overflow-y-auto snap-y snap-mandatory">
       {storyOpen && <WrappedStory data={data} onExit={() => setStoryOpen(false)} />}
       <Slide>
         <p className="label-mono mb-2">Anime Wrapped</p>
@@ -58,7 +58,7 @@ export default function WrappedPage() {
             </button>
           ))}
         </div>
-        <button onClick={() => setStoryOpen(true)} className="btn-solid cta-glow px-6 py-2.5 text-sm mt-6">
+        <button onClick={() => setStoryOpen(true)} className="btn-solid px-6 py-2.5 text-sm mt-6">
           ▶ Story indítása
         </button>
         <p className="text-text-3 text-sm mt-4">…vagy görgess ↓</p>

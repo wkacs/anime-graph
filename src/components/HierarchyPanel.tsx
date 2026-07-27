@@ -26,7 +26,7 @@ export default function HierarchyPanel({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="glass rounded-full px-4 py-2.5 label-mono hover:bg-white/10 transition-colors"
+        className="surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 hover:text-text-1 transition-colors"
       >
         Szintek · {config.levels.length}
       </button>
@@ -34,7 +34,7 @@ export default function HierarchyPanel({
   }
 
   return (
-    <div className="glass rounded-2xl w-64 p-4 text-sm">
+    <div className="surface-overlay rounded-2xl w-64 p-4 text-sm">
       <div className="flex items-center justify-between mb-3">
         <span className="label-mono">Hierarchia</span>
         <button onClick={() => setOpen(false)} className="btn-ghost px-2 py-0.5 text-xs">✕</button>

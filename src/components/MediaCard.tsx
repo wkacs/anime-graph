@@ -28,11 +28,11 @@ export default function MediaCard({
   if (variant === 'row') {
     const inner = (
       <>
-        <div className="relative w-8 h-11 shrink-0 overflow-hidden rounded-[var(--r-sm)] bg-white/5">
+        <div className="relative w-10 h-14 shrink-0 overflow-hidden rounded-[var(--r-sm)] bg-white/5">
           {coverUrl && <Image src={coverUrl} alt="" fill sizes="32px" className="object-cover" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-text-1 truncate">{title}</p>
+          <p className="text-[15px] font-medium text-text-1 truncate">{title}</p>
           {genres.length > 0 && (
             <p className="font-mono text-[10px] text-text-3 truncate">{genres.slice(0, 2).join(' · ')}</p>
           )}

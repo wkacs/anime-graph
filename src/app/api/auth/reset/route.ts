@@ -6,9 +6,16 @@ import { hashPassword } from '@/lib/password'
 import { createSession, SESSION_DAYS } from '@/lib/auth'
 import { clearTokenVersionCache } from '@/lib/token-version'
 import { MIN_PASSWORD_LENGTH } from '@/lib/registration'
+import { clientIp, rateLimit } from '@/lib/rate-limit'
 import { and, eq, sql } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
+  // A reset-token kriptográfiailag erős, de a végpont eddig korlátlanul
+  // hívható volt — a token-tippelés így legalább mérhető költségbe kerül,
+  // és a hibás próbálkozás-özön sem terheli az adatbázist.
+  if (!(await rateLimit('reset', clientIp(req.headers), 10, 3600))) {
+    return NextResponse.json({ error: 'Túl sok próbálkozás. Próbáld később.' }, { status: 429 })
+  }
   const body = await req.json().catch(() => ({}))
   const raw = String(body.token ?? '')
   const password = String(body.password ?? '')

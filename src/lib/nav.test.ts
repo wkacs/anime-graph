@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import {
-  PRIMARY_TABS, MORE_TABS, MOBILE_TABS,
-  isTabActive, isNavHidden, isMoreActive,
-} from './nav'
+import {PRIMARY_TABS, MORE_TABS, MOBILE_TABS,
+  isTabActive, isNavHidden, isMoreActive, isFooterHidden } from './nav'
 
 describe('nav szerkezet', () => {
   it('5 elsodleges es 5 tovabbi tab', () => {
@@ -70,5 +68,31 @@ describe('isMoreActive', () => {
   it('hamis az elsodleges tabokon', () => {
     expect(isMoreActive('/')).toBe(false)
     expect(isMoreActive('/lista')).toBe(false)
+  })
+})
+
+describe('isFooterHidden', () => {
+  // A teljes-nezetes oldalak sajat magassagot kezelnek (3D-vaszon, snap-story):
+  // ott egy labjegyzet-sav eltolna vagy elvagna a tartalmat.
+  it('rejtve a teljes-nezetes oldalakon', () => {
+    expect(isFooterHidden('/graf')).toBe(true)
+    expect(isFooterHidden('/wrapped')).toBe(true)
+  })
+
+  it('rejtve ott is, ahol a nav rejtve van', () => {
+    expect(isFooterHidden('/login')).toBe(true)
+    expect(isFooterHidden('/p/abc123')).toBe(true)
+  })
+
+  it('lathato a normal oldalakon', () => {
+    expect(isFooterHidden('/')).toBe(false)
+    expect(isFooterHidden('/lista')).toBe(false)
+    expect(isFooterHidden('/toplista')).toBe(false)
+    expect(isFooterHidden('/anime/sousou-no-frieren-154587')).toBe(false)
+    expect(isFooterHidden('/adatvedelem')).toBe(false)
+  })
+
+  it('a grafhoz hasonlo nevu utvonalat nem rejti el tevedesbol', () => {
+    expect(isFooterHidden('/grafikon')).toBe(false)
   })
 })

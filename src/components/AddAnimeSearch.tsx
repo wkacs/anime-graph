@@ -80,13 +80,16 @@ export default function AddAnimeSearch({
   const hasResults = results.length > 0 || fallback.length > 0 || ownMatches.length > 0
 
   return (
-    <div className="w-[min(85vw,20rem)] relative text-sm">
+    // w-full + max-w, NEM w-[min(85vw,20rem)]: a kötött 85vw figyelmen kívül
+    // hagyta a szülő flex-résést, és a gráfon ráfutott az „Ajánlj nekem"
+    // gombra. Így a szülő szabja meg a szélességet, a max-w csak plafon.
+    <div className="relative w-full max-w-80 text-sm">
       <div className="relative">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={mediaType === 'ANIME' ? 'Anime hozzáadása…' : 'Manga hozzáadása…'}
-          className="field glass w-full rounded-full px-4 py-2.5 pr-24"
+          className="field surface-overlay w-full rounded-full px-4 py-2.5 pr-24"
         />
         <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex rounded-full border border-white/10 overflow-hidden">
           {(['ANIME', 'MANGA'] as const).map((t) => (
@@ -103,7 +106,7 @@ export default function AddAnimeSearch({
         </div>
       </div>
       {hasResults && (
-        <ul className="glass-strong absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
+        <ul className="surface-menu absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
           {ownMatches.length > 0 && (
             <li className="label-mono px-2 pt-1 pb-0.5">A listádon — ugrás a gráfon</li>
           )}

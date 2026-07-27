@@ -206,10 +206,10 @@ export default function ListaPage() {
       {/* NINCS overflow-hidden: az scroll-kontenert csinal, ami elrontja a
           <thead> position:sticky-jet. A sarok-lekerekites a tablan van. */}
       <div className="surface-1 rounded-[var(--r-lg)]">
-        <table className="w-full text-sm rounded-[var(--r-lg)]">
+        <table className="w-full text-[15px] rounded-[var(--r-lg)]">
           <thead className="sticky top-[4.5rem] z-20 backdrop-blur-md bg-[#0d0d10]/95">
             <tr className="border-b border-white/8">
-              <th className="w-14" />
+              <th className="w-20" />
               <Th k="titleRomaji">Cím</Th>
               <Th k="year" className="hidden sm:table-cell">Év</Th>
               <Th k="studio" className="hidden md:table-cell">Stúdió</Th>
@@ -241,13 +241,13 @@ export default function ListaPage() {
                         className="poster-glow opacity-0 group-hover:opacity-45"
                       />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={a.coverUrl} alt="" className="relative w-9 h-12 object-cover rounded-[var(--r-sm)]" />
+                      <img src={a.coverUrl} alt="" className="relative w-[52px] h-[72px] object-cover rounded-[var(--r-sm)] border border-white/10" />
                     </>
                   )}
                 </td>
                 <td className="px-3 py-2">
                   <p className="font-medium leading-tight">{a.titleRomaji}</p>
-                  {a.titleNative && <p className="text-[11px] text-text-3 leading-tight mt-0.5">{a.titleNative}</p>}
+                  {a.titleNative && <p className="text-xs text-text-3 leading-tight mt-1">{a.titleNative}</p>}
                 </td>
                 <td className="px-3 py-2 font-mono text-xs text-text-2 hidden sm:table-cell">{a.year ?? '–'}</td>
                 <td className="px-3 py-2 text-text-2 hidden md:table-cell">{a.studio ?? '–'}</td>

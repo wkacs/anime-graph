@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, Instrument_Serif, Geist_Mono, Noto_Sans_JP } from "next/font/google";
+import { Instrument_Sans, Bricolage_Grotesque, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
 import MobileTabBar from "@/components/MobileTabBar";
+import SiteFooter from "@/components/SiteFooter";
 import "./globals.css";
 
 const instrument = Instrument_Sans({
@@ -10,11 +11,13 @@ const instrument = Instrument_Sans({
   subsets: ["latin"],
 });
 
-// display-vágás: NEM variable font, a weight kötelező
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  weight: "400",
-  subsets: ["latin"],
+// Display-vágás: film-főcím logika, nem irodalmi serif. A wdth tengelyt a
+// .display-* osztályok hangolják, az opsz-t a böngésző (font-optical-sizing).
+// latin-ext explicit: a magyar ő/ű a display-fokozaton is a webfontból jöjjön.
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin", "latin-ext"],
+  axes: ["opsz", "wdth"],
 });
 
 const geistMono = Geist_Mono({
@@ -49,11 +52,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${instrument.variable} ${instrumentSerif.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
+        className={`${instrument.variable} ${bricolage.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
         <IntlProvider>
           <TopNav />
           {children}
+          <SiteFooter />
           <MobileTabBar />
         </IntlProvider>
       </body>

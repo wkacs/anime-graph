@@ -10,33 +10,75 @@ export default function WeekCalendar({ mine }: { mine: MineItem[] }) {
 
   return (
     <section>
-      <SectionHeader eyebrow="Adásnaptár" title="A heted" />
-      <div className="grid grid-cols-7 gap-2">
+      <SectionHeader title="A heted" />
+
+      {/* Mobilon vízszintesen görgethető sáv 108px-es napokkal: hét egyenlő
+          oszlop 390px-en 48px-et adott naponként, amibe csak bélyegkép fért.
+          sm-től valódi 7 oszlopos rács. A flex/grid váltás Tailwinden megy,
+          nem a .snap-row osztályon, hogy ne kelljen display-specificitást
+          csatázni. */}
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-7 sm:overflow-visible sm:px-0">
         {WEEKDAY_LABELS.map((label, day) => {
           const items = mine.filter((m) => weekdayIndexBudapest(m.airingAt) === day)
           const today = day === todayIdx
           return (
             <div
               key={label}
-              className={`rounded-[var(--r-md)] p-2 min-h-24 ${today ? 'surface-2' : 'surface-1'}`}
+              aria-current={today ? 'date' : undefined}
+              className={`w-[108px] shrink-0 rounded-[var(--r-md)] p-2 sm:w-auto ${
+                today ? 'surface-2 ring-1 ring-white/20' : 'surface-1'
+              }`}
             >
-              <p className={`label-mono mb-2 text-center ${today ? '!text-text-1' : ''}`}>{label}</p>
-              <div className="flex flex-col items-center gap-1.5">
-                {items.map((m) => (
-                  <Link key={m.animeId} href={`/anime/${m.animeId}`} title={m.title}>
-                    {m.coverUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={m.coverUrl}
-                        alt={m.title}
-                        className="w-9 h-12 object-cover rounded-[var(--r-sm)] hover:scale-110 transition-transform"
-                      />
-                    ) : (
-                      <span className="text-[10px] text-text-2">{m.title.slice(0, 8)}</span>
-                    )}
-                  </Link>
-                ))}
-              </div>
+              <p
+                className={`mb-2 text-center text-xs font-medium uppercase tracking-wide ${
+                  today ? 'text-text-1' : 'text-text-2'
+                }`}
+              >
+                {label}
+              </p>
+
+              {items.length === 0 ? (
+                <p className="py-4 text-center text-xs text-text-3" aria-label="nincs adás">
+                  -
+                </p>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {items.map((m) => (
+                    <Link
+                      key={m.animeId}
+                      href={`/anime/${m.animeId}`}
+                      title={m.title}
+                      className="group block"
+                    >
+                      <div className="relative">
+                        {m.coverUrl ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={m.coverUrl}
+                            alt=""
+                            loading="lazy"
+                            className="w-full rounded-[var(--r-sm)] border border-white/10 object-cover transition-transform group-hover:scale-[1.04]"
+                            style={{ aspectRatio: '2 / 3' }}
+                          />
+                        ) : (
+                          <div
+                            className="w-full rounded-[var(--r-sm)] bg-white/5"
+                            style={{ aspectRatio: '2 / 3' }}
+                          />
+                        )}
+                        {m.nextEpisode > 0 && (
+                          <span className="surface-3 absolute bottom-1 right-1 rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-text-1">
+                            {m.nextEpisode}.
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1.5 line-clamp-2 text-[11px] leading-snug text-text-2 group-hover:text-text-1">
+                        {m.title}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}

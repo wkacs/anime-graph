@@ -45,12 +45,18 @@ export default function TourSpotlight({ page, steps, force = false }: {
       cancelAnimationFrame(rafRef.current)
       rafRef.current = requestAnimationFrame(measure)
     }
-    window.addEventListener('resize', onMove)
-    window.addEventListener('scroll', onMove, true)
+    // A harmadik argumentum korabban csupasz `true` volt: az useCapture, NEM
+    // options — vagyis a listener nem-passziv maradt es blokkolta a gorgetest.
+    // Itt a scroll-listener indokolt: a reflektor folyamatos pozicio-kovetest
+    // igenyel, amit IntersectionObserver nem ad meg. A rAF-fojtas megvan,
+    // es a figyelo csak a nyitott tura alatt el.
+    const opts = { capture: true, passive: true } as const
+    window.addEventListener('resize', onMove, { passive: true })
+    window.addEventListener('scroll', onMove, opts)
     return () => {
       clearTimeout(t)
       window.removeEventListener('resize', onMove)
-      window.removeEventListener('scroll', onMove, true)
+      window.removeEventListener('scroll', onMove, opts)
     }
   }, [idx, measure, steps])
 

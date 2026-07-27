@@ -82,8 +82,10 @@ export default async function CatalogTitlePage({
             )}
             <div className="flex-1 min-w-0">
               <h1 className="display-xl text-text-1">{t.titleRomaji}</h1>
+              {/* text-2, nem text-3: az eredeti cím valódi tartalom, ráadásul
+                  a poszter-ambiens fölött áll, ahol a text-3 nem AA-biztos. */}
               {t.titleNative && (
-                <p className="font-jp text-text-3 mt-2 text-lg">{t.titleNative}</p>
+                <p className="font-jp text-text-2 mt-2 text-lg">{t.titleNative}</p>
               )}
               {t.titleEnglish && t.titleEnglish !== t.titleRomaji && (
                 <p className="text-text-2 text-sm mt-1">{t.titleEnglish}</p>
@@ -138,7 +140,7 @@ export default async function CatalogTitlePage({
 
         {t.description && (
           <section>
-            <SectionHeader eyebrow="Leírás" title="Miről szól" />
+            <SectionHeader title="Miről szól" />
             <p className="text-[15px] text-text-1 leading-[1.75] max-w-[62ch]">{stripHtml(t.description)}</p>
           </section>
         )}
@@ -182,7 +184,7 @@ export default async function CatalogTitlePage({
 
         {staff.length > 0 && (
           <section>
-            <SectionHeader eyebrow="Stáb" title="Kik csinálták" />
+            <SectionHeader title="Kik csinálták" />
             <div className="snap-row no-scrollbar pb-2">
               {staff.map((s) => (
                 <div key={s.staffId} className="surface-1 flex items-center gap-2.5 rounded-full pl-1 pr-4 py-1">
@@ -212,7 +214,7 @@ export default async function CatalogTitlePage({
 
         {otherRelations.length > 0 && (
           <section>
-            <SectionHeader eyebrow="Kapcsolódó" title="A sorozat többi része" />
+            <SectionHeader title="A sorozat többi része" />
             <ul className="surface-1 rounded-[var(--r-lg)] p-2 flex flex-col">
               {otherRelations.map((r) => (
                 <li key={`${r.type}-${r.anilistId}`}>

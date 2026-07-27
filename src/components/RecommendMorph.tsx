@@ -84,7 +84,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
       layout
       transition={spring}
       style={{ borderRadius: 22 }}
-      className={`glass-strong overflow-hidden ${open ? '' : 'cta-glow'}`}
+      className="surface-overlay overflow-hidden"
     >
       <AnimatePresence mode="popLayout" initial={false}>
         {!open ? (

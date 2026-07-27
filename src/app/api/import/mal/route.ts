@@ -4,6 +4,7 @@ import { mapTitle } from '@/lib/catalog'
 import { parseMalXml } from '@/lib/import'
 import { upsertImported, type ImportRow } from '@/lib/import-upsert'
 import { requireUserId } from '@/lib/session'
+import { rateLimit } from '@/lib/rate-limit'
 
 function chunks<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
@@ -14,6 +15,11 @@ function chunks<T>(arr: T[], size: number): T[][] {
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  // Az import külső API-t hív és tömegesen ír — egy elszabadult kliens percek
+  // alatt megterhelné az AniList-kvótánkat és az adatbázist.
+  if (!(await rateLimit('import', String(userId), 5, 3600))) {
+    return NextResponse.json({ error: 'Túl sok import egymás után. Próbáld egy óra múlva.' }, { status: 429 })
+  }
   const body = await req.json().catch(() => null)
   const xml = String(body?.xml ?? '')
   if (!xml.includes('<anime>')) {

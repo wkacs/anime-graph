@@ -42,6 +42,16 @@ export function isNavHidden(pathname: string): boolean {
   return pathname === '/login' || pathname === '/p' || pathname.startsWith('/p/')
 }
 
+// A gráf 3D-vászna és a wrapped snap-sztorija saját, teljes nézetmagasságot
+// kezel — ott egy lábléc-sáv eltolná vagy elvágná a tartalmat. Ahol a nav is
+// rejtve van (login, megosztott lista), ott a lábléc sem kell.
+const FULL_VIEW_ROUTES = ['/graf', '/wrapped']
+
+export function isFooterHidden(pathname: string): boolean {
+  if (isNavHidden(pathname)) return true
+  return FULL_VIEW_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))
+}
+
 export function isMoreActive(pathname: string): boolean {
   return MORE_TABS.some((t) => isTabActive(t.href, pathname))
 }

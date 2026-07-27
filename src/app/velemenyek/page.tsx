@@ -80,13 +80,13 @@ export default function VelemenyekPage() {
             <div key={item.id} className="glass rounded-3xl p-4 flex gap-4">
               {item.coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.coverUrl} alt="" className="w-20 self-start aspect-[2/3] object-cover rounded-xl border border-white/8 shrink-0" />
+                <img src={item.coverUrl} alt="" className="w-28 self-start aspect-[2/3] object-cover rounded-xl border border-white/10 shrink-0" />
               ) : (
-                <div className="w-20 aspect-[2/3] rounded-xl bg-white/5 shrink-0" />
+                <div className="w-28 aspect-[2/3] rounded-xl bg-white/5 shrink-0" />
               )}
               <div className="flex-1 min-w-0 flex flex-col gap-2">
                 <div>
-                  <p className="text-sm font-medium leading-tight">{item.titleRomaji}</p>
+                  <p className="text-base font-medium leading-tight">{item.titleRomaji}</p>
                   <p className="flex items-center gap-1.5 mt-1">
                     <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CSS_VARS[item.status] ?? 'white' }} />
                     <span className="label-mono !text-[9px]">

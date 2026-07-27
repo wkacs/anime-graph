@@ -1,19 +1,17 @@
 'use client'
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
+import PageShell from '@/components/ui/PageShell'
+import Skeleton from '@/components/ui/Skeleton'
+import Podium from '@/components/toplista/Podium'
+import LeaderboardRow from '@/components/toplista/LeaderboardRow'
+import type { LeaderRow } from '@/lib/leaderboard-metric'
 import type { LeaderboardTab } from '@/lib/leaderboard'
 
-type Row = {
-  rank: number; id: number; slug: string; mediaType: string; titleRomaji: string
-  coverUrl: string | null; genres: string[]; avgScore: number | null
-  communityScore: number | null; communityCount: number; popularity: number
-}
-
-const TABS: { id: LeaderboardTab; label: string; hint: string }[] = [
-  { id: 'sajat', label: 'Nálunk', hint: 'a mi értékeléseink (bayesian átlag, min. 2 pontozó)' },
-  { id: 'anilist', label: 'AniList', hint: 'AniList átlagpontszám a teljes katalóguson' },
-  { id: 'nepszeru', label: 'Legnézettebb', hint: 'hányan vettük fel a listánkra' },
+const TABS: { id: LeaderboardTab; labelKey: string; hintKey: string }[] = [
+  { id: 'sajat', labelKey: 'tabOwn', hintKey: 'hintOwn' },
+  { id: 'anilist', labelKey: 'tabAnilist', hintKey: 'hintAnilist' },
+  { id: 'nepszeru', labelKey: 'tabPopular', hintKey: 'hintPopular' },
 ]
 
 // az AniList zárt genre-halmaza, ahogy a title.genres tárolja
@@ -24,10 +22,11 @@ const GENRES = [
 ]
 
 export default function ToplistaPage() {
+  const t = useTranslations('leaderboard')
   const [tab, setTab] = useState<LeaderboardTab>('anilist')
   const [type, setType] = useState<'ANIME' | 'MANGA'>('ANIME')
   const [genre, setGenre] = useState<string | null>(null)
-  const [rows, setRows] = useState<Row[] | null>(null)
+  const [rows, setRows] = useState<LeaderRow[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -37,72 +36,76 @@ export default function ToplistaPage() {
     if (genre) qs.set('genre', genre)
     fetch(`/api/leaderboard?${qs}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Hiba történt')
-        const j = await r.json() as { items: Row[] }
+        if (!r.ok) throw new Error((await r.json()).error ?? 'Request failed')
+        const j = await r.json() as { items: LeaderRow[] }
         setRows(j.items)
       })
       .catch((e) => setError(String(e.message ?? e)))
   }, [tab, type, genre])
 
-  const activeTab = TABS.find((t) => t.id === tab)!
-
-  function metric(r: Row): string {
-    if (tab === 'sajat') return r.communityScore != null ? `★ ${r.communityScore.toFixed(1)} · ${r.communityCount} pontozó` : '–'
-    if (tab === 'nepszeru') return `${r.popularity} listán`
-    return r.avgScore != null ? `${r.avgScore}%` : '–'
-  }
+  const activeTab = TABS.find((x) => x.id === tab)!
+  const podium = rows?.slice(0, 3) ?? []
+  const restRows = rows?.slice(3) ?? []
 
   return (
-    <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
-      <div>
-        <p className="label-mono mb-1">Toplista</p>
-        <h1 className="text-2xl font-semibold tracking-tight">A legjobbra értékelt címek</h1>
-        <p className="text-sm text-text-2 mt-1">{activeTab.hint}</p>
-      </div>
+    <PageShell className="flex flex-col gap-6">
+      {/* Nincs „TOPLISTA" eyebrow a cím fölött: pontosan azt ismételte, amit a
+          cím és a nav amúgy is elmond. */}
+      <header>
+        <h1 className="display-l text-text-1">{t('heading')}</h1>
+        <p className="mt-1.5 text-sm text-text-2">{t(activeTab.hintKey)}</p>
+      </header>
 
-      <div className="glass rounded-3xl p-4 flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex rounded-full border border-white/10 overflow-hidden">
-          {TABS.map((t) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex overflow-hidden rounded-full border border-white/10">
+          {/* a ciklusváltozó NEM `t`: elfedné a fordító függvényt */}
+          {TABS.map((item) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                tab === t.id ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
+              key={item.id}
+              onClick={() => setTab(item.id)}
+              aria-pressed={tab === item.id}
+              className={`px-3.5 py-1.5 text-xs transition-colors ${
+                tab === item.id ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
               }`}
             >
-              {t.label}
+              {t(item.labelKey)}
             </button>
           ))}
         </div>
-        <div className="flex rounded-full border border-white/10 overflow-hidden">
-          {(['ANIME', 'MANGA'] as const).map((t) => (
+        <div className="flex overflow-hidden rounded-full border border-white/10">
+          {(['ANIME', 'MANGA'] as const).map((mt) => (
             <button
-              key={t}
-              onClick={() => setType(t)}
-              className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wide transition-colors ${
-                type === t ? 'bg-white/10 text-text-1' : 'text-text-2 hover:text-text-1'
+              key={mt}
+              onClick={() => setType(mt)}
+              aria-pressed={type === mt}
+              className={`px-3.5 py-1.5 text-xs transition-colors ${
+                type === mt ? 'bg-white/10 text-text-1' : 'text-text-2 hover:text-text-1'
               }`}
             >
-              {t === 'ANIME' ? 'Anime' : 'Manga'}
+              {mt === 'ANIME' ? t('anime') : t('manga')}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      {/* 18 műfaj korábban három sorba tördelve elvitte az első képernyőt.
+          Vízszintes snap-sáv: egy sor magas, a tartalom feljebb kerül. */}
+      <div className="snap-row no-scrollbar snap-fade -mx-4 px-4" style={{ gap: 'var(--sp-2)' }}>
         <button
           onClick={() => setGenre(null)}
-          className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+          aria-pressed={genre === null}
+          className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors ${
             genre === null ? 'border-white/40 text-text-1' : 'border-white/10 text-text-2 hover:text-text-1'
           }`}
         >
-          Minden műfaj
+          {t('allGenres')}
         </button>
         {GENRES.map((g) => (
           <button
             key={g}
             onClick={() => setGenre(genre === g ? null : g)}
-            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+            aria-pressed={genre === g}
+            className={`shrink-0 rounded-full border px-3 py-1 text-xs transition-colors ${
               genre === g ? 'border-white/40 text-text-1' : 'border-white/10 text-text-2 hover:text-text-1'
             }`}
           >
@@ -112,48 +115,46 @@ export default function ToplistaPage() {
       </div>
 
       {error && <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>}
+
+      {/* Vázlat a végleges elrendezés alakjában, nem pulzáló „Betöltés…" felirat. */}
       {rows == null && !error && (
-        <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
-          Betöltés…
-        </motion.p>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-3 md:grid-cols-[1.55fr_1fr]">
+            <div className="surface-1 rounded-[var(--r-lg)] p-5">
+              <div className="flex gap-5">
+                <div className="w-28 shrink-0 sm:w-32"><Skeleton variant="poster" count={1} /></div>
+                <div className="flex-1 pt-2"><Skeleton variant="text" count={3} /></div>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-1">
+              <div className="surface-1 rounded-[var(--r-md)] p-3"><Skeleton variant="row" count={1} /></div>
+              <div className="surface-1 rounded-[var(--r-md)] p-3"><Skeleton variant="row" count={1} /></div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3"><Skeleton variant="row" count={8} /></div>
+        </div>
       )}
+
       {rows != null && rows.length === 0 && (
         <p className="text-sm text-text-2">
-          {tab === 'sajat'
-            ? 'Ehhez még kevés a házon belüli értékelés — pontozzatok, és épül a lista.'
-            : 'Nincs találat ezzel a szűrővel.'}
+          {tab === 'sajat' ? t('emptyOwn') : t('emptyFiltered')}
         </p>
       )}
 
       {rows != null && rows.length > 0 && (
-        <ol className="flex flex-col gap-2">
-          {rows.map((r) => (
-            <li key={r.id}>
-              <Link
-                href={`/${r.mediaType === 'MANGA' ? 'manga' : 'anime'}/${r.slug}`}
-                className="glass rounded-2xl p-3 flex items-center gap-3 hover:bg-white/6 transition-colors"
-              >
-                <span className={`font-mono text-sm w-8 shrink-0 text-right tabular-nums ${
-                  r.rank <= 3 ? 'text-text-1 font-semibold' : 'text-text-3'
-                }`}>
-                  {r.rank}.
-                </span>
-                {r.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.coverUrl} alt="" className="w-9 aspect-[2/3] object-cover rounded-lg border border-white/8 shrink-0" />
-                ) : (
-                  <div className="w-9 aspect-[2/3] rounded-lg bg-white/5 shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{r.titleRomaji}</p>
-                  <p className="text-[11px] text-text-3 truncate">{r.genres.slice(0, 3).join(' · ')}</p>
-                </div>
-                <span className="label-mono shrink-0">{metric(r)}</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
+        <div className="flex flex-col gap-6">
+          <Podium rows={podium} tab={tab} />
+          {restRows.length > 0 && (
+            <ol className="flex flex-col">
+              {restRows.map((r) => (
+                <li key={r.id}>
+                  <LeaderboardRow row={r} tab={tab} />
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       )}
-    </main>
+    </PageShell>
   )
 }

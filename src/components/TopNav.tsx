@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { useScroll, useMotionValueEvent } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import LocaleSwitcher from './LocaleSwitcher'
 import { PRIMARY_TABS, MORE_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
@@ -24,13 +25,12 @@ export default function TopNav() {
       .catch(() => { /* badge nelkul is el a nav */ })
   }, [pathname, hidden])
 
-  // a nav lefele scrollnal surubb lesz
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  // A nav lefele scrollnal surubb lesz. Nyers window scroll-listener helyett a
+  // Motion useScroll-ja: a pozicio motion-value-kent el, a React fan kivul.
+  // A setScrolled azonos ertekkel nem renderel ujra, igy a hatarertek ket
+  // oldalan nulla render fut — a korabbi listener minden framen ujrarenderelt.
+  const { scrollY } = useScroll()
+  useMotionValueEvent(scrollY, 'change', (v) => setScrolled(v > 24))
 
   // a Tovabb menu bezarasa kulso kattintasra / Escape-re
   useEffect(() => {
@@ -58,8 +58,14 @@ export default function TopNav() {
     }`
 
   return (
+    <>
     <nav
-      className={`fixed top-4 left-1/2 -translate-x-1/2 z-40 rounded-full pl-4 pr-2 py-1.5 hidden md:flex items-center gap-2 max-w-[95vw] whitespace-nowrap overflow-x-auto no-scrollbar transition-[background,box-shadow] duration-300 ${
+      /* NINCS overflow-x-auto: az overflow bármelyik tengelyen kivágja a
+         „Több" legördülőt, mert az a nav dobozán KÍVÜL, alatta nyílik.
+         (A CSS spec szerint ha az egyik tengely nem `visible`, a másik
+         `visible` értéke is `auto`-ra vált — így az overflow-y is vágott.)
+         A nav asztalon egy sorban elfér, görgetnie nem kell. */
+      className={`fixed top-4 left-1/2 -translate-x-1/2 z-40 rounded-full pl-4 pr-2 py-1.5 hidden md:flex items-center gap-2 max-w-[95vw] whitespace-nowrap transition-[background,box-shadow] duration-300 ${
         scrolled ? 'surface-3' : 'surface-2'
       }`}
     >
@@ -71,8 +77,11 @@ export default function TopNav() {
           <circle cx="4" cy="13" r="1.6" fill="currentColor" fillOpacity="0.75" />
           <circle cx="14" cy="13" r="1.6" fill="currentColor" fillOpacity="0.75" />
         </svg>
-        <span className="display-l !text-[17px] leading-none text-text-1">Anime Graph</span>
-        <span className="label-mono hidden lg:inline">アニメ</span>
+        {/* md-n csak a gráf-jel fér el egy sorban; a szóvédjegy lg-től jön.
+            Görgetés helyett tömörítünk: a nav asztalon soha ne törjön két sorba
+            és ne lógjon ki a pill-ből. */}
+        <span className="display-l !text-[17px] leading-none text-text-1 hidden lg:inline">Anime Graph</span>
+        <span className="label-mono hidden xl:inline">アニメ</span>
       </Link>
 
       <div className="h-4 w-px bg-white/10 shrink-0" />
@@ -144,5 +153,6 @@ export default function TopNav() {
         </svg>
       </Link>
     </nav>
+    </>
   )
 }

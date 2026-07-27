@@ -2,9 +2,12 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 const VARIANTS = {
-  /** mono adat: ev, format, hossz, pontszam */
-  data: 'surface-2 font-mono text-text-2',
-  /** mufaj: csak korvonal */
+  /** mono adat: ev, format, hossz, pontszam.
+      text-1: ezek tenyadatok, amiket a hasznalo szemmel keres a fejlecben,
+      raadasul a cimoldalon a poszter-ambiens folott ulnek, ahol a hatter
+      cimenkent mas. Teljes kontraszt kell. */
+  data: 'surface-2 font-mono text-text-1',
+  /** mufaj: csak korvonal, masodlagos */
   genre: 'hairline text-text-2',
   /** kattinthato / eldobhato aktiv szuro */
   link: 'hairline text-text-1 hover:border-white/35',

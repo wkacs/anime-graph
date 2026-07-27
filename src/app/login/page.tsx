@@ -1,10 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset'
 
 export default function LoginPage() {
+  const t = useTranslations('auth')
+  const locale = useLocale()
   const [mode, setMode] = useState<Mode>('login')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -40,7 +44,7 @@ export default function LoginPage() {
           body: JSON.stringify({ email }),
         })
         // szándékosan ugyanaz a válasz létező és nem létező címre
-        setNotice('Ha van ilyen fiók, elküldtük a linket.')
+        setNotice(t('forgotSent'))
         return
       }
 
@@ -51,7 +55,7 @@ export default function LoginPage() {
           body: JSON.stringify({ token: resetToken, password }),
         })
         if (res.ok) { router.push('/'); return }
-        setError((await res.json().catch(() => null))?.error ?? 'Hiba történt')
+        setError((await res.json().catch(() => null))?.error ?? t('genericError'))
         return
       }
 
@@ -61,23 +65,26 @@ export default function LoginPage() {
         body: JSON.stringify(
           mode === 'login'
             ? { username, password }
-            : { username, email, password, invite, locale: 'hu' },
+            // A felület nyelvét visszük tovább a fiókba. Korábban beégetett
+            // 'hu' volt: minden új felhasználó magyar beállítással jött létre,
+            // akkor is, ha végig angolul regisztrált.
+            : { username, email, password, invite, locale },
         ),
       })
       if (res.ok) { router.push(mode === 'register' ? '/onboarding' : '/'); return }
       const json = await res.json().catch(() => null)
       if (res.status === 403) setInviteNeeded(true)
-      setError(json?.error ?? 'Hiba történt')
+      setError(json?.error ?? t('genericError'))
     } finally {
       setBusy(false)
     }
   }
 
   const submitLabel = {
-    login: 'Belépés',
-    register: 'Fiók létrehozása',
-    forgot: 'Link küldése',
-    reset: 'Új jelszó mentése',
+    login: t('submitLogin'),
+    register: t('submitRegister'),
+    forgot: t('submitForgot'),
+    reset: t('submitReset'),
   }[mode]
 
   return (
@@ -99,28 +106,24 @@ export default function LoginPage() {
                   mode === m ? 'bg-white/12 text-text-1' : 'text-text-3 hover:text-text-2'
                 }`}
               >
-                {m === 'login' ? 'Belépés' : 'Regisztráció'}
+                {m === 'login' ? t('tabLogin') : t('tabRegister')}
               </button>
             ))}
           </div>
         )}
 
         {mode === 'forgot' && (
-          <p className="text-[13px] text-text-2 text-center -mt-1">
-            Add meg az e-mail-címed, és küldünk egy visszaállító linket.
-          </p>
+          <p className="text-[13px] text-text-2 text-center -mt-1">{t('forgotHint')}</p>
         )}
         {mode === 'reset' && (
-          <p className="text-[13px] text-text-2 text-center -mt-1">
-            Adj meg egy új jelszót. A mentés minden más eszközön kilépteti a fiókot.
-          </p>
+          <p className="text-[13px] text-text-2 text-center -mt-1">{t('resetHint')}</p>
         )}
 
         {(mode === 'login' || mode === 'register') && (
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Felhasználónév"
+            placeholder={t('username')}
             autoComplete="username"
             className="field px-4 py-2.5 text-sm"
             autoFocus
@@ -132,7 +135,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="E-mail-cím"
+            placeholder={t('email')}
             autoComplete="email"
             className="field px-4 py-2.5 text-sm"
           />
@@ -143,7 +146,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={mode === 'login' ? 'Jelszó' : 'Jelszó (min. 8 karakter)'}
+            placeholder={mode === 'login' ? t('password') : t('passwordNew')}
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
             className="field px-4 py-2.5 text-sm"
           />
@@ -153,7 +156,7 @@ export default function LoginPage() {
           <input
             value={invite}
             onChange={(e) => setInvite(e.target.value)}
-            placeholder="Meghívó-kód"
+            placeholder={t('inviteCode')}
             className="field px-4 py-2.5 text-sm"
           />
         )}
@@ -165,13 +168,29 @@ export default function LoginPage() {
           {busy ? '…' : submitLabel}
         </button>
 
+        {/* A regisztráció a hozzájárulás pillanata: itt kell látnia a
+            feltételeket, nem egy eldugott láblécben. */}
+        {mode === 'register' && (
+          <p className="text-[11px] leading-relaxed text-text-3">
+            {t('termsPrefix')}{' '}
+            <Link href="/aszf" className="text-text-2 underline decoration-white/20 underline-offset-2 hover:text-text-1">
+              {t('termsLink')}
+            </Link>{' '}
+            {t('termsMiddle')}{' '}
+            <Link href="/adatvedelem" className="text-text-2 underline decoration-white/20 underline-offset-2 hover:text-text-1">
+              {t('privacyLink')}
+            </Link>
+            {t('termsSuffix')}
+          </p>
+        )}
+
         {mode === 'login' && (
           <button
             type="button"
             onClick={() => switchTo('forgot')}
             className="text-xs text-text-3 hover:text-text-2 transition-colors"
           >
-            Elfelejtettem a jelszavam
+            {t('forgotLink')}
           </button>
         )}
         {(mode === 'forgot' || mode === 'reset') && (
@@ -180,7 +199,7 @@ export default function LoginPage() {
             onClick={() => switchTo('login')}
             className="text-xs text-text-3 hover:text-text-2 transition-colors"
           >
-            Vissza a belépéshez
+            {t('backToLogin')}
           </button>
         )}
       </form>

@@ -198,7 +198,7 @@ export default function GrafPage() {
 
   return (
     <main
-      className="relative h-screen w-screen overflow-hidden"
+      className="relative h-[100dvh] w-screen overflow-hidden"
       onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
     >
       <div data-tour="graph" className="absolute inset-0">
@@ -214,8 +214,16 @@ export default function GrafPage() {
         />
       </div>
 
-      <div className="fixed top-20 left-4 z-20">
-        <AddAnimeSearch onAdded={handleAdded} ownList={animeList} onPickOwn={flyToAnime} />
+      {/* Kereső és „Ajánlj nekem" EGY sorban osztozik. Külön fixed elemként
+          390px-en egymásra csúsztak (x 234–336 átfedés). Desktopon a
+          justify-between visszateszi őket a két sarokba. */}
+      <div className="fixed top-20 left-4 right-4 z-20 flex items-start justify-between gap-2 pointer-events-none">
+        <div className="min-w-0 flex-1 pointer-events-auto md:max-w-sm">
+          <AddAnimeSearch onAdded={handleAdded} ownList={animeList} onPickOwn={flyToAnime} />
+        </div>
+        <div className="shrink-0 pointer-events-auto">
+          <RecommendMorph onAdded={refresh} />
+        </div>
       </div>
 
       {/* breadcrumb a drill-down nézetben */}
@@ -223,7 +231,7 @@ export default function GrafPage() {
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-20">
           <button
             onClick={() => { setFocusGenre(null); setFitKey(Date.now()) }}
-            className="glass rounded-full px-4 py-2 text-sm text-text-1 hover:bg-white/10 transition-colors"
+            className="surface-overlay rounded-full px-4 py-2 text-sm text-text-1 hover:bg-white/10 transition-colors"
           >
             ← Minden műfaj
             <span className="label-mono ml-2">{focusGenre} · {animeNodeCount}</span>
@@ -231,10 +239,14 @@ export default function GrafPage() {
         </div>
       )}
 
-      {/* mobilon az also tab-sav fole (bottom-24), desktopon a lap aljara */}
-      <div className="fixed bottom-24 md:bottom-4 left-4 z-20 flex items-end gap-2">
+      {/* Alsó vezérlők EGY konténerben. Korábban a gombsor és az időutazás-
+          csúszka két külön fixed elem volt azonos bottom-értékkel: 390px-en
+          a gombsor 592px-re nőtt (kilógott), és rácsúszott a csúszkára.
+          Mobilon egymás alá kerülnek, a gombsor vízszintesen görgethető. */}
+      <div className="fixed bottom-24 md:bottom-4 left-0 right-0 z-20 flex flex-col gap-2 px-4 pointer-events-none md:flex-row md:items-end md:justify-between">
+        <div className="-mx-4 flex items-end gap-2 overflow-x-auto px-4 no-scrollbar pointer-events-auto md:mx-0 md:overflow-visible md:px-0">
         {advanced && !timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
-        <div className="glass rounded-full p-1 flex">
+        <div className="surface-overlay rounded-full p-1 flex shrink-0">
           {MEDIA_MODES.map((m) => (
             <button
               key={m.value}
@@ -244,7 +256,7 @@ export default function GrafPage() {
                 setFocusGenre(null)
                 setFitKey(Date.now())
               }}
-              className={`rounded-full px-3 py-1.5 label-mono transition-colors ${
+              className={`rounded-full px-3 py-2 text-xs text-text-2 transition-colors ${
                 mediaMode === m.value ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
               }`}
             >
@@ -256,14 +268,14 @@ export default function GrafPage() {
           <button
             data-tour="view-toggle"
             onClick={() => setView(!advanced)}
-            className="glass rounded-full px-4 py-2.5 label-mono hover:bg-white/10 transition-colors"
+            className="surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 hover:text-text-1 transition-colors"
           >
             {advanced ? 'Egyszerű nézet' : 'Haladó nézet'}
           </button>
         )}
         <button
           onClick={() => setFlythrough(timelineMode ? 0 : Date.now())}
-          className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
+          className={`surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 transition-colors ${
             timelineMode ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
           }`}
         >
@@ -277,7 +289,7 @@ export default function GrafPage() {
               localStorage.setItem(CHARS_KEY, next ? '1' : '0')
             }}
             title="Kedvenc karakterek a gráfban, azonos seiyuu-nál keresztéllel"
-            className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
+            className={`surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 transition-colors ${
               showChars ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
             }`}
           >
@@ -292,22 +304,21 @@ export default function GrafPage() {
               localStorage.setItem(STAFF_KEY, next ? '1' : '0')
             }}
             title="Rendezők a gráfban — közös rendező összeköti az animéidet"
-            className={`glass rounded-full px-4 py-2.5 label-mono transition-colors ${
+            className={`surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 transition-colors ${
               showStaff ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
             }`}
           >
             🎬 Stáb
           </button>
         )}
-      </div>
+        </div>
 
-      <div className="fixed top-20 right-4 z-20">
-        <RecommendMorph onAdded={refresh} />
-      </div>
-
-      {/* időutazás: így nőtt az univerzumod évről évre */}
+      {/* időutazás: így nőtt az univerzumod évről évre.
+          Ugyanabban a konténerben, mint a gombsor — mobilon alá kerül,
+          desktopon a jobb szélre. Korábban külön fixed elem volt azonos
+          bottom-értékkel, ezért rácsúszott a gombsorra. */}
       {!timelineMode && minYear < maxYear && (
-        <div className="fixed bottom-24 md:bottom-4 right-4 z-20 glass rounded-full px-4 py-2.5 flex items-center gap-3">
+        <div className="surface-overlay pointer-events-auto flex shrink-0 items-center gap-3 self-start rounded-full px-4 py-2.5 md:self-end">
           <span className="label-mono">Időutazás</span>
           <input
             type="range"
@@ -325,6 +336,7 @@ export default function GrafPage() {
           </span>
         </div>
       )}
+      </div>
 
       {animeList.length === 0 && (
         <div className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -339,7 +351,7 @@ export default function GrafPage() {
 
       {hoverAnime && (
         <div
-          className="glass-strong fixed z-30 w-64 rounded-2xl p-3 pointer-events-none flex gap-3"
+          className="surface-overlay fixed z-30 w-64 rounded-2xl p-3 pointer-events-none flex gap-3"
           style={{
             left: Math.min(mouse.x + 18, typeof window !== 'undefined' ? window.innerWidth - 280 : mouse.x),
             top: Math.min(mouse.y + 18, typeof window !== 'undefined' ? window.innerHeight - 180 : mouse.y),

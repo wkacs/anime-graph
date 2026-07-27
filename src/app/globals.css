@@ -5,7 +5,10 @@
   --bg: #09090b;
   --text-1: #fafafa;
   --text-2: #a1a1aa;
-  --text-3: #6b6b74;
+  /* #6b6b74 volt: 3,77:1 a lapon és 3,33:1 a surface-2 soron — mindkettő bukta
+     a WCAG AA 4,5:1-et, pedig ezen a tokenen ül a toplista pontszáma és az
+     összes label-mono. #888891 = 5,66 / 5,00 / 4,68 a három felület-szinten. */
+  --text-3: #888891;
 
   /* ── felület-skála ────────────────────────────────────── */
   --surface-1-bg: rgba(255, 255, 255, 0.03);
@@ -50,8 +53,10 @@
   --r-xl: 1.75rem;
 
   /* ── tipográfiai skála ────────────────────────────────── */
-  --fs-display-xl: clamp(2.75rem, 6vw, 4.5rem);
-  --fs-display-l: clamp(2rem, 4vw, 3rem);
+  /* A grotesque 700-on jóval súlyosabb foltot ad, mint a serif 400-on volt,
+     ezért a felső határ lejjebb jött: azonos px-en hangosabb lenne. */
+  --fs-display-xl: clamp(2.5rem, 5.5vw, 4rem);
+  --fs-display-l: clamp(1.875rem, 3.8vw, 2.75rem);
   --fs-h2: 1.5rem;
   --fs-body: 0.875rem;
   --fs-eyebrow: 0.6875rem;
@@ -66,7 +71,7 @@
   --color-text-3: var(--text-3);
   --font-sans: var(--font-instrument), var(--font-noto-jp), sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
-  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --font-display: var(--font-bricolage), "Arial Narrow", sans-serif;
   --font-jp: var(--font-noto-jp), sans-serif;
 }
 
@@ -101,28 +106,44 @@ body::after {
 
 /* ── tipográfiai fokozatok ───────────────────────────────── */
 
+/* A display-arc szoros, súlyos grotesque: film-főcím, nem magazin-serif.
+   A wdth tengely a fokozattal nyílik (xl a legszűkebb), így a nagy címek
+   sűrű foltot adnak, a kisebbek olvashatóak maradnak.
+   line-height >= 1: a magyar tele van leszálló szárral (gy, ny, j, p) —
+   a korábbi 0,95 levágta őket. A padding-bottom a tartalék. */
+
 .display-xl {
-  font-family: var(--font-instrument-serif), Georgia, serif;
+  /* NEM var(--font-display): az @theme inline változói nem élnek futásidejű
+     custom property-ként, a szabály némán a body-fontra esne vissza. */
+  font-family: var(--font-bricolage), "Arial Narrow", sans-serif;
   font-size: var(--fs-display-xl);
-  font-weight: 400;
-  line-height: 0.95;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  font-variation-settings: "wdth" 86;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  padding-bottom: 0.06em;
 }
 
 .display-l {
-  font-family: var(--font-instrument-serif), Georgia, serif;
+  /* NEM var(--font-display): az @theme inline változói nem élnek futásidejű
+     custom property-ként, a szabály némán a body-fontra esne vissza. */
+  font-family: var(--font-bricolage), "Arial Narrow", sans-serif;
   font-size: var(--fs-display-l);
-  font-weight: 400;
-  line-height: 1.02;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  font-variation-settings: "wdth" 92;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  padding-bottom: 0.05em;
 }
 
 .h2 {
-  font-family: var(--font-instrument-serif), Georgia, serif;
+  /* NEM var(--font-display): az @theme inline változói nem élnek futásidejű
+     custom property-ként, a szabály némán a body-fontra esne vissza. */
+  font-family: var(--font-bricolage), "Arial Narrow", sans-serif;
   font-size: var(--fs-h2);
-  font-weight: 400;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
 }
 
 /* ── felület-skála ───────────────────────────────────────── */
@@ -177,6 +198,21 @@ body::after {
   border: 1px solid var(--surface-1-border);
 }
 
+/* Vezérlők KISZÁMÍTHATATLAN tartalom fölött (3D-gráf vászna).
+   A .glass itt kevés: a backdrop-blur átengedi a gráf világos csomópontjait,
+   és a felirat mögötti háttér mozgás közben világosodik-sötétedik, vagyis a
+   kontraszt nem garantálható. Majdnem opak alap, a blur már csak a széleken
+   ad mélységet. Ugyanaz az indok, mint a .surface-menu-nél. */
+.surface-overlay {
+  background: rgba(16, 16, 19, 0.93);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--surface-3-border);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 8px 28px rgba(0, 0, 0, 0.5);
+}
+
 /* felugro menu: majdnem opak. A surface-3 backdrop-blurjan atszurodott a
    mogotte allo UI (sticky szuro-sav chipjei), ami olvashatatlan kasat adott. */
 .surface-menu {
@@ -197,22 +233,49 @@ body::after {
   pointer-events: none;
 }
 
+/* OLVASHATÓSÁGI PLAFON.
+   A háttér színe a borítóból jön, tehát címenként más. Plafon nélkül egy
+   világos poszter fehér ködöt adott: mérve text-2 = 1,72:1 és text-3 = 1,25:1,
+   vagyis a másodlagos szöveg eltűnt. A brightness(0.45) a forrásnál fogja meg
+   a fényerőt, a scrim (::after) pedig garantált sötét alapot ad — együtt a
+   legrosszabb eset (teljesen fehér poszter) is 4,7:1 a text-2-re.
+   A szín megmarad: narancs poszter rgb(51,36,27) a semleges rgb(54,54,55)-tel
+   szemben.
+   SZABÁLY: az ambiens FÖLÉ csak text-1 és text-2 mehet. A text-3 ott nem
+   hozható AA-ra anélkül, hogy a szín teljesen kihalna. */
+
+/* A scrim intenzitás-függő, NEM egyenszabás. A `hero` fogyasztói (címoldal,
+   címlap-hero) saját, nagy felületű gradienst tesznek az ambiens fölé, ott a
+   globális fátyol csak duplán sötétítene és megölné a színt. A `card` és `row`
+   viszont közvetlenül hordja a szöveget, ott erősebb fátyol kell. */
+.poster-ambient { --scrim: 0.12; }
+.poster-ambient[data-intensity="card"] { --scrim: 0.32; }
+.poster-ambient[data-intensity="row"] { --scrim: 0.28; }
+
+.poster-ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgb(9 9 11 / var(--scrim));
+  pointer-events: none;
+}
+
 .poster-ambient > img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transform: scale(1.15);
-  filter: blur(64px) saturate(180%);
+  filter: blur(64px) saturate(180%) brightness(0.7);
   opacity: 0.42;
 }
 
 .poster-ambient[data-intensity="card"] > img {
-  filter: blur(28px) saturate(170%);
-  opacity: 0.5;
+  filter: blur(28px) saturate(170%) brightness(0.5);
+  opacity: 0.45;
 }
 
 .poster-ambient[data-intensity="row"] > img {
-  filter: blur(18px) saturate(160%);
+  filter: blur(18px) saturate(160%) brightness(0.55);
   opacity: 0.35;
 }
 
@@ -293,6 +356,13 @@ body::after {
   overflow-x: auto;
   scroll-snap-type: x proximity;
 }
+
+/* A sáv jobb széle elhalványul: enélkül a levágott elem törésnek látszik,
+   nem annak, hogy görgethető. A bal szél csak akkor, ha már elgörgettek. */
+.snap-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--sp-4), #000 calc(100% - var(--sp-10)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--sp-4), #000 calc(100% - var(--sp-10)), transparent 100%);
+}
 .snap-row > * {
   scroll-snap-align: start;
   flex: 0 0 auto;
@@ -305,13 +375,10 @@ body::after {
   to { opacity: 1; transform: none; }
 }
 
-@keyframes ctaGlow {
-  0%, 100% { box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 0 16px rgba(250, 250, 250, 0.08); }
-  50% { box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.22), 0 0 30px rgba(250, 250, 250, 0.2); }
-}
-.cta-glow {
-  animation: ctaGlow 3.4s ease-in-out infinite;
-}
+/* .cta-glow törölve: végtelen külső izzás-loop volt két CTA-n. Semmit nem
+   közölt (nem hierarchia, nem visszajelzés, nem állapot), viszont folyamatos
+   repaintet kért és outer-glow tell volt. A CTA a tömör fehér kitöltéstől
+   amúgy is a lap legkontrasztosabb eleme. */
 
 @keyframes shimmer {
   from { background-position: -200% 0; }
