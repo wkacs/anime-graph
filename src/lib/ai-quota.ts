@@ -7,20 +7,24 @@ import {
 import { rateLimit } from './rate-limit'
 
 const INC = sql`jsonb_build_object('count', coalesce((${settings.value}->>'count')::int, 0) + 1)`
+const DEC = sql`jsonb_build_object('count', greatest(coalesce((${settings.value}->>'count')::int, 0) - 1, 0))`
 
-async function readCount(userId: number, key: string): Promise<number> {
-  const [row] = await db.select().from(settings)
-    .where(and(eq(settings.userId, userId), eq(settings.key, key)))
-  return row ? Number((row.value as { count?: number }).count ?? 0) : 0
-}
-
-async function bump(userId: number, key: string): Promise<void> {
-  await db.insert(settings)
+/** Atomi novelés; a visszaadott érték a novelés UTÁNI állás. */
+async function bump(userId: number, key: string): Promise<number> {
+  const [row] = await db.insert(settings)
     .values({ userId, key, value: { count: 1 } })
     .onConflictDoUpdate({
       target: [settings.userId, settings.key],
       set: { value: INC },
     })
+    .returning({ value: settings.value })
+  return Number((row?.value as { count?: number })?.count ?? 1)
+}
+
+/** Visszavonás a visszautasított ágon. `greatest(...,0)`: a számláló nem megy negatívba. */
+async function unbump(userId: number, key: string): Promise<void> {
+  await db.update(settings).set({ value: DEC })
+    .where(and(eq(settings.userId, userId), eq(settings.key, key)))
 }
 
 /**
@@ -55,22 +59,31 @@ export async function consumeAiQuota(userId: number, endpoint: string): Promise<
   // hogy melyik végponton ment el.
   const globalKey = `aiGlobalDay:${day}`
 
-  const [userCount, globalCount] = await Promise.all([
-    readCount(userId, userKey),
-    globalLimit > 0 ? readCount(GLOBAL_QUOTA_USER_ID, globalKey) : Promise.resolve(0),
+  // ELOSZOR novelunk, aztan dontunk a novelés ELOTTI állásból (`after - 1`).
+  // Beolvasás-majd-írás esetén két párhuzamos kérés ugyanazt a szabad helyet
+  // látná, és mindkettő átmenne a kereten; így a hely foglalása maga a mérés.
+  const [globalAfter, userAfter] = await Promise.all([
+    globalLimit > 0 ? bump(GLOBAL_QUOTA_USER_ID, globalKey) : Promise.resolve(0),
+    bump(userId, userKey),
   ])
 
-  const verdict = quotaVerdict({ userCount, userLimit, globalCount, globalLimit })
+  const verdict = quotaVerdict({
+    userCount: userAfter - 1,
+    userLimit,
+    globalCount: globalLimit > 0 ? globalAfter - 1 : 0,
+    globalLimit,
+  })
   if (!verdict.allowed) {
-    // Mindkettő mérés ELŐTT dől el, hogy a visszautasított hívás egyik
-    // számlálót se fogyassza.
+    // A visszautasított hívás egyik számlálót se fogyaszthatja el: ami nem ment
+    // modellhez, az nem költség. A visszavonás a hibaüzenet előtt fut le.
+    await Promise.all([
+      unbump(userId, userKey),
+      globalLimit > 0 ? unbump(GLOBAL_QUOTA_USER_ID, globalKey) : Promise.resolve(),
+    ])
     throw new Error(
       verdict.reason === 'global'
         ? 'A mai közös AI-keret elfogyott. Holnap újraindul.'
         : `Elérted a napi AI-keretet (${userLimit} hívás). Holnap folytathatod.`,
     )
   }
-
-  await bump(userId, userKey)
-  if (globalLimit > 0) await bump(GLOBAL_QUOTA_USER_ID, globalKey)
 }
