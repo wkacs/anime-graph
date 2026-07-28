@@ -29,14 +29,17 @@ function Slide({ children }: { children: React.ReactNode }) {
 export default function WrappedPage() {
   const [data, setData] = useState<Data | null>(null)
   const [list, setList] = useState<ApiAnime[]>([])
-  const [error, setError] = useState('')
+  // null = nincs hiba; '' = van hiba, de a szerver nem adott sajat uzenetet
+  const [error, setError] = useState<string | null>(null)
   const [storyOpen, setStoryOpen] = useState(false)
   const t = useTranslations('wrapped')
   const tc = useTranslations('common')
 
+  // Nem `tc(...)`: a forditó nem referencia-stabil, a `load` fuggosegekent
+  // minden renderben ujraindulna a lekeres. Az alapertelmezes a renderben lep be.
   async function load(year?: number) {
     const res = await fetch(`/api/wrapped${year ? `?year=${year}` : ''}`)
-    if (!res.ok) { setError((await res.json()).error ?? tc('error')); return }
+    if (!res.ok) { setError((await res.json()).error ?? ''); return }
     setData(await res.json())
   }
   useEffect(() => {
@@ -44,7 +47,7 @@ export default function WrappedPage() {
     fetch('/api/anime').then((r) => r.json()).then((j) => setList(j.anime ?? [])).catch(() => {})
   }, [])
 
-  if (error) return <main className="min-h-screen grid place-items-center"><p className="text-sm text-[color:var(--status-dropped)]">{error}</p></main>
+  if (error != null) return <main className="min-h-screen grid place-items-center"><p className="text-sm text-[color:var(--status-dropped)]">{error || tc('error')}</p></main>
   if (!data) return <main className="min-h-screen grid place-items-center"><p className="label-mono">{t('generating')}</p></main>
 
   return (
