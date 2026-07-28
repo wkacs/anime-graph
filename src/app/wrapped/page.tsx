@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import WrappedCard from '@/components/WrappedCard'
 import WrappedStory from '@/components/WrappedStory'
 import type { WrappedData } from '@/lib/wrapped'
@@ -30,10 +31,12 @@ export default function WrappedPage() {
   const [list, setList] = useState<ApiAnime[]>([])
   const [error, setError] = useState('')
   const [storyOpen, setStoryOpen] = useState(false)
+  const t = useTranslations('wrapped')
+  const tc = useTranslations('common')
 
   async function load(year?: number) {
     const res = await fetch(`/api/wrapped${year ? `?year=${year}` : ''}`)
-    if (!res.ok) { setError((await res.json()).error ?? 'Hiba történt'); return }
+    if (!res.ok) { setError((await res.json()).error ?? tc('error')); return }
     setData(await res.json())
   }
   useEffect(() => {
@@ -42,7 +45,7 @@ export default function WrappedPage() {
   }, [])
 
   if (error) return <main className="min-h-screen grid place-items-center"><p className="text-sm text-[color:var(--status-dropped)]">{error}</p></main>
-  if (!data) return <main className="min-h-screen grid place-items-center"><p className="label-mono">Összefoglaló készül…</p></main>
+  if (!data) return <main className="min-h-screen grid place-items-center"><p className="label-mono">{t('generating')}</p></main>
 
   return (
     <main className="h-[100dvh] overflow-y-auto snap-y snap-mandatory">
@@ -59,23 +62,23 @@ export default function WrappedPage() {
           ))}
         </div>
         <button onClick={() => setStoryOpen(true)} className="btn-solid px-6 py-2.5 text-sm mt-6">
-          ▶ Story indítása
+          {t('startStory')}
         </button>
-        <p className="text-text-3 text-sm mt-4">…vagy görgess ↓</p>
+        <p className="text-text-3 text-sm mt-4">{t('orScroll')}</p>
       </Slide>
       <Slide>
-        <p className="label-mono mb-3">Ennyit néztél</p>
-        <p className="text-5xl font-semibold tabular-nums">{Math.round(data.totalHours)} óra</p>
-        <p className="text-text-2 mt-2">{data.totalEpisodes} rész / fejezet</p>
+        <p className="label-mono mb-3">{t('watchedThisMuch')}</p>
+        <p className="text-5xl font-semibold tabular-nums">{t('hours', { count: Math.round(data.totalHours) })}</p>
+        <p className="text-text-2 mt-2">{t('episodesChapters', { count: data.totalEpisodes })}</p>
       </Slide>
       {data.topGenres.length > 0 && (
         <Slide>
-          <p className="label-mono mb-4">Top műfajaid</p>
+          <p className="label-mono mb-4">{t('topGenres')}</p>
           <ol className="flex flex-col gap-2">
             {data.topGenres.map((g, i) => (
               <li key={g.name} className="flex items-baseline justify-between gap-4">
                 <span className={i === 0 ? 'text-2xl font-semibold' : 'text-base text-text-2'}>{i + 1}. {g.name}</span>
-                <span className="font-mono text-sm text-text-3">{g.count} cím</span>
+                <span className="font-mono text-sm text-text-3">{t('titleCount', { count: g.count })}</span>
               </li>
             ))}
           </ol>
@@ -83,12 +86,12 @@ export default function WrappedPage() {
       )}
       {data.topStudios.length > 0 && (
         <Slide>
-          <p className="label-mono mb-4">Top stúdióid</p>
+          <p className="label-mono mb-4">{t('topStudios')}</p>
           <ol className="flex flex-col gap-2">
             {data.topStudios.map((s, i) => (
               <li key={s.name} className="flex items-baseline justify-between gap-4">
                 <span className={i === 0 ? 'text-2xl font-semibold' : 'text-base text-text-2'}>{i + 1}. {s.name}</span>
-                <span className="font-mono text-sm text-text-3">{s.count} cím</span>
+                <span className="font-mono text-sm text-text-3">{t('titleCount', { count: s.count })}</span>
               </li>
             ))}
           </ol>
@@ -96,7 +99,7 @@ export default function WrappedPage() {
       )}
       {data.topAnime.length > 0 && (
         <Slide>
-          <p className="label-mono mb-4">Az év címei nálad</p>
+          <p className="label-mono mb-4">{t('titlesOfYear')}</p>
           <div className="flex justify-center gap-3 flex-wrap">
             {data.topAnime.map((t) => (
               <figure key={t.title} className="w-24">
@@ -110,28 +113,28 @@ export default function WrappedPage() {
       )}
       {data.longestStreakDays > 1 && (
         <Slide>
-          <p className="label-mono mb-3">Leghosszabb sorozatod</p>
-          <p className="text-5xl font-semibold tabular-nums">{data.longestStreakDays} nap</p>
-          <p className="text-text-2 mt-2">megállás nélkül minden nap</p>
+          <p className="label-mono mb-3">{t('longestStreak')}</p>
+          <p className="text-5xl font-semibold tabular-nums">{t('days', { count: data.longestStreakDays })}</p>
+          <p className="text-text-2 mt-2">{t('everyDayNonstop')}</p>
         </Slide>
       )}
       {data.maxEpisodesInDay > 1 && (
         <Slide>
-          <p className="label-mono mb-3">Binge-rekordod</p>
-          <p className="text-5xl font-semibold tabular-nums">{data.maxEpisodesInDay} rész</p>
-          <p className="text-text-2 mt-2">egyetlen nap alatt</p>
+          <p className="label-mono mb-3">{t('bingeRecord')}</p>
+          <p className="text-5xl font-semibold tabular-nums">{t('episodes', { count: data.maxEpisodesInDay })}</p>
+          <p className="text-text-2 mt-2">{t('inOneDay')}</p>
         </Slide>
       )}
       {data.drops > 0 && (
         <Slide>
-          <p className="label-mono mb-3">Elengedted</p>
-          <p className="text-5xl font-semibold tabular-nums">{data.drops} cím</p>
-          <p className="text-text-2 mt-2">és ez teljesen rendben van</p>
+          <p className="label-mono mb-3">{t('letGo')}</p>
+          <p className="text-5xl font-semibold tabular-nums">{t('titleCount', { count: data.drops })}</p>
+          <p className="text-text-2 mt-2">{t('thatsFine')}</p>
         </Slide>
       )}
       {data.favChars.length > 0 && (
         <Slide>
-          <p className="label-mono mb-4">Idei kedvenc karaktereid</p>
+          <p className="label-mono mb-4">{t('favChars')}</p>
           <div className="flex justify-center gap-3 flex-wrap">
             {data.favChars.map((c) => (
               <figure key={c.name} className="w-16">
@@ -145,16 +148,16 @@ export default function WrappedPage() {
       )}
       {data.manga && (
         <Slide>
-          <p className="label-mono mb-3">Manga</p>
-          <p className="text-4xl font-semibold tabular-nums">{data.manga.count} cím</p>
-          <p className="text-text-2 mt-2">{data.manga.chapters} fejezet elolvasva</p>
+          <p className="label-mono mb-3">{t('manga')}</p>
+          <p className="text-4xl font-semibold tabular-nums">{t('titleCount', { count: data.manga.count })}</p>
+          <p className="text-text-2 mt-2">{t('chaptersRead', { count: data.manga.chapters })}</p>
         </Slide>
       )}
       <Slide>
-        <p className="label-mono mb-4">Oszd meg</p>
+        <p className="label-mono mb-4">{t('share')}</p>
         {list.length > 0 && <WrappedCard list={list} />}
         <div className="mt-6">
-          <Link href="/stats" className="btn-ghost border border-white/10 px-4 py-2 text-sm inline-block">← Vissza a Stats-ra</Link>
+          <Link href="/stats" className="btn-ghost border border-white/10 px-4 py-2 text-sm inline-block">{t('backToStats')}</Link>
         </div>
       </Slide>
     </main>

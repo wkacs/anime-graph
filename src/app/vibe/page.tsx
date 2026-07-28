@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import { VIBE_PRESETS, buildVibePrompt } from '@/lib/vibe-presets'
 import type { ApiAnime } from '@/lib/types'
@@ -29,6 +30,9 @@ export default function VibePage() {
   const [newPicks, setNewPicks] = useState<NewPick[]>([])
   const [ran, setRan] = useState(false)
   const [addedNew, setAddedNew] = useState<Set<number>>(new Set())
+  const t = useTranslations('vibe')
+  const tv = useTranslations('vibeChips')
+  const tc = useTranslations('common')
 
   async function addToPlanned(anilistId: number) {
     const res = await fetch('/api/anime', {
@@ -83,7 +87,7 @@ export default function VibePage() {
     const json = await res.json()
     setLoading(false)
     setRan(true)
-    if (!res.ok) { setError(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setError(json.error ?? tc('error')); return }
     setOwnPicks(json.ownPicks ?? [])
     setNewPicks(json.newPicks ?? [])
   }
@@ -91,16 +95,14 @@ export default function VibePage() {
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Vibe-keresés</h1>
-        <p className="text-sm text-text-2 mt-1">
-          Jelöld be, mire vágysz — a kiválasztott animék fixen bemennek kontextusnak.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight">{t('heading')}</h1>
+        <p className="text-sm text-text-2 mt-1">{t('lead')}</p>
       </div>
 
       <section className="glass rounded-3xl p-5 flex flex-col gap-4">
         {VIBE_PRESETS.map((group) => (
-          <div key={group.group}>
-            <p className="label-mono mb-1.5">{group.group}</p>
+          <div key={group.groupId}>
+            <p className="label-mono mb-1.5">{tv(`group_${group.groupId}`)}</p>
             <div className="flex flex-wrap gap-1.5">
               {group.chips.map((c) => (
                 <button
@@ -112,7 +114,7 @@ export default function VibePage() {
                       : 'border-white/10 text-text-2 hover:text-text-1 hover:border-white/30'
                   }`}
                 >
-                  {c.label}
+                  {tv(c.id)}
                 </button>
               ))}
             </div>
@@ -121,7 +123,7 @@ export default function VibePage() {
         <input
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
-          placeholder="Egyéb kívánság — ha valami kimaradt volna…"
+          placeholder={t('customPlaceholder')}
           className="field w-full rounded-full px-4 py-2.5 text-sm"
         />
         <div className="flex flex-wrap items-center gap-2">
@@ -130,7 +132,7 @@ export default function VibePage() {
               key={a.id}
               onClick={() => toggle(a.id)}
               className="flex items-center gap-1.5 rounded-full bg-white/8 border border-white/10 pl-1 pr-2.5 py-1 text-xs hover:bg-white/12 transition-colors"
-              title="Eltávolítás"
+              title={t('remove')}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {a.coverUrl && <img src={a.coverUrl} alt="" className="w-5 h-7 object-cover rounded" />}
@@ -142,14 +144,14 @@ export default function VibePage() {
             onClick={() => setPickerOpen(true)}
             className="rounded-full border border-dashed border-white/20 px-3 py-1.5 text-xs text-text-2 hover:text-text-1 hover:border-white/40 transition-colors"
           >
-            + Anime a listádból
+            {t('addFromList')}
           </button>
           <button
             onClick={run}
             disabled={loading || (!prompt.trim() && selected.size === 0)}
             className="btn-solid ml-auto px-5 py-2 text-sm"
           >
-            {loading ? 'Keresés…' : 'Keresés'}
+            {loading ? t('searching') : t('search')}
           </button>
         </div>
       </section>
@@ -158,7 +160,7 @@ export default function VibePage() {
 
       {newPicks.length > 0 && (
         <section>
-          <p className="label-mono mb-2">Új felfedezés — nincs a listádon</p>
+          <p className="label-mono mb-2">{t('newDiscovery')}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {newPicks.map((p) => (
               <MediaCard
@@ -196,7 +198,7 @@ export default function VibePage() {
 
       {ownPicks.length > 0 && (
         <section>
-          <p className="label-mono mb-2">Hasonlók a listádból — ilyesmit már ismersz</p>
+          <p className="label-mono mb-2">{t('fromYourList')}</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 opacity-85">
             {ownPicks.map((p) => (
               <MediaCard
@@ -213,7 +215,7 @@ export default function VibePage() {
       )}
 
       {ran && !loading && !error && ownPicks.length === 0 && newPicks.length === 0 && (
-        <p className="text-sm text-text-3">Nincs találat — próbáld pontosabban leírni.</p>
+        <p className="text-sm text-text-3">{t('noResults')}</p>
       )}
 
       <AnimatePresence>
@@ -237,11 +239,11 @@ export default function VibePage() {
                 <input
                   value={pickerQ}
                   onChange={(e) => setPickerQ(e.target.value)}
-                  placeholder="Keresés a listádban…"
+                  placeholder={t('pickerPlaceholder')}
                   className="field flex-1 rounded-full px-4 py-2 text-sm"
                   autoFocus
                 />
-                <button onClick={() => setPickerOpen(false)} className="btn-ghost px-3 py-1.5 text-sm">Kész</button>
+                <button onClick={() => setPickerOpen(false)} className="btn-ghost px-3 py-1.5 text-sm">{t('done')}</button>
               </div>
               <div className="overflow-y-auto grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {pickerRows.map((a) => {
@@ -270,7 +272,7 @@ export default function VibePage() {
                   )
                 })}
                 {pickerRows.length === 0 && (
-                  <p className="col-span-full text-center text-sm text-text-3 py-6">Nincs találat.</p>
+                  <p className="col-span-full text-center text-sm text-text-3 py-6">{t('pickerEmpty')}</p>
                 )}
               </div>
             </motion.div>
