@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores } from '@/lib/use-fit-scores'
 import ScoreBadge from '@/components/ui/ScoreBadge'
@@ -12,13 +13,9 @@ import EmptyState from '@/components/ui/EmptyState'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 
-const BONGESZO_TOUR: TourStep[] = [
-  { selector: 'search', title: 'Katalógus', text: ' 130 ezer anime és manga, saját adatbázisból — villámgyors keresés, szűrők, egy-kattintásos hozzáadás.' },
-  { selector: 'results', title: 'Neked való?', text: 'A találatokon a %-badge azt mutatja, mennyire illik az ízlésedhez — a saját listádból számolva, minden címre.' },
-]
 import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
-import { SEASON_LABELS } from '@/lib/seasonal'
+import { useSeasonLabel } from '@/components/useLabels'
 
 // a /api/trending title-sorai TitleHit-alakra képezve, hogy a kártya-rács közös legyen
 type TrendingRow = {
@@ -34,11 +31,7 @@ const toHit = (t: TrendingRow): TitleHit => ({
   year: t.year, format: t.format, communityScore: t.communityScore, popularity: t.popularity,
 })
 
-const ADD_OPTIONS = [
-  { status: 'completed', label: 'Láttam' },
-  { status: 'watching', label: 'Nézem' },
-  { status: 'planned', label: 'Terv' },
-] as const
+const ADD_OPTIONS = ['completed', 'watching', 'planned'] as const
 
 const PAGE_SIZE = 24
 
@@ -52,6 +45,16 @@ export default function BrowsePage() {
   const [studioFilter, setStudioFilter] = useState<string | null>(null)
   const [seasonKey, setSeasonKey] = useState<'current' | 'next' | null>(null)
   const [filtered, setFiltered] = useState<TitleHit[] | null>(null)
+  // `tr`, nem `t`: a fajlban tobb helyi `t` van (setTimeout-id, media-tipus param).
+  const tr = useTranslations('browse')
+  const ta = useTranslations('addSearch')
+  const tc = useTranslations('common')
+  const seasonLabel = useSeasonLabel()
+  // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
+  const BONGESZO_TOUR: TourStep[] = [
+    { selector: 'search', title: tr('tourCatalogTitle'), text: tr('tourCatalogText') },
+    { selector: 'results', title: tr('tourFitTitle'), text: tr('tourFitText') },
+  ]
   const trendingHits = trending
     ? { seasonal: trending.seasonal.map(toHit), popular: trending.popular.map(toHit) }
     : null
@@ -129,7 +132,9 @@ export default function BrowsePage() {
     const t = setTimeout(() => {
       fetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`)
         .then(async (r) => {
-          if (!r.ok) throw new Error('Hiba történt')
+          // Ures uzenet: a forditott alapertelmezes a renderben lep be, hogy a
+          // forditó ne valjon useEffect-fuggosegge.
+          if (!r.ok) throw new Error('')
           const j = await r.json() as { hits: TitleHit[] }
           setHits(j.hits)
         })
