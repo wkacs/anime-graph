@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import type { RecCandidate } from '@/lib/anilist'
 
 type PickResult = RecCandidate & { reason: string }
@@ -25,6 +26,8 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
   const [added, setAdded] = useState<Set<number>>(new Set())
   const [explaining, setExplaining] = useState(false)
   const [explainNote, setExplainNote] = useState('')
+  const t = useTranslations('recommend')
+  const tc = useTranslations('common')
 
   // A rangsor lokalis (fit-vektor). Ez a gomb EGY AI-hivast inditi, es CSAK az
   // indoklas szoveget csereli le — hiba eseten a lista es a lokalis indoklas marad.
@@ -41,7 +44,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
       })
       const json = await res.json().catch(() => null)
       if (!res.ok) {
-        setExplainNote(json?.error ?? 'Most nem sikerült bővebb indoklás')
+        setExplainNote(json?.error ?? t('explainFailed'))
         return
       }
       const byId = new Map<number, string>(
@@ -49,7 +52,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
       )
       setPicks((prev) => prev.map((p) => ({ ...p, reason: byId.get(p.anilistId) ?? p.reason })))
     } catch {
-      setExplainNote('Most nem sikerült bővebb indoklás')
+      setExplainNote(t('explainFailed'))
     } finally {
       setExplaining(false)
     }
@@ -63,7 +66,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
     const res = await fetch('/api/recommend', { method: 'POST' })
     const json = await res.json()
     setLoading(false)
-    if (!res.ok) { setError(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setError(json.error ?? tc('error')); return }
     setPicks(json.picks)
   }
 
@@ -98,7 +101,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
             whileTap={{ scale: 0.97 }}
             className="px-5 py-2.5 text-sm font-medium text-text-1 whitespace-nowrap"
           >
-            ✦ Ajánlj nekem
+            {t('cta')}
           </motion.button>
         ) : (
           <motion.div
@@ -111,12 +114,12 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
           >
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
               <div>
-                <p className="label-mono">Ajánló</p>
-                <h2 className="text-base font-semibold tracking-tight">Neked válogatva</h2>
+                <p className="label-mono">{t('kicker')}</p>
+                <h2 className="text-base font-semibold tracking-tight">{t('heading')}</h2>
               </div>
               <div className="flex items-center gap-1">
                 {!loading && (
-                  <button onClick={run} className="btn-ghost px-2.5 py-1 text-xs" title="Új ajánlás">↻</button>
+                  <button onClick={run} className="btn-ghost px-2.5 py-1 text-xs" title={t('newPicks')}>↻</button>
                 )}
                 <button onClick={() => setOpen(false)} className="btn-ghost px-2.5 py-1 text-xs">✕</button>
               </div>
@@ -128,7 +131,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
                   transition={{ duration: 1.6, repeat: Infinity }}
                   className="label-mono px-2 py-6 text-center"
                 >
-                  Az ízlésed elemzése…
+                  {t('analysing')}
                 </motion.p>
               )}
               {error && <p className="text-sm text-[color:var(--status-dropped)] px-2 py-4">{error}</p>}
@@ -151,7 +154,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
                       disabled={added.has(p.anilistId)}
                       className="btn-ghost self-start px-2.5 py-1 text-xs border border-white/10 whitespace-nowrap disabled:text-[color:var(--status-watching)] disabled:border-transparent"
                     >
-                      {added.has(p.anilistId) ? '✓' : '+ Tervezem'}
+                      {added.has(p.anilistId) ? '✓' : t('planIt')}
                     </button>
                   </motion.li>
                 ))}
@@ -163,7 +166,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
                     disabled={explaining}
                     className="btn-ghost px-3 py-1.5 text-xs border border-white/10"
                   >
-                    {explaining ? '…' : 'Mondd el bővebben'}
+                    {explaining ? '…' : t('explainMore')}
                   </button>
                   {explainNote && <p className="text-xs text-text-3 mt-1">{explainNote}</p>}
                 </div>

@@ -2,8 +2,8 @@ import type { ReactNode } from 'react'
 
 type Props = {
   /** apro mono cimke a cim FELETT — nem a cim helyett */
-  eyebrow?: string
-  title: string
+  eyebrow?: ReactNode
+  title: ReactNode
   action?: ReactNode
 }
 

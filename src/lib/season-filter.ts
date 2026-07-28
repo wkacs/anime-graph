@@ -28,21 +28,12 @@ export const EMPTY_SEASON_VIEW: SeasonView = {
   minScore: 0,
 }
 
-export const SORT_LABELS: Record<SeasonSort, string> = {
-  taste: 'Ízlés-pont',
-  airing: 'Adásidő',
-  score: 'AniList-pont',
-  popularity: 'Népszerűség',
-}
+// A cimkek a szotarban ulnek (`seasonFilter.sort_*` / `format.*`), itt csak a
+// kulcs-keszlet — a rendezes-lista sorrendjet ez adja.
+export const SORT_KEYS: SeasonSort[] = ['taste', 'airing', 'score', 'popularity']
 
-export const FORMAT_LABELS: Record<string, string> = {
-  TV: 'TV',
-  TV_SHORT: 'TV rövid',
-  MOVIE: 'Film',
-  ONA: 'ONA',
-  OVA: 'OVA',
-  SPECIAL: 'Special',
-}
+/** Amire van sajat forditasunk; ami nincs benne, nyersen jelenik meg. */
+export const FORMAT_KEYS = ['TV', 'TV_SHORT', 'MOVIE', 'ONA', 'OVA', 'SPECIAL'] as const
 
 export const MIN_SCORE_STEPS = [0, 50, 60, 70, 80]
 

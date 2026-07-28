@@ -193,6 +193,93 @@
     "previousExtractFailed": "előző kinyerés hibázott",
     "aiWorking": "AI dolgozik…"
   },
+  "news": {
+    "eyebrow": "Hírek",
+    "loadFailed": "Nem sikerült betölteni",
+    "tourSeasonTitle": "Szezon",
+    "tourSeasonText": "Az aktuális szezon minden címe — a badge azt mutatja, mennyire illik az ízlésedhez. Lista nélkül is él.",
+    "tourRecommendTitle": "Ajánlj nekem",
+    "tourRecommendText": "Egy gomb: az AI a listádból és a véleményeidből tanult ízlésed alapján ajánl. Ez a lényeg.",
+    "tourTonightTitle": "Ma este?",
+    "tourTonightText": "Nincs kedved dönteni? Hangulat + idő alapján kiválasztja, mit nézz ma este."
+  },
+  "format": {
+    "TV": "TV",
+    "TV_SHORT": "TV rövid",
+    "MOVIE": "Film",
+    "ONA": "ONA",
+    "OVA": "OVA",
+    "SPECIAL": "Special"
+  },
+  "seasonFilter": {
+    "sort": "Rendezés",
+    "sort_taste": "Ízlés-pont",
+    "sort_airing": "Adásidő",
+    "sort_score": "AniList-pont",
+    "sort_popularity": "Népszerűség",
+    "filterCount": "{count} szűrő",
+    "genre": "Műfaj",
+    "format": "Formátum",
+    "streaming": "Streaming",
+    "minScore": "Min. pont",
+    "all": "mind",
+    "clearFilters": "Szűrők törlése",
+    "scoresUnavailable": "AI-pont most nem elérhető, adásidő szerint rendezve",
+    "scoring": "Ízlés-pontok számolása…"
+  },
+  "catalog": {
+    "episodeCount": "{count} rész",
+    "chapterCount": "{count} fejezet",
+    "volumeCount": "{count} kötet",
+    "minuteCount": "{count} perc",
+    "synopsis": "Miről szól",
+    "sourceEyebrow": "Eredeti mű",
+    "sourceTitle": "Ebből készült ez a feldolgozás",
+    "adaptationEyebrow": "Anime-adaptáció",
+    "adaptationTitle": "Ebből készült az anime",
+    "open": "Megnyitás →",
+    "staff": "Kik csinálták",
+    "otherParts": "A sorozat többi része"
+  },
+  "titleTour": {
+    "fitTitle": "Neked való?",
+    "fitText": "Az ízlésedből számolt egyezés — mellette/ellene érvekkel, és ha hasonlókat szoktál dobni, arra is figyelmeztet.",
+    "opinionTitle": "Vélemény = a rendszer lelke",
+    "opinionText": "Írd le szabadon, mi tetszett és mi nem — az AI ízlés-tényeket nyer ki belőle, és ettől lesz egyre pontosabb minden ajánlás."
+  },
+  "addSearch": {
+    "placeholderAnime": "Anime hozzáadása…",
+    "placeholderManga": "Manga hozzáadása…",
+    "onYourListJump": "A listádon — ugrás a gráfon",
+    "onYourList": "a listádon",
+    "addHeading": "Hozzáadás",
+    "notInCatalogue": "Nincs a katalógusban — AniList",
+    "addAs": "Hozzáadás: {label}",
+    "add_completed": "Láttam",
+    "add_watching": "Nézem",
+    "add_planned": "Terv"
+  },
+  "recommend": {
+    "cta": "✦ Ajánlj nekem",
+    "kicker": "Ajánló",
+    "heading": "Neked válogatva",
+    "newPicks": "Új ajánlás",
+    "analysing": "Az ízlésed elemzése…",
+    "planIt": "+ Tervezem",
+    "explainMore": "Mondd el bővebben",
+    "explainFailed": "Most nem sikerült bővebb indoklás"
+  },
+  "sync": {
+    "heading": "Kétirányú szinkron",
+    "lead": "Nem kell váltanod: kösd be a fiókod, és amit itt állítasz (státusz, rész, pont), automatikusan frissül a MAL/AniList-listádon is.",
+    "connected": "✓ Fiók bekötve — mostantól a változásaid automatikusan szinkronizálódnak.",
+    "connectFailed": "✕ A bekötés nem sikerült — próbáld újra.",
+    "connectedShort": "bekötve",
+    "connect": "Bekötés",
+    "disconnect": "Lekapcsol",
+    "notConfigured": "nincs konfigurálva",
+    "missingEnv": "{env} env hiányzik"
+  },
   "tour": {
     "skip": "Kihagyom",
     "done": "Kész ✓",

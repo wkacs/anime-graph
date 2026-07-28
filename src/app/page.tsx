@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import OnboardingCTA from '@/components/OnboardingCTA'
 import RecommendMorph from '@/components/RecommendMorph'
 import TonightPicker from '@/components/TonightPicker'
@@ -20,15 +21,10 @@ import type {
   NewsData, MineItem, NextSeasonRow, UpcomingItem, WatchItem, FeedItem,
 } from '@/components/home/types'
 
-const NEWS_TOUR: TourStep[] = [
-  { selector: 'season', title: 'Szezon', text: 'Az aktuális szezon minden címe — a badge azt mutatja, mennyire illik az ízlésedhez. Lista nélkül is él.' },
-  { selector: 'recommend', title: 'Ajánlj nekem', text: 'Egy gomb: az AI a listádból és a véleményeidből tanult ízlésed alapján ajánl. Ez a lényeg.' },
-  { selector: 'tonight', title: 'Ma este?', text: 'Nincs kedved dönteni? Hangulat + idő alapján kiválasztja, mit nézz ma este.' },
-]
-
 export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
-  const [error, setError] = useState('')
+  // null = nincs hiba; '' = van hiba, de a szerver nem adott sajat uzenetet
+  const [error, setError] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<number>>(new Set())
   const [digest, setDigest] = useState<string | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
@@ -40,11 +36,21 @@ export default function NewsPage() {
   const [scores, setScores] = useState<Map<number, { score: number; reason: string }>>(new Map())
   const [scoresFailed, setScoresFailed] = useState(false)
   const [view, setView] = useState<SeasonView>(EMPTY_SEASON_VIEW)
+  const t = useTranslations('news')
+  const tc = useTranslations('common')
+  // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
+  const NEWS_TOUR: TourStep[] = [
+    { selector: 'season', title: t('tourSeasonTitle'), text: t('tourSeasonText') },
+    { selector: 'recommend', title: t('tourRecommendTitle'), text: t('tourRecommendText') },
+    { selector: 'tonight', title: t('tourTonightTitle'), text: t('tourTonightText') },
+  ]
 
   useEffect(() => {
     fetch('/api/news')
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Hiba történt')
+        // Nem `tc(...)`: a forditó nem referencia-stabil, fuggosegkent minden
+        // renderben ujrainditana a fetchet. Az alapertelmezes a renderben lep be.
+        if (!r.ok) throw new Error((await r.json()).error ?? '')
         setData(await r.json())
       })
       .catch((e) => setError(String(e.message ?? e)))
@@ -145,10 +151,10 @@ export default function NewsPage() {
     if (res.ok) setWatchlist((l) => l.filter((x) => x.id !== w.id))
   }
 
-  if (error) {
+  if (error != null) {
     return (
       <PageShell>
-        <EmptyState eyebrow="Hírek" title="Nem sikerült betölteni" text={error} />
+        <EmptyState eyebrow={t('eyebrow')} title={t('loadFailed')} text={error || tc('error')} />
       </PageShell>
     )
   }

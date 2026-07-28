@@ -193,6 +193,93 @@
     "previousExtractFailed": "previous extract failed",
     "aiWorking": "AI is working…"
   },
+  "news": {
+    "eyebrow": "News",
+    "loadFailed": "Could not load it",
+    "tourSeasonTitle": "Season",
+    "tourSeasonText": "Every title of the current season — the badge shows how well it fits your taste. It works without a list too.",
+    "tourRecommendTitle": "Recommend me",
+    "tourRecommendText": "One button: the AI recommends based on the taste it learned from your list and your reviews. This is the point.",
+    "tourTonightTitle": "Tonight?",
+    "tourTonightText": "Don't feel like deciding? It picks what to watch tonight based on mood and time."
+  },
+  "format": {
+    "TV": "TV",
+    "TV_SHORT": "TV short",
+    "MOVIE": "Film",
+    "ONA": "ONA",
+    "OVA": "OVA",
+    "SPECIAL": "Special"
+  },
+  "seasonFilter": {
+    "sort": "Sort",
+    "sort_taste": "Taste score",
+    "sort_airing": "Airing time",
+    "sort_score": "AniList score",
+    "sort_popularity": "Popularity",
+    "filterCount": "{count} filters",
+    "genre": "Genre",
+    "format": "Format",
+    "streaming": "Streaming",
+    "minScore": "Min. score",
+    "all": "all",
+    "clearFilters": "Clear filters",
+    "scoresUnavailable": "AI score unavailable right now, sorted by airing time",
+    "scoring": "Calculating taste scores…"
+  },
+  "catalog": {
+    "episodeCount": "{count} episodes",
+    "chapterCount": "{count} chapters",
+    "volumeCount": "{count} volumes",
+    "minuteCount": "{count} min",
+    "synopsis": "What it's about",
+    "sourceEyebrow": "Original work",
+    "sourceTitle": "This adaptation is based on it",
+    "adaptationEyebrow": "Anime adaptation",
+    "adaptationTitle": "The anime was made from this",
+    "open": "Open →",
+    "staff": "Who made it",
+    "otherParts": "The rest of the series"
+  },
+  "titleTour": {
+    "fitTitle": "Is it for you?",
+    "fitText": "A match calculated from your taste — with points for and against, and a warning if you tend to drop similar ones.",
+    "opinionTitle": "A review is the heart of the system",
+    "opinionText": "Write freely about what worked and what didn't — the AI pulls taste facts out of it, and every recommendation gets sharper."
+  },
+  "addSearch": {
+    "placeholderAnime": "Add anime…",
+    "placeholderManga": "Add manga…",
+    "onYourListJump": "On your list — jump to it on the graph",
+    "onYourList": "on your list",
+    "addHeading": "Add",
+    "notInCatalogue": "Not in the catalogue — AniList",
+    "addAs": "Add as: {label}",
+    "add_completed": "Seen",
+    "add_watching": "Watching",
+    "add_planned": "Plan"
+  },
+  "recommend": {
+    "cta": "✦ Recommend me",
+    "kicker": "Recommender",
+    "heading": "Picked for you",
+    "newPicks": "New picks",
+    "analysing": "Analysing your taste…",
+    "planIt": "+ Plan to watch",
+    "explainMore": "Tell me more",
+    "explainFailed": "No longer explanation this time"
+  },
+  "sync": {
+    "heading": "Two-way sync",
+    "lead": "No need to switch: connect your account, and whatever you set here (status, episode, score) updates on your MAL/AniList list too.",
+    "connected": "✓ Account connected — your changes now sync automatically.",
+    "connectFailed": "✕ Connecting failed — please try again.",
+    "connectedShort": "connected",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "notConfigured": "not configured",
+    "missingEnv": "{env} env is missing"
+  },
   "tour": {
     "skip": "Skip",
     "done": "Done ✓",

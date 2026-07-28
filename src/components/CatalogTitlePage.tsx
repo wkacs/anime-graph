@@ -10,13 +10,8 @@ import PosterAmbient from '@/components/ui/PosterAmbient'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Chip from '@/components/ui/Chip'
 import MediaCard from '@/components/MediaCard'
-import TourSpotlight from '@/components/TourSpotlight'
-import type { TourStep } from '@/lib/tour'
-
-const TITLE_TOUR: TourStep[] = [
-  { selector: 'fit', title: 'Neked való?', text: 'Az ízlésedből számolt egyezés — mellette/ellene érvekkel, és ha hasonlókat szoktál dobni, arra is figyelmeztet.' },
-  { selector: 'opinion', title: 'Vélemény = a rendszer lelke', text: 'Írd le szabadon, mi tetszett és mi nem — az AI ízlés-tényeket nyer ki belőle, és ettől lesz egyre pontosabb minden ajánlás.' },
-]
+import T from '@/components/T'
+import TitleTour from '@/components/TitleTour'
 import CharacterGrid from '@/components/CharacterGrid'
 import ThemesPlayer from '@/components/ThemesPlayer'
 import StreamLinks from '@/components/StreamLinks'
@@ -30,17 +25,24 @@ export default async function CatalogTitlePage({
   const t = await resolveTitleBySlug(mediaType, slug)
   if (!t) notFound()
 
-  const countChip = t.mediaType === 'MANGA'
-    ? (t.chapters != null ? `${t.chapters} fejezet` : t.volumes != null ? `${t.volumes} kötet` : null)
-    : (t.episodes != null ? `${t.episodes} rész` : null)
-  const chips = [
-    t.year != null ? String(t.year) : null,
-    t.format,
-    countChip,
-    t.mediaType !== 'MANGA' && t.durationMin != null ? `${t.durationMin} perc` : null,
-    t.avgScore != null ? `AniList ${t.avgScore}%` : null,
-    t.communityScore != null ? `★ ${t.communityScore.toFixed(1)} (${t.communityCount})` : null,
-  ].filter(Boolean) as string[]
+  // A mertekegyseges chipek `<T>`-vel mennek: az oldal ISR-elt szerver-komponens,
+  // ott nincs `useTranslations` — a `<T>` a kliensen hidratal a nezo nyelvere.
+  const chips: { key: string; node: React.ReactNode }[] = []
+  if (t.year != null) chips.push({ key: 'year', node: String(t.year) })
+  if (t.format) chips.push({ key: 'format', node: t.format })
+  if (t.mediaType === 'MANGA') {
+    if (t.chapters != null) chips.push({ key: 'count', node: <T ns="catalog" k="chapterCount" values={{ count: t.chapters }} /> })
+    else if (t.volumes != null) chips.push({ key: 'count', node: <T ns="catalog" k="volumeCount" values={{ count: t.volumes }} /> })
+  } else if (t.episodes != null) {
+    chips.push({ key: 'count', node: <T ns="catalog" k="episodeCount" values={{ count: t.episodes }} /> })
+  }
+  if (t.mediaType !== 'MANGA' && t.durationMin != null) {
+    chips.push({ key: 'duration', node: <T ns="catalog" k="minuteCount" values={{ count: t.durationMin }} /> })
+  }
+  if (t.avgScore != null) chips.push({ key: 'avg', node: `AniList ${t.avgScore}%` })
+  if (t.communityScore != null) {
+    chips.push({ key: 'community', node: `★ ${t.communityScore.toFixed(1)} (${t.communityCount})` })
+  }
 
   // eredeti mű / adaptáció kiemelése + stáb (api_cache-elt AniList-query, hibánál üres)
   const sourceRel = pickSourceRelation(t.relations, t.mediaType === 'MANGA' ? 'MANGA' : 'ANIME')
@@ -93,13 +95,12 @@ export default async function CatalogTitlePage({
 
               <div className="flex flex-wrap gap-1.5 mt-5">
                 {chips.map((chip) => (
-                  <Chip key={chip}>{chip}</Chip>
+                  <Chip key={chip.key}>{chip.node}</Chip>
                 ))}
                 {t.studio && (
                   <Chip
                     variant="link"
                     href={`/bongeszo?studio=${encodeURIComponent(t.studio)}`}
-                    title={`További ${t.studio}-címek a böngészőben`}
                   >
                     {t.studio}
                   </Chip>
@@ -132,7 +133,7 @@ export default async function CatalogTitlePage({
 
       <div className="max-w-5xl mx-auto px-4 pb-24 md:pb-16 flex flex-col gap-14">
         {/* personalized, dynamic — not part of the cached shell */}
-        <TourSpotlight page="title" steps={TITLE_TOUR} />
+        <TitleTour />
         <OwnerOverlay
           titleId={t.id}
           watchlistMeta={{ anilistId: t.anilistId, title: t.titleRomaji, coverUrl: t.coverUrl, mediaType: t.mediaType }}
@@ -140,7 +141,7 @@ export default async function CatalogTitlePage({
 
         {t.description && (
           <section>
-            <SectionHeader title="Miről szól" />
+            <SectionHeader title={<T ns="catalog" k="synopsis" />} />
             <p className="text-[15px] text-text-1 leading-[1.75] max-w-[62ch]">{stripHtml(t.description)}</p>
           </section>
         )}
@@ -148,8 +149,8 @@ export default async function CatalogTitlePage({
         {sourceRel && (
           <section>
             <SectionHeader
-              eyebrow={t.mediaType === 'MANGA' ? 'Anime-adaptáció' : 'Eredeti mű'}
-              title={t.mediaType === 'MANGA' ? 'Ebből készült az anime' : 'Ebből készült ez a feldolgozás'}
+              eyebrow={<T ns="catalog" k={t.mediaType === 'MANGA' ? 'adaptationEyebrow' : 'sourceEyebrow'} />}
+              title={<T ns="catalog" k={t.mediaType === 'MANGA' ? 'adaptationTitle' : 'sourceTitle'} />}
             />
             <div className="surface-1 rounded-[var(--r-lg)] p-3 flex items-center gap-4">
               {sourceLocal?.coverUrl && (
@@ -165,7 +166,7 @@ export default async function CatalogTitlePage({
                   href={canonicalPath(sourceLocal.mediaType, sourceLocal.slug)}
                   className="btn-ghost border border-white/12 px-3.5 py-1.5 text-xs shrink-0"
                 >
-                  Megnyitás →
+                  <T ns="catalog" k="open" />
                 </Link>
               ) : (
                 <a
@@ -184,7 +185,7 @@ export default async function CatalogTitlePage({
 
         {staff.length > 0 && (
           <section>
-            <SectionHeader title="Kik csinálták" />
+            <SectionHeader title={<T ns="catalog" k="staff" />} />
             <div className="snap-row no-scrollbar pb-2">
               {staff.map((s) => (
                 <div key={s.staffId} className="surface-1 flex items-center gap-2.5 rounded-full pl-1 pr-4 py-1">
@@ -214,7 +215,7 @@ export default async function CatalogTitlePage({
 
         {otherRelations.length > 0 && (
           <section>
-            <SectionHeader title="A sorozat többi része" />
+            <SectionHeader title={<T ns="catalog" k="otherParts" />} />
             <ul className="surface-1 rounded-[var(--r-lg)] p-2 flex flex-col">
               {otherRelations.map((r) => (
                 <li key={`${r.type}-${r.anilistId}`}>

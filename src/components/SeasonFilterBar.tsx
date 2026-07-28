@@ -1,10 +1,10 @@
 'use client'
 import { useId, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import {
-  FORMAT_LABELS,
+  FORMAT_KEYS,
   MIN_SCORE_STEPS,
-  SORT_LABELS,
-  type SeasonSort,
+  SORT_KEYS,
   type SeasonView,
 } from '@/lib/season-filter'
 
@@ -40,7 +40,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
-function Group({ label, children }: { label: string; children: React.ReactNode }) {
+function Group({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="label-mono mr-1 w-full sm:w-auto">{label}</span>
@@ -52,8 +52,13 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 export default function SeasonFilterBar({ view, onChange, facets, shown, total, scored, scoresFailed }: Props) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
+  const t = useTranslations('seasonFilter')
+  const tf = useTranslations('format')
 
-  const sorts: SeasonSort[] = ['taste', 'airing', 'score', 'popularity']
+  // Amire nincs sajat forditasunk, azt nyersen mutatjuk (AniList-formatum-kod).
+  const formatLabel = (f: string) =>
+    (FORMAT_KEYS as readonly string[]).includes(f) ? tf(f as (typeof FORMAT_KEYS)[number]) : f
+
   const activeCount =
     view.genres.length + view.formats.length + view.sites.length + (view.minScore > 0 ? 1 : 0)
   const filtersActive = activeCount > 0
@@ -69,10 +74,12 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
         aria-controls={panelId}
         className="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left transition-colors hover:bg-white/[0.04]"
       >
-        <span className="label-mono shrink-0">Rendezés</span>
+        <span className="label-mono shrink-0">{t('sort')}</span>
         <span className="min-w-0 flex-1 truncate text-[13px] text-text-1">
-          {SORT_LABELS[view.sort]}
-          {filtersActive && <span className="text-text-2">{` · ${activeCount} szűrő`}</span>}
+          {t(`sort_${view.sort}`)}
+          {filtersActive && (
+            <span className="text-text-2">{` · ${t('filterCount', { count: activeCount })}`}</span>
+          )}
         </span>
         <span className="shrink-0 font-mono text-[13px] tabular-nums text-text-2">
           {shown}/{total}
@@ -104,17 +111,17 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
         {/* inert: csukott állapotban a chipek ne legyenek tabbal elérhetők */}
         <div className="overflow-hidden" inert={!open}>
           <div className="flex flex-col gap-3.5 border-t border-white/8 px-4 py-3.5">
-              <Group label="Rendezés">
-                {sorts.map((s) => (
+              <Group label={t('sort')}>
+                {SORT_KEYS.map((s) => (
                   <Chip key={s} active={view.sort === s} onClick={() => onChange({ ...view, sort: s })}>
-                    {SORT_LABELS[s]}
+                    {t(`sort_${s}`)}
                     {s === 'taste' && !scored && ' ·'}
                   </Chip>
                 ))}
               </Group>
 
               {facets.genres.length > 0 && (
-                <Group label="Műfaj">
+                <Group label={t('genre')}>
                   {facets.genres.map((g) => (
                     <Chip key={g} active={view.genres.includes(g)} onClick={() => onChange({ ...view, genres: toggle(view.genres, g) })}>
                       {g}
@@ -124,17 +131,17 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
               )}
 
               {facets.formats.length > 1 && (
-                <Group label="Formátum">
+                <Group label={t('format')}>
                   {facets.formats.map((f) => (
                     <Chip key={f} active={view.formats.includes(f)} onClick={() => onChange({ ...view, formats: toggle(view.formats, f) })}>
-                      {FORMAT_LABELS[f] ?? f}
+                      {formatLabel(f)}
                     </Chip>
                   ))}
                 </Group>
               )}
 
               {facets.sites.length > 0 && (
-                <Group label="Streaming">
+                <Group label={t('streaming')}>
                   {facets.sites.map((s) => (
                     <Chip key={s} active={view.sites.includes(s)} onClick={() => onChange({ ...view, sites: toggle(view.sites, s) })}>
                       {s}
@@ -145,10 +152,10 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
 
               {/* pont nélkül minden küszöb üres rácsot adna — ilyenkor a sáv el is tűnik */}
               {scored && (
-                <Group label="Min. pont">
+                <Group label={t('minScore')}>
                   {MIN_SCORE_STEPS.map((m) => (
                     <Chip key={m} active={view.minScore === m} onClick={() => onChange({ ...view, minScore: m })}>
-                      {m === 0 ? 'mind' : `${m}+`}
+                      {m === 0 ? t('all') : `${m}+`}
                     </Chip>
                   ))}
                 </Group>
@@ -160,7 +167,7 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
                     onClick={() => onChange({ ...view, genres: [], formats: [], sites: [], minScore: 0 })}
                     className="btn-ghost border border-white/12 px-3 py-1.5 text-[13px] text-text-2"
                   >
-                    Szűrők törlése
+                    {t('clearFilters')}
                   </button>
                 </div>
               )}
@@ -170,7 +177,7 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
 
       {!scored && (
         <p className="label-mono border-t border-white/8 px-4 py-2">
-          {scoresFailed ? 'AI-pont most nem elérhető, adásidő szerint rendezve' : 'Ízlés-pontok számolása…'}
+          {scoresFailed ? t('scoresUnavailable') : t('scoring')}
         </p>
       )}
     </div>
