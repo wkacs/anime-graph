@@ -31,7 +31,7 @@ const MISSING: Metric = { value: '-', unit: 'none' }
 
 // U+202F = keskeny nem-toro szokoz. Escape-kent irva, mert a nyers karakter
 // vizualisan megkulonboztethetetlen a sima szokoztol.
-export const THIN_SPACE = ' '
+export const THIN_SPACE = '\u202F'
 
 // Ezres tagolas: a 4+ jegyu szamok kulonben osszefolynak, a sima szokoz
 // viszont sortorest engedne a szamon belul.
