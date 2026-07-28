@@ -18,13 +18,7 @@ export const DEFAULT_CONFIG: GraphConfig = {
 // above this many anime nodes 'auto' drops covers/labels for plain dots
 export const COVER_AUTO_LIMIT = 80
 
-export const DIM_LABELS: Record<Dimension, string> = {
-  genre: 'Műfaj',
-  studio: 'Stúdió',
-  scoreBand: 'Pontszám-sáv',
-  year: 'Év',
-  status: 'Státusz',
-}
+export const ALL_DIMENSIONS: Dimension[] = ['genre', 'studio', 'scoreBand', 'year', 'status']
 
 export type MediaMode = 'ANIME' | 'MANGA' | 'ALL'
 
@@ -70,28 +64,38 @@ export type GraphNode = {
 
 export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' | 'vibe' | 'char' | 'seiyuu' }
 
-const STATUS_LABELS: Record<string, string> = {
-  watching: 'Nézem',
-  completed: 'Kész',
-  dropped: 'Dropped',
-  planned: 'Tervezem',
+/**
+ * A csoport-node felirata EGYBEN az azonositoja is (`dim:genre:<label>`), ezert
+ * a forditott szoveget be kell adni, nem lehet a megjelenitesnel racsavarni.
+ * Alapertelmezes az angol, mert az app alapnyelve is az.
+ */
+export type GraphLabels = {
+  unknown: string
+  noScore: string
+  status: Record<string, string>
 }
 
-export function scoreBand(s: number | null): string {
-  if (s == null) return 'Nincs pont'
+export const DEFAULT_GRAPH_LABELS: GraphLabels = {
+  unknown: 'Unknown',
+  noScore: 'No score',
+  status: { watching: 'Watching', completed: 'Completed', dropped: 'Dropped', planned: 'Plan to watch' },
+}
+
+export function scoreBand(s: number | null, labels: GraphLabels = DEFAULT_GRAPH_LABELS): string {
+  if (s == null) return labels.noScore
   if (s <= 4) return '1–4'
   if (s <= 6) return '5–6'
   if (s <= 8) return '7–8'
   return '9–10'
 }
 
-function dimValue(a: GraphAnime, d: Dimension): string {
+function dimValue(a: GraphAnime, d: Dimension, labels: GraphLabels): string {
   switch (d) {
-    case 'genre': return a.genres[0] ?? 'Ismeretlen'
-    case 'studio': return a.studio ?? 'Ismeretlen'
-    case 'scoreBand': return scoreBand(a.myScore)
-    case 'year': return a.year != null ? String(a.year) : 'Ismeretlen'
-    case 'status': return STATUS_LABELS[a.status] ?? a.status
+    case 'genre': return a.genres[0] ?? labels.unknown
+    case 'studio': return a.studio ?? labels.unknown
+    case 'scoreBand': return scoreBand(a.myScore, labels)
+    case 'year': return a.year != null ? String(a.year) : labels.unknown
+    case 'status': return labels.status[a.status] ?? a.status
   }
 }
 
@@ -99,10 +103,13 @@ const RELATION_TYPES = new Set(['SEQUEL', 'PREQUEL', 'SIDE_STORY', 'SPIN_OFF', '
 
 // drill-down entry view: one bubble per genre, sized by how many anime carry it,
 // decorated with the genre's top-scored covers
-export function buildBubbles(rows: GraphAnime[]): { nodes: GraphNode[]; links: GraphLink[] } {
+export function buildBubbles(
+  rows: GraphAnime[],
+  labels: GraphLabels = DEFAULT_GRAPH_LABELS,
+): { nodes: GraphNode[]; links: GraphLink[] } {
   const byGenre = new Map<string, GraphAnime[]>()
   for (const a of rows) {
-    const genres = a.genres.length ? a.genres : ['Ismeretlen']
+    const genres = a.genres.length ? a.genres : [labels.unknown]
     for (const g of genres) {
       const list = byGenre.get(g) ?? []
       list.push(a)
@@ -157,9 +164,13 @@ function vibeLinks(subset: GraphAnime[]): GraphLink[] {
 }
 
 // drill-down detail: the chosen genre as hub + every anime tagged with it
-export function buildGenreDetail(rows: GraphAnime[], genre: string): { nodes: GraphNode[]; links: GraphLink[] } {
+export function buildGenreDetail(
+  rows: GraphAnime[],
+  genre: string,
+  labels: GraphLabels = DEFAULT_GRAPH_LABELS,
+): { nodes: GraphNode[]; links: GraphLink[] } {
   const subset = rows.filter((a) =>
-    genre === 'Ismeretlen' ? a.genres.length === 0 : a.genres.includes(genre),
+    genre === labels.unknown ? a.genres.length === 0 : a.genres.includes(genre),
   )
   const hubId = `dim:genre:${genre}`
   const nodes: GraphNode[] = [
@@ -319,7 +330,11 @@ export function buildTimeline(rows: TimelineAnime[]): { nodes: GraphNode[]; link
   return { nodes, links }
 }
 
-export function buildGraph(rows: GraphAnime[], cfg: GraphConfig): { nodes: GraphNode[]; links: GraphLink[] } {
+export function buildGraph(
+  rows: GraphAnime[],
+  cfg: GraphConfig,
+  labels: GraphLabels = DEFAULT_GRAPH_LABELS,
+): { nodes: GraphNode[]; links: GraphLink[] } {
   const nodes = new Map<string, GraphNode>()
   const links: GraphLink[] = []
   const linkSeen = new Set<string>()
@@ -346,7 +361,7 @@ export function buildGraph(rows: GraphAnime[], cfg: GraphConfig): { nodes: Graph
     let prevId: string | null = null
     const path: string[] = []
     for (const level of cfg.levels) {
-      const value = dimValue(a, level)
+      const value = dimValue(a, level, labels)
       path.push(value)
       const dimId = `dim:${level}:${path.join('/')}`
       if (!nodes.has(dimId)) {

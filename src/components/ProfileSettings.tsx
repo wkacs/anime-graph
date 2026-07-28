@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import Avatar from './Avatar'
 
 const MAX_BIO = 500
@@ -13,6 +14,7 @@ export default function ProfileSettings() {
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
+  const t = useTranslations('profileSettings')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -65,7 +67,7 @@ export default function ProfileSettings() {
           onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO))}
           onBlur={() => save({ bio })}
           rows={3}
-          placeholder="Pár mondat magadról — ez jelenik meg a publikus profilodon."
+          placeholder={t('bioPlaceholder')}
           className="field w-full px-4 py-2.5 text-sm resize-y"
         />
         <p className="text-[11px] font-mono text-text-3 mt-1">{bio.length}/{MAX_BIO}</p>
@@ -73,11 +75,8 @@ export default function ProfileSettings() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm">Publikus profil</p>
-          <p className="text-xs text-text-3">
-            Privátra állítva a /u/{username} oldal nem érhető el. A véleményeid szövege
-            sosem publikus, függetlenül ettől.
-          </p>
+          <p className="text-sm">{t('publicProfile')}</p>
+          <p className="text-xs text-text-3">{t('visibilityHint', { username })}</p>
         </div>
         <div className="flex rounded-full bg-white/5 p-1 text-xs">
           {(['public', 'private'] as const).map((v) => (
@@ -90,13 +89,13 @@ export default function ProfileSettings() {
                 visibility === v ? 'bg-white/12 text-text-1' : 'text-text-3 hover:text-text-2'
               }`}
             >
-              {v === 'public' ? 'Publikus' : 'Privát'}
+              {v === 'public' ? t('public') : t('private')}
             </button>
           ))}
         </div>
       </div>
 
-      {saved && <p className="text-[13px] text-text-2">Elmentve.</p>}
+      {saved && <p className="text-[13px] text-text-2">{t('saved')}</p>}
     </section>
   )
 }

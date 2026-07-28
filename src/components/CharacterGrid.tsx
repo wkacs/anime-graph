@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { CharacterEntry } from '@/lib/anilist'
 
 // anime-oldali szereplő-rács: szív-gombbal kedvencelhető karakterek (CV-vel).
@@ -10,6 +11,7 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [pinned, setPinned] = useState<number[] | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const t = useTranslations('characters')
 
   useEffect(() => {
     fetch(`/api/characters/${anilistId}`)
@@ -42,7 +44,7 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
       body: JSON.stringify({ chars: next }),
     })
     if (res.ok) setPinned(next)
-    else alert((await res.json()).error ?? 'Nem sikerült a kitűzés')
+    else alert((await res.json()).error ?? t('pinFailed'))
   }
 
   async function toggle(c: CharacterEntry) {
@@ -75,7 +77,10 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
 
   return (
     <section className="glass rounded-3xl p-5">
-      <p className="label-mono mb-3">Szereplők{!readOnly && <span className="text-text-3"> — ♥ a kedvenceid a gráfba kerülnek</span>}</p>
+      <p className="label-mono mb-3">
+        {t('heading')}
+        {!readOnly && <span className="text-text-3"> {t('favouritesHint')}</span>}
+      </p>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
         {characters.map((c) => {
           const fav = favorites.has(c.charId)
@@ -89,7 +94,7 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
                 {!readOnly && (
                   <button
                     onClick={() => toggle(c)}
-                    aria-label={fav ? 'Kedvenc törlése' : 'Kedvencnek jelölés'}
+                    aria-label={fav ? t('unfavourite') : t('favourite')}
                     className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full glass flex items-center justify-center text-sm transition-colors ${
                       fav ? 'text-[color:var(--status-dropped)]' : 'text-text-2 hover:text-text-1'
                     }`}
@@ -100,8 +105,8 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
                 {!readOnly && fav && pinned != null && (
                   <button
                     onClick={() => togglePin(c.charId)}
-                    aria-label={pinned.includes(c.charId) ? 'Levétel a profilról' : 'Kitűzés a profilra (max 3)'}
-                    title={pinned.includes(c.charId) ? 'Levétel a profilról' : 'Kitűzés a profilra (max 3)'}
+                    aria-label={pinned.includes(c.charId) ? t('unpin') : t('pin')}
+                    title={pinned.includes(c.charId) ? t('unpin') : t('pin')}
                     className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full glass flex items-center justify-center text-xs transition-colors ${
                       pinned.includes(c.charId) ? 'text-text-1' : 'text-text-3 hover:text-text-1'
                     }`}

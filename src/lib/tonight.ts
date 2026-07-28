@@ -12,7 +12,20 @@ export type TonightAnime = {
 
 export type TonightMood = 'folytatas' | 'rovid' | 'comfort' | 'barmi'
 
-export type TonightPick = TonightAnime & { reason: string }
+/**
+ * Az indoklas kulcs + behelyettesitendo ertekek, nem kesz mondat: a valasztas
+ * logikaja nyelvfuggetlen, a szoveget a felulet rakja ossze a `tonight`
+ * namespace-bol. Igy a picker tesztelheto marad nyelvi fuggoseg nelkul.
+ */
+export type TonightReason =
+  | { key: 'resume'; progress: number }
+  | { key: 'movie' }
+  | { key: 'shortSeries'; episodes: number }
+  | { key: 'comfort'; score: number }
+  | { key: 'longPlanned' }
+  | { key: 'rewatch'; score: number }
+
+export type TonightPick = TonightAnime & { reason: TonightReason }
 
 const rand = <T,>(arr: T[], r: () => number): T => arr[Math.floor(r() * arr.length)]
 
@@ -32,7 +45,7 @@ export function pickTonight(
 
   if (mood === 'folytatas' && watching.length) {
     const a = rand(watching, r)
-    return { ...a, reason: `Már a ${a.progress}. résznél jársz — ma este eggyel közelebb a végéhez.` }
+    return { ...a, reason: { key: 'resume', progress: a.progress } }
   }
   if (mood === 'rovid') {
     const short = planned
@@ -40,12 +53,17 @@ export function pickTonight(
       .sort((a, b) => (b.avgScore ?? 0) - (a.avgScore ?? 0))
     if (short.length) {
       const a = short[Math.floor(r() * Math.min(3, short.length))]
-      return { ...a, reason: a.format === 'MOVIE' ? 'Egy film — ma este be is fejezed.' : `Csak ${a.episodes} rész — gyorsan végigmegy.` }
+      return {
+        ...a,
+        reason: a.format === 'MOVIE'
+          ? { key: 'movie' }
+          : { key: 'shortSeries', episodes: a.episodes ?? 0 },
+      }
     }
   }
   if (mood === 'comfort' && comfort.length) {
     const a = comfort[Math.floor(r() * Math.min(3, comfort.length))]
-    return { ...a, reason: `${a.myScore}/10-et adtál rá — garantált jó este, nulla kockázat.` }
+    return { ...a, reason: { key: 'comfort', score: a.myScore ?? 0 } }
   }
 
   // barmi + fallbackok: tervezett (népszerűség szerint súlyozva) → nézem → comfort
@@ -53,10 +71,10 @@ export function pickTonight(
   if (!pool.length) return null
   const sorted = [...pool].sort((a, b) => (b.avgScore ?? 0) - (a.avgScore ?? 0))
   const a = sorted[Math.floor(r() * Math.min(5, sorted.length))]
-  const reason = a.status === 'planned'
-    ? 'Régóta ott ül a tervezett listádon — ma este itt az ideje.'
+  const reason: TonightReason = a.status === 'planned'
+    ? { key: 'longPlanned' }
     : a.status === 'watching'
-      ? `Már elkezdted (${a.progress}. rész) — folytasd ma este.`
-      : `${a.myScore}/10 — újranézésre mindig jó.`
+      ? { key: 'resume', progress: a.progress }
+      : { key: 'rewatch', score: a.myScore ?? 0 }
   return { ...a, reason }
 }

@@ -10,6 +10,10 @@ import { join } from 'node:path'
 // staff-szekcióval visszatért regresszió).
 const ISR_SAFE_MODULES = ['catalog-page.ts', 'api-cache.ts', 'staff-cache.ts']
 
+// Ugyanaz a csapda mas alakban: a `server-i18n.ts` cookie()/headers()-t olvas,
+// ami szinten dinamikussa teszi a rendert. ISR-modul nem importalhatja.
+const ISR_FORBIDDEN_IMPORTS = ['@/lib/server-i18n', './server-i18n']
+
 const readLib = (file: string) => readFileSync(join(__dirname, file), 'utf8')
 
 // a '@/db/client'-ből importált NEVEK (az `as` alias előtti, forrás-oldali oldal)
@@ -31,6 +35,16 @@ describe('ISR-biztos DB-kliens', () => {
     it(`${file} nem importálja a no-store 'db' klienst`, () => {
       const bindings = importedDbClientBindings(readLib(file))
       expect(bindings, `${file}: ISR-oldal alatt csak dbStatic használható`).not.toContain('db')
+    })
+  }
+
+  for (const file of ISR_SAFE_MODULES) {
+    it(`${file} nem importálja a dinamikus locale-feloldót`, () => {
+      const src = readLib(file)
+      for (const mod of ISR_FORBIDDEN_IMPORTS) {
+        expect(src, `${file}: a ${mod} cookie()/headers()-t olvas → DYNAMIC_SERVER_USAGE`)
+          .not.toContain(mod)
+      }
     })
   }
 

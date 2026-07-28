@@ -2,20 +2,17 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import { pickTonight, type TonightMood, type TonightPick, type TonightAnime } from '@/lib/tonight'
 
-const MOODS: { mood: TonightMood; label: string }[] = [
-  { mood: 'barmi', label: 'Mindegy, dobj egyet' },
-  { mood: 'folytatas', label: 'Folytatnék valamit' },
-  { mood: 'rovid', label: 'Valami rövidet' },
-  { mood: 'comfort', label: 'Comfort újranézés' },
-]
+const MOODS = ['barmi', 'folytatas', 'rovid', 'comfort'] as const satisfies readonly TonightMood[]
 
 export default function TonightPicker() {
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState<TonightAnime[]>([])
   const [pick, setPick] = useState<TonightPick | null>(null)
   const [mood, setMood] = useState<TonightMood>('barmi')
+  const t = useTranslations('tonight')
 
   useEffect(() => {
     if (!open || rows.length) return
@@ -46,7 +43,7 @@ export default function TonightPicker() {
         onClick={() => setOpen(true)}
         className="glass rounded-full px-4 py-2 text-sm text-text-2 hover:text-text-1 hover:bg-white/8 transition-colors"
       >
-        🎲 Ma este mit nézzek?
+        {t('cta')}
       </button>
       <AnimatePresence>
         {open && (
@@ -65,20 +62,20 @@ export default function TonightPicker() {
               className="glass-strong rounded-3xl w-full max-w-md p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              <p className="label-mono mb-1">Ma este</p>
-              <h2 className="text-lg font-semibold tracking-tight mb-4">Milyen hangulatban vagy?</h2>
+              <p className="label-mono mb-1">{t('kicker')}</p>
+              <h2 className="text-lg font-semibold tracking-tight mb-4">{t('question')}</h2>
               <div className="flex flex-wrap gap-1.5 mb-5">
                 {MOODS.map((m) => (
                   <button
-                    key={m.mood}
-                    onClick={() => roll(m.mood)}
+                    key={m}
+                    onClick={() => roll(m)}
                     className={`rounded-full px-3.5 py-1.5 text-xs transition-colors ${
-                      pick && mood === m.mood
+                      pick && mood === m
                         ? 'bg-white text-black font-semibold'
                         : 'bg-white/6 text-text-2 hover:bg-white/12'
                     }`}
                   >
-                    {m.label}
+                    {t(`mood_${m}`)}
                   </button>
                 ))}
               </div>
@@ -97,21 +94,24 @@ export default function TonightPicker() {
                       {pick.titleRomaji}
                     </Link>
                     <p className="label-mono mt-1">
-                      {pick.episodes != null ? `${pick.episodes} rész` : pick.format ?? ''}
+                      {pick.episodes != null ? t('episodeCount', { count: pick.episodes }) : pick.format ?? ''}
                     </p>
-                    <p className="text-[13px] text-text-2 leading-snug mt-2">{pick.reason}</p>
+                    <p className="text-[13px] text-text-2 leading-snug mt-2">
+                      {/* A picker kulcsot ad, nem mondatot — lasd lib/tonight.ts */}
+                      {t(`reason_${pick.reason.key}`, { ...pick.reason })}
+                    </p>
                     <div className="flex gap-2 mt-auto pt-3">
                       <button onClick={startWatching} className="btn-solid px-4 py-1.5 text-xs">
-                        ▶ Ezt nézem
+                        {t('watchThis')}
                       </button>
                       <button onClick={() => roll(mood)} className="btn-ghost border border-white/10 px-3 py-1.5 text-xs">
-                        Másikat 🎲
+                        {t('another')}
                       </button>
                     </div>
                   </div>
                 </motion.div>
               ) : (
-                <p className="text-sm text-text-3">Válassz hangulatot, és dobok egyet a listádból.</p>
+                <p className="text-sm text-text-3">{t('hint')}</p>
               )}
             </motion.div>
           </motion.div>

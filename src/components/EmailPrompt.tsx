@@ -1,9 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 // A nyílt regisztráció előtti fiókoknak nincs e-mail-címük, tehát nincs
 // jelszó-visszaállításuk sem. Ez a sáv kéri be, és újraindítja a megerősítést.
 export default function EmailPrompt() {
+  const t = useTranslations('emailPrompt')
+  const tc = useTranslations('common')
   const [needed, setNeeded] = useState(false)
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
@@ -21,7 +24,7 @@ export default function EmailPrompt() {
   if (done) {
     return (
       <div className="glass rounded-2xl p-4 text-sm text-text-2">
-        Elmentve. Küldtünk egy megerősítő levelet — kattints a benne lévő linkre.
+        {t('saved')}
       </div>
     )
   }
@@ -30,13 +33,13 @@ export default function EmailPrompt() {
     <div className="glass rounded-2xl p-4 flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="text-text-2 flex-1 min-w-[200px]">
-          Nincs e-mail a fiókodon, így nincs jelszó-visszaállításod.
+          {t('noEmail')}
         </span>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@pelda.hu"
+          placeholder={t('placeholder')}
           className="field px-3 py-1.5 text-sm flex-1 min-w-[200px]"
         />
         <button
@@ -51,12 +54,12 @@ export default function EmailPrompt() {
                 body: JSON.stringify({ email }),
               })
               if (r.ok) setDone(true)
-              else setError((await r.json().catch(() => null))?.error ?? 'Hiba történt')
+              else setError((await r.json().catch(() => null))?.error ?? tc('error'))
             } finally {
               setBusy(false)
             }
           }}
-        >{busy ? '…' : 'Mentés'}</button>
+        >{busy ? '…' : tc('save')}</button>
       </div>
       {error && <p className="text-[13px] text-[color:var(--status-dropped)]">{error}</p>}
     </div>

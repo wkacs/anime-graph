@@ -5,6 +5,7 @@ import { title } from '@/db/schema'
 import { fetchMedia } from '@/lib/anilist'
 import { stripHtml } from '@/lib/description'
 import { canonicalPath } from '@/lib/catalog-page'
+import { serverT } from '@/lib/server-i18n'
 import PreviewAddButtons from '@/components/PreviewAddButtons'
 import { eq } from 'drizzle-orm'
 
@@ -27,6 +28,8 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
 
   const isManga = media.type === 'MANGA'
   const desc = stripHtml(media.description)
+  // force-dynamic oldal, tehat a felhasznalo nyelven rendelhet (lasd server-i18n)
+  const t = await serverT('preview')
 
   return (
     <main className="min-h-screen max-w-4xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
@@ -42,7 +45,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
           </div>
         )}
         <div className="min-w-0 flex flex-col gap-2">
-          <p className="label-mono">Előnézet — nincs a listádon</p>
+          <p className="label-mono">{t('kicker')}</p>
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight">{media.title.romaji}</h1>
           {media.title.english && media.title.english !== media.title.romaji && (
             <p className="text-sm text-text-2">{media.title.english}</p>
@@ -53,8 +56,8 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
               media.format,
               media.seasonYear ?? undefined,
               isManga
-                ? (media.chapters ? `${media.chapters} fejezet` : undefined)
-                : (media.episodes ? `${media.episodes} rész` : undefined),
+                ? (media.chapters ? t('chapterCount', { count: media.chapters }) : undefined)
+                : (media.episodes ? t('episodeCount', { count: media.episodes }) : undefined),
               media.averageScore != null ? `AniList ${media.averageScore}` : undefined,
             ].filter(Boolean).join(' · ')}
           </p>
@@ -74,7 +77,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
 
       {desc && (
         <section className="glass rounded-3xl p-5">
-          <p className="label-mono mb-2">Leírás</p>
+          <p className="label-mono mb-2">{t('description')}</p>
           <p className="text-sm text-text-1 leading-relaxed">{desc}</p>
         </section>
       )}

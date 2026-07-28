@@ -22,9 +22,9 @@ describe('buildBubbles', () => {
     expect(g.links).toHaveLength(0)
   })
 
-  it('anime without genre lands in Ismeretlen bubble', () => {
+  it('anime without genre lands in the unknown bubble', () => {
     const g = buildBubbles([mk({ genres: [] })])
-    expect(g.nodes.find((n) => n.id === 'dim:genre:Ismeretlen')!.val).toBe(1)
+    expect(g.nodes.find((n) => n.id === 'dim:genre:Unknown')!.val).toBe(1)
   })
 
   it('collects up to 3 top-scored covers per bubble', () => {

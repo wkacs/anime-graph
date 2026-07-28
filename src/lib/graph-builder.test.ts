@@ -44,7 +44,7 @@ describe('scoreBand', () => {
     expect(scoreBand(5)).toBe('5–6')
     expect(scoreBand(8)).toBe('7–8')
     expect(scoreBand(10)).toBe('9–10')
-    expect(scoreBand(null)).toBe('Nincs pont')
+    expect(scoreBand(null)).toBe('No score')
   })
 })
 
@@ -93,8 +93,15 @@ describe('buildGraph', () => {
     expect(rel).toEqual([{ source: 'anime:1', target: 'anime:2', kind: 'relation' }])
   })
 
-  it('anime with no genre falls into Ismeretlen', () => {
+  it('anime with no genre falls into the unknown bucket', () => {
     const g = buildGraph([mk({ genres: [] })], { levels: ['genre'], crossLinks: false })
+    expect(g.nodes.some((n) => n.id === 'dim:genre:Unknown')).toBe(true)
+  })
+
+  it('a csoport-cimke a beadott szotarbol jon, nem beegetve', () => {
+    // A node ID-ja a cimkebol kepzodik, ezert a forditast a builder kapja.
+    const labels = { unknown: 'Ismeretlen', noScore: 'Nincs pont', status: { watching: 'Nézem' } }
+    const g = buildGraph([mk({ genres: [] })], { levels: ['genre'], crossLinks: false }, labels)
     expect(g.nodes.some((n) => n.id === 'dim:genre:Ismeretlen')).toBe(true)
   })
 })

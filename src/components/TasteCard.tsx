@@ -1,6 +1,11 @@
 'use client'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { ApiAnime } from '@/lib/types'
+
+// A vasznon rajzolt felirat nem JSX, ezert a forditott szoveget a komponens
+// adja at — a rajzolo fuggveny nem hivhat hookot.
+type CardLabels = { title: string; topGenres: string }
 
 const proxied = (url: string) => `/_next/image?url=${encodeURIComponent(url)}&w=256&q=80`
 
@@ -42,7 +47,7 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
 
 type Profile = { portrait: string; badges: string[] }
 
-async function drawTasteCard(profile: Profile, list: ApiAnime[]): Promise<string> {
+async function drawTasteCard(profile: Profile, list: ApiAnime[], labels: CardLabels): Promise<string> {
   const W = 1080
   const cw = 190, ch = 268, gap = 26
 
@@ -80,7 +85,7 @@ async function drawTasteCard(profile: Profile, list: ApiAnime[]): Promise<string
 
   ctx.fillStyle = 'rgba(250,250,250,0.55)'
   ctx.font = '600 30px Geist Mono, monospace'
-  ctx.fillText('ANIME ÍZLÉS-DNS', 72, 110)
+  ctx.fillText(labels.title, 72, 110)
 
   // portré (tördelve)
   ctx.fillStyle = '#fafafa'
@@ -114,7 +119,7 @@ async function drawTasteCard(profile: Profile, list: ApiAnime[]): Promise<string
   const maxC = top[0]?.[1] ?? 1
   ctx.fillStyle = 'rgba(250,250,250,0.55)'
   ctx.font = '600 26px Geist Mono, monospace'
-  ctx.fillText('TOP MŰFAJOK', 72, y)
+  ctx.fillText(labels.topGenres, 72, y)
   y += 44
   ctx.font = '500 28px Instrument Sans, sans-serif'
   for (const [g, c] of top) {
@@ -156,13 +161,14 @@ async function drawTasteCard(profile: Profile, list: ApiAnime[]): Promise<string
 // Megosztható ízlés-DNS-kártya (PNG): portré + badge-ek + top műfajok + top-3 borító.
 export default function TasteCard({ profile, list }: { profile: Profile | null; list: ApiAnime[] }) {
   const [busy, setBusy] = useState(false)
+  const t = useTranslations('tasteCard')
 
   if (!profile || !list.length) return null
 
   async function download() {
     setBusy(true)
     try {
-      const url = await drawTasteCard(profile!, list)
+      const url = await drawTasteCard(profile!, list, { title: t('cardTitle'), topGenres: t('topGenres') })
       const a = document.createElement('a')
       a.href = url
       a.download = 'izles-dns.png'
@@ -174,7 +180,7 @@ export default function TasteCard({ profile, list }: { profile: Profile | null; 
 
   return (
     <button onClick={download} disabled={busy} className="btn-ghost border border-white/10 px-3.5 py-1.5 text-xs">
-      {busy ? 'Rajzolás…' : '🧬 DNS-kártya letöltése'}
+      {busy ? t('drawing') : t('download')}
     </button>
   )
 }

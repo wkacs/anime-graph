@@ -41,7 +41,28 @@ export default function GrafPage() {
   const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
   const t = useTranslations('graph')
+  const tgl = useTranslations('graphLabels')
+  const ts = useTranslations('status')
   const statusLabel = useStatusLabel()
+  // A csoport-node felirata egyben az azonositoja is, ezert a forditott
+  // cimkeket a builder KAPJA, nem a megjelenites teszi ra (lasd graph-builder).
+  //
+  // A memo STRINGEKRE fugg, nem a forditóra: a next-intl `t` minden renderben
+  // uj referencia, igy az egesz grafot ujraepitene minden renderben.
+  const lblUnknown = tgl('unknown')
+  const lblNoScore = tgl('noScore')
+  const lblWatching = ts('watching')
+  const lblCompleted = ts('completed')
+  const lblPlanned = ts('planned')
+  const lblDropped = ts('dropped')
+  const graphLabels = useMemo(() => ({
+    unknown: lblUnknown,
+    noScore: lblNoScore,
+    status: {
+      watching: lblWatching, completed: lblCompleted,
+      planned: lblPlanned, dropped: lblDropped,
+    },
+  }), [lblUnknown, lblNoScore, lblWatching, lblCompleted, lblPlanned, lblDropped])
   // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
   const GRAF_TOUR: TourStep[] = [
     { selector: 'graph', title: t('tour1Title'), text: t('tour1Text') },
@@ -149,9 +170,9 @@ export default function GrafPage() {
   const graph = useMemo(() => {
     const base =
       timelineMode ? buildTimeline(rows)
-      : advanced ? buildGraph(rows, config)
-      : focusGenre ? buildGenreDetail(rows, focusGenre)
-      : buildBubbles(rows)
+      : advanced ? buildGraph(rows, config, graphLabels)
+      : focusGenre ? buildGenreDetail(rows, focusGenre, graphLabels)
+      : buildBubbles(rows, graphLabels)
     if ((!showChars && !showStaff) || timelineMode) return base
     // karakter/stáb-réteg: csak a most látható anime-node-okhoz kötve
     const visibleIds = new Set(
@@ -167,7 +188,7 @@ export default function GrafPage() {
       merged = { nodes: [...merged.nodes, ...layer.nodes], links: [...merged.links, ...layer.links] }
     }
     return merged
-  }, [rows, config, timelineMode, advanced, focusGenre, showChars, favChars, showStaff, staffRows])
+  }, [rows, config, timelineMode, advanced, focusGenre, showChars, favChars, showStaff, staffRows, graphLabels])
 
   const animeNodeCount = useMemo(
     () => graph.nodes.filter((n) => n.type === 'anime').length,

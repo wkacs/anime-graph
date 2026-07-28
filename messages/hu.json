@@ -193,6 +193,95 @@
     "previousExtractFailed": "előző kinyerés hibázott",
     "aiWorking": "AI dolgozik…"
   },
+  "tour": {
+    "skip": "Kihagyom",
+    "done": "Kész ✓",
+    "next": "Tovább →"
+  },
+  "emailPrompt": {
+    "saved": "Elmentve. Küldtünk egy megerősítő levelet — kattints a benne lévő linkre.",
+    "noEmail": "Nincs e-mail a fiókodon, így nincs jelszó-visszaállításod.",
+    "placeholder": "email@pelda.hu"
+  },
+  "profileReveal": {
+    "kicker": "Import kész ✓",
+    "heading": "Ki vagy te animenézőként?",
+    "reading": "Olvassuk az ízlésed…",
+    "failed": "Most nem sikerült a portré (AI-limit vagy hiba) — a Stats oldalon bármikor újrapróbálhatod.",
+    "close": "Bezárom",
+    "myStats": "Statisztikáim →"
+  },
+  "characters": {
+    "heading": "Szereplők",
+    "favouritesHint": "— ♥ a kedvenceid a gráfba kerülnek",
+    "favourite": "Kedvencnek jelölés",
+    "unfavourite": "Kedvenc törlése",
+    "pin": "Kitűzés a profilra (max 3)",
+    "unpin": "Levétel a profilról",
+    "pinFailed": "Nem sikerült a kitűzés"
+  },
+  "profileSettings": {
+    "bioPlaceholder": "Pár mondat magadról — ez jelenik meg a publikus profilodon.",
+    "publicProfile": "Publikus profil",
+    "visibilityHint": "Privátra állítva a /u/{username} oldal nem érhető el. A véleményeid szövege sosem publikus, függetlenül ettől.",
+    "public": "Publikus",
+    "private": "Privát",
+    "saved": "Elmentve."
+  },
+  "tasteCard": {
+    "cardTitle": "ANIME ÍZLÉS-DNS",
+    "topGenres": "TOP MŰFAJOK",
+    "drawing": "Rajzolás…",
+    "download": "🧬 DNS-kártya letöltése"
+  },
+  "preview": {
+    "kicker": "Előnézet — nincs a listádon",
+    "episodeCount": "{count} rész",
+    "chapterCount": "{count} fejezet",
+    "description": "Leírás"
+  },
+  "dimension": {
+    "genre": "Műfaj",
+    "studio": "Stúdió",
+    "scoreBand": "Pontszám-sáv",
+    "year": "Év",
+    "status": "Státusz"
+  },
+  "hierarchy": {
+    "levels": "Szintek",
+    "title": "Hierarchia",
+    "removeLevel": "Szint kikapcsolása",
+    "noLevels": "Nincs szint — csak animék",
+    "sequelLinks": "Sequel/prequel élek",
+    "view": "Nézet:",
+    "viewTooltip": "Auto: sok animénél kisebb borító, név nélkül (a név hoverre így is látszik). Teljes: mindig nagy borító + név. Csak pöttyök: leggyorsabb.",
+    "viewAuto": "Auto",
+    "viewFull": "Teljes",
+    "viewDots": "Csak pöttyök"
+  },
+  "graphLabels": {
+    "unknown": "Ismeretlen",
+    "noScore": "Nincs pont"
+  },
+  "tonight": {
+    "cta": "🎲 Ma este mit nézzek?",
+    "kicker": "Ma este",
+    "question": "Milyen hangulatban vagy?",
+    "mood_barmi": "Mindegy, dobj egyet",
+    "mood_folytatas": "Folytatnék valamit",
+    "mood_rovid": "Valami rövidet",
+    "mood_comfort": "Comfort újranézés",
+    "episodeCount": "{count} rész",
+    "reason_resume": "Már a {progress}. résznél jársz — ma este eggyel közelebb a végéhez.",
+    "reason_movie": "Egy film — ma este be is fejezed.",
+    "reason_shortSeries": "Csak {episodes} rész — gyorsan végigmegy.",
+    "reason_comfort": "{score}/10-et adtál rá — garantált jó este, nulla kockázat.",
+    "reason_longPlanned": "Régóta ott ül a tervezett listádon — ma este itt az ideje.",
+    "reason_rewatch": "{score}/10 — újranézésre mindig jó.",
+    "watchThis": "▶ Ezt nézem",
+    "another": "Másikat 🎲",
+    "hint": "Válassz hangulatot, és dobok egyet a listádból."
+  },
   "graph": {
     "media_ANIME": "Anime",
     "media_MANGA": "Manga",

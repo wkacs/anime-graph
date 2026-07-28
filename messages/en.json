@@ -193,6 +193,95 @@
     "previousExtractFailed": "previous extract failed",
     "aiWorking": "AI is working…"
   },
+  "tour": {
+    "skip": "Skip",
+    "done": "Done ✓",
+    "next": "Next →"
+  },
+  "emailPrompt": {
+    "saved": "Saved. We sent a confirmation email — click the link inside it.",
+    "noEmail": "There is no email on your account, so you have no password reset.",
+    "placeholder": "you@example.com"
+  },
+  "profileReveal": {
+    "kicker": "Import done ✓",
+    "heading": "Who are you as a viewer?",
+    "reading": "Reading your taste…",
+    "failed": "The portrait did not work this time (AI limit or an error) — you can retry any time on the Stats page.",
+    "close": "Close",
+    "myStats": "My stats →"
+  },
+  "characters": {
+    "heading": "Characters",
+    "favouritesHint": "— ♥ your favourites end up in the graph",
+    "favourite": "Mark as favourite",
+    "unfavourite": "Remove favourite",
+    "pin": "Pin to your profile (max 3)",
+    "unpin": "Unpin from your profile",
+    "pinFailed": "Pinning failed"
+  },
+  "profileSettings": {
+    "bioPlaceholder": "A few sentences about yourself — this shows on your public profile.",
+    "publicProfile": "Public profile",
+    "visibilityHint": "Set to private, the /u/{username} page is unreachable. The text of your reviews is never public, regardless of this setting.",
+    "public": "Public",
+    "private": "Private",
+    "saved": "Saved."
+  },
+  "tasteCard": {
+    "cardTitle": "ANIME TASTE DNA",
+    "topGenres": "TOP GENRES",
+    "drawing": "Rendering…",
+    "download": "🧬 Download DNA card"
+  },
+  "preview": {
+    "kicker": "Preview — not on your list",
+    "episodeCount": "{count} episodes",
+    "chapterCount": "{count} chapters",
+    "description": "Description"
+  },
+  "dimension": {
+    "genre": "Genre",
+    "studio": "Studio",
+    "scoreBand": "Score band",
+    "year": "Year",
+    "status": "Status"
+  },
+  "hierarchy": {
+    "levels": "Levels",
+    "title": "Hierarchy",
+    "removeLevel": "Turn this level off",
+    "noLevels": "No levels — anime only",
+    "sequelLinks": "Sequel/prequel links",
+    "view": "View:",
+    "viewTooltip": "Auto: smaller covers without names when there are many anime (the name still shows on hover). Full: always a large cover + name. Dots only: fastest.",
+    "viewAuto": "Auto",
+    "viewFull": "Full",
+    "viewDots": "Dots only"
+  },
+  "graphLabels": {
+    "unknown": "Unknown",
+    "noScore": "No score"
+  },
+  "tonight": {
+    "cta": "🎲 What should I watch tonight?",
+    "kicker": "Tonight",
+    "question": "What mood are you in?",
+    "mood_barmi": "Whatever, roll one",
+    "mood_folytatas": "I'd continue something",
+    "mood_rovid": "Something short",
+    "mood_comfort": "Comfort rewatch",
+    "episodeCount": "{count} episodes",
+    "reason_resume": "You are already at episode {progress} — one step closer to the end tonight.",
+    "reason_movie": "A film — you can finish it tonight.",
+    "reason_shortSeries": "Only {episodes} episodes — it goes fast.",
+    "reason_comfort": "You gave it {score}/10 — a guaranteed good evening, zero risk.",
+    "reason_longPlanned": "It has been sitting on your plan list for a while — tonight is the night.",
+    "reason_rewatch": "{score}/10 — always good for a rewatch.",
+    "watchThis": "▶ I'll watch this",
+    "another": "Another 🎲",
+    "hint": "Pick a mood and I'll roll one from your list."
+  },
   "graph": {
     "media_ANIME": "Anime",
     "media_MANGA": "Manga",

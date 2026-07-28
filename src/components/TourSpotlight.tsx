@@ -1,5 +1,6 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { firstVisibleStep, tooltipPos, tourKey, type TourStep } from '@/lib/tour'
 
 const TIP = { width: 320, height: 150 }
@@ -15,6 +16,7 @@ export default function TourSpotlight({ page, steps, force = false }: {
   const [idx, setIdx] = useState<number | null>(null)
   const [rect, setRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
   const rafRef = useRef(0)
+  const t = useTranslations('tour')
 
   const elFor = (selector: string) => document.querySelector<HTMLElement>(`[data-tour="${selector}"]`)
 
@@ -100,10 +102,10 @@ export default function TourSpotlight({ page, steps, force = false }: {
         <p className="label-mono">{step.title}</p>
         <p className="text-sm text-text-1 leading-relaxed">{step.text}</p>
         <div className="flex items-center justify-between mt-1">
-          <button onClick={finish} className="text-xs text-text-3 hover:text-text-1">Kihagyom</button>
+          <button onClick={finish} className="text-xs text-text-3 hover:text-text-1">{t('skip')}</button>
           <span className="label-mono text-text-3">{idx + 1}/{steps.length}</span>
           <button onClick={next} className="btn-solid px-4 py-1.5 text-xs">
-            {firstVisibleStep(steps, (s) => Boolean(elFor(s)), idx + 1) == null ? 'Kész ✓' : 'Tovább →'}
+            {firstVisibleStep(steps, (s) => Boolean(elFor(s)), idx + 1) == null ? t('done') : t('next')}
           </button>
         </div>
       </div>
