@@ -1,16 +1,19 @@
 'use client'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import SectionHeader from '@/components/ui/SectionHeader'
-import { weekdayIndexBudapest, WEEKDAY_LABELS } from '@/lib/news'
+import { weekdayIndexBudapest, WEEKDAY_KEYS } from '@/lib/news'
 import type { MineItem } from './types'
 
 export default function WeekCalendar({ mine }: { mine: MineItem[] }) {
+  const t = useTranslations('home')
+  const tw = useTranslations('weekday')
   if (mine.length === 0) return null
   const todayIdx = weekdayIndexBudapest(Math.floor(Date.now() / 1000))
 
   return (
     <section>
-      <SectionHeader title="A heted" />
+      <SectionHeader title={t('yourWeek')} />
 
       {/* Mobilon vízszintesen görgethető sáv 108px-es napokkal: hét egyenlő
           oszlop 390px-en 48px-et adott naponként, amibe csak bélyegkép fért.
@@ -18,12 +21,13 @@ export default function WeekCalendar({ mine }: { mine: MineItem[] }) {
           nem a .snap-row osztályon, hogy ne kelljen display-specificitást
           csatázni. */}
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-7 sm:overflow-visible sm:px-0">
-        {WEEKDAY_LABELS.map((label, day) => {
+        {WEEKDAY_KEYS.map((key, day) => {
+          const label = tw(key)
           const items = mine.filter((m) => weekdayIndexBudapest(m.airingAt) === day)
           const today = day === todayIdx
           return (
             <div
-              key={label}
+              key={key}
               aria-current={today ? 'date' : undefined}
               className={`w-[108px] shrink-0 rounded-[var(--r-md)] p-2 sm:w-auto ${
                 today ? 'surface-2 ring-1 ring-white/20' : 'surface-1'
@@ -38,7 +42,7 @@ export default function WeekCalendar({ mine }: { mine: MineItem[] }) {
               </p>
 
               {items.length === 0 ? (
-                <p className="py-4 text-center text-xs text-text-3" aria-label="nincs adás">
+                <p className="py-4 text-center text-xs text-text-3" aria-label={t('notAiring')}>
                   -
                 </p>
               ) : (

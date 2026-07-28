@@ -1,12 +1,13 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useTranslations } from 'next-intl'
 import Countdown from '@/components/Countdown'
 import PosterAmbient from '@/components/ui/PosterAmbient'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import Button from '@/components/ui/Button'
+import { useStatusLabel } from '@/components/useLabels'
 import { pickHero } from '@/lib/home-hero'
-import { STATUS_LABELS } from '@/lib/status'
 import type { MineItem, SeasonItem } from './types'
 
 type Props = {
@@ -21,6 +22,8 @@ type Props = {
 }
 
 export default function HeroToday({ mine, season, fit, digest, onBump, onPlan, planned }: Props) {
+  const t = useTranslations('home')
+  const statusLabel = useStatusLabel()
   if (mine == null) {
     return (
       <section className="surface-1 relative overflow-hidden rounded-[var(--r-xl)] px-6 py-10 sm:px-10 sm:py-14">
@@ -41,7 +44,9 @@ export default function HeroToday({ mine, season, fit, digest, onBump, onPlan, p
   const title = pick.item.title
 
   const eyebrow =
-    pick.kind === 'airing' ? 'Ma' : pick.kind === 'watching' ? 'Ott folytatod' : 'Neked ajánljuk'
+    pick.kind === 'airing' ? t('heroToday')
+      : pick.kind === 'watching' ? t('heroResume')
+        : t('heroForYou')
 
   const href =
     pick.kind === 'discover'
@@ -78,17 +83,17 @@ export default function HeroToday({ mine, season, fit, digest, onBump, onPlan, p
             )}
             {pick.kind === 'watching' && (
               <span className="text-text-1">
-                {STATUS_LABELS[pick.item.status] ?? pick.item.status} ·{' '}
+                {statusLabel(pick.item.status)} ·{' '}
                 {pick.item.progress}{pick.item.episodes ? `/${pick.item.episodes}` : ''}
               </span>
             )}
             {pick.kind === 'discover' && pick.score != null && (
-              <ScoreBadge score={pick.score} kind="taste" title="Ennyire illik az ízlésedhez" />
+              <ScoreBadge score={pick.score} kind="taste" title={t('fitTooltip')} />
             )}
 
             {pick.kind !== 'discover' ? (
-              <Button size="md" onClick={() => onBump(pick.item)} title="Megnéztem egy részt">
-                +1 rész
+              <Button size="md" onClick={() => onBump(pick.item)} title={t('watchedOneEpisode')}>
+                {t('plusOneEpisode')}
               </Button>
             ) : (
               <Button
@@ -96,14 +101,14 @@ export default function HeroToday({ mine, season, fit, digest, onBump, onPlan, p
                 onClick={() => onPlan(pick.item.anilistId)}
                 disabled={planned.has(pick.item.anilistId)}
               >
-                {planned.has(pick.item.anilistId) ? '✓ Terveim között' : '+ Tervezem'}
+                {planned.has(pick.item.anilistId) ? t('plannedAlready') : t('planIt')}
               </Button>
             )}
           </div>
 
           {digest && (
             <p className="text-sm text-text-2 leading-relaxed max-w-[58ch] border-l border-white/12 pl-4 mt-1">
-              <span className="label-mono mr-2">✦ ma</span>
+              <span className="label-mono mr-2">{t('digestKicker')}</span>
               {digest}
             </p>
           )}

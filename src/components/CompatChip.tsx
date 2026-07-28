@@ -1,11 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 type Compat = { score: number; common: string[] }
 
 // Kompatibilitás-chip a publikus profilon — csak bejelentkezett nézőnek jelenik meg.
 export default function CompatChip({ token }: { token: string }) {
   const [compat, setCompat] = useState<Compat | null>(null)
+  const t = useTranslations('compat')
 
   useEffect(() => {
     fetch(`/api/compat?token=${encodeURIComponent(token)}`)
@@ -18,12 +20,12 @@ export default function CompatChip({ token }: { token: string }) {
 
   return (
     <div className="glass rounded-full px-4 py-2 inline-flex items-center gap-2.5 self-start">
-      <span className="label-mono">ízlés-egyezés veled</span>
+      <span className="label-mono">{t('tasteMatch')}</span>
       <span className="font-mono font-semibold" style={{ color: compat.score >= 70 ? 'var(--status-watching)' : undefined }}>
         {compat.score}%
       </span>
       {compat.common.length > 0 && (
-        <span className="text-xs text-text-3">közös: {compat.common.join(', ')}</span>
+        <span className="text-xs text-text-3">{t('shared', { list: compat.common.join(', ') })}</span>
       )}
     </div>
   )

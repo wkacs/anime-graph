@@ -1,13 +1,15 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import WrappedCard from '@/components/WrappedCard'
 import TasteCard from '@/components/TasteCard'
 import PinnedShowcase from '@/components/PinnedShowcase'
 import { toPublicPinned, type PublicPinned } from '@/lib/public-view'
 import { buildHeatmapCells, type HeatCell } from '@/lib/heatmap'
 import { monthlyEvolution } from '@/lib/evolution'
-import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import { useStatusLabel } from '@/components/useLabels'
+import { STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
 
 const HEAT_ALPHA = [0.05, 0.22, 0.42, 0.65, 0.95]
@@ -18,6 +20,8 @@ function ErasBlock() {
   const [eras, setEras] = useState<{ label: string; summary: string; from: string; to: string }[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const t = useTranslations('stats')
+  const tc = useTranslations('common')
   useEffect(() => {
     fetch('/api/taste/eras').then((r) => r.json()).then((j) => setEras(j.eras ?? null)).catch(() => {})
   }, [])
@@ -26,15 +30,15 @@ function ErasBlock() {
     const res = await fetch('/api/taste/eras', { method: 'POST' })
     const json = await res.json()
     setLoading(false)
-    if (!res.ok) { setError(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setError(json.error ?? tc('error')); return }
     setEras(json.eras)
   }
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between">
-        <p className="label-mono">Korszakaim</p>
+        <p className="label-mono">{t('myEras')}</p>
         <button onClick={run} disabled={loading} className="btn-ghost border border-white/10 px-3 py-1.5 text-xs">
-          {loading ? 'AI gondolkodik…' : eras ? 'Frissítés' : 'AI-korszakok'}
+          {loading ? t('aiThinking') : eras ? t('refresh') : t('aiEras')}
         </button>
       </div>
       {error && <p className="text-xs text-[color:var(--status-dropped)] mt-2">{error}</p>}
@@ -53,15 +57,22 @@ function ErasBlock() {
 }
 
 function EvolutionSection({ list }: { list: ApiAnime[] }) {
+  const t = useTranslations('stats')
   const pts = monthlyEvolution(list.map((a) => ({ watchedAt: a.watchedAt, createdAt: a.createdAt, myScore: a.myScore }))).slice(-18)
   const max = Math.max(...pts.map((p) => p.count), 1)
   if (pts.length < 2) return null
   return (
     <section className="glass rounded-3xl p-5">
-      <p className="label-mono mb-3">Ízlés-evolúció — havi ütem</p>
+      <p className="label-mono mb-3">{t('evolution')}</p>
       <div className="flex items-end gap-1.5 h-28">
         {pts.map((p) => (
-          <div key={p.month} className="flex-1 flex flex-col items-center justify-end gap-1 h-full" title={`${p.month}: ${p.count} cím${p.avgScore != null ? `, átlag ${p.avgScore}` : ''}`}>
+          <div
+            key={p.month}
+            className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
+            title={p.avgScore != null
+              ? t('monthTooltipWithAvg', { month: p.month, count: p.count, avg: p.avgScore })
+              : t('monthTooltip', { month: p.month, count: p.count })}
+          >
             <div className="w-full rounded-t-md bg-white/15" style={{ height: `${(p.count / max) * 100}%` }} />
             {p.avgScore != null && <span className="font-mono text-[9px] text-text-3">{p.avgScore}</span>}
           </div>
@@ -85,7 +96,7 @@ function StatTile({ label, value, unit }: { label: string; value: string; unit?:
 }
 
 // single-series monochrome radar: axes = top genres, value = count
-function GenreRadar({ data }: { data: { name: string; count: number }[] }) {
+function GenreRadar({ data, ariaLabel }: { data: { name: string; count: number }[]; ariaLabel: string }) {
   const cx = 130, cy = 118, r = 82
   const max = Math.max(...data.map((d) => d.count), 1)
   const angle = (i: number) => (Math.PI * 2 * i) / data.length - Math.PI / 2
@@ -95,7 +106,7 @@ function GenreRadar({ data }: { data: { name: string; count: number }[] }) {
   const values = data.map((d, i) => point(i, d.count / max)).join(' ')
 
   return (
-    <svg viewBox="0 0 260 236" className="w-full" role="img" aria-label="Műfaj-radar">
+    <svg viewBox="0 0 260 236" className="w-full" role="img" aria-label={ariaLabel}>
       {[0.25, 0.5, 0.75, 1].map((ratio) => (
         <polygon key={ratio} points={ring(ratio)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
       ))}
@@ -160,6 +171,8 @@ export default function StatsPage() {
   const [profile, setProfile] = useState<{ portrait: string; badges: string[] } | null>(null)
   const [profileBusy, setProfileBusy] = useState(false)
   const [pinned, setPinned] = useState<PublicPinned | null>(null)
+  const t = useTranslations('stats')
+  const statusLabel = useStatusLabel()
 
   useEffect(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => {
@@ -233,7 +246,7 @@ export default function StatsPage() {
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="glass rounded-3xl px-10 py-12 text-center">
           <p className="label-mono mb-2">Stats</p>
-          <p className="text-sm text-text-2">Még nincs adat — adj hozzá animéket a gráfon.</p>
+          <p className="text-sm text-text-2">{t('noData')}</p>
         </div>
       </main>
     )
@@ -247,7 +260,7 @@ export default function StatsPage() {
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
         <div className="flex items-center gap-2">
-          <Link href="/wrapped" className="btn-solid px-4 py-2 text-sm">✨ Éves Wrapped →</Link>
+          <Link href="/wrapped" className="btn-solid px-4 py-2 text-sm">{t('yearlyWrapped')}</Link>
           <WrappedCard list={list} />
         </div>
       </div>
@@ -257,14 +270,14 @@ export default function StatsPage() {
       {profile && (
         <section className="glass rounded-3xl p-6">
           <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="label-mono">Ízlés-profilod</p>
+            <p className="label-mono">{t('yourTasteProfile')}</p>
             <div className="flex items-center gap-2">
               <TasteCard profile={profile} list={list} />
               <button
                 onClick={regenerateProfile}
                 disabled={profileBusy}
                 className="btn-ghost px-2.5 py-1 text-xs"
-                title="Újragenerálás"
+                title={t('regenerate')}
               >
                 {profileBusy ? '…' : '↻'}
               </button>
@@ -280,17 +293,17 @@ export default function StatsPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatTile label="Anime a listán" value={String(list.length)} />
-        <StatTile label="Nézett idő" value={(stats.watchedMinutes / 60).toFixed(0)} unit="óra" />
-        <StatTile label="Befejezve" value={String(completedCount)} />
-        <StatTile label="Átlagpontom" value={stats.avgScore != null ? stats.avgScore.toFixed(1) : '–'} unit={stats.avgScore != null ? '/ 10' : undefined} />
+        <StatTile label={t('tileTitles')} value={String(list.length)} />
+        <StatTile label={t('tileWatchedTime')} value={(stats.watchedMinutes / 60).toFixed(0)} unit={t('hoursUnit')} />
+        <StatTile label={t('tileCompleted')} value={String(completedCount)} />
+        <StatTile label={t('tileAvgScore')} value={stats.avgScore != null ? stats.avgScore.toFixed(1) : '–'} unit={stats.avgScore != null ? '/ 10' : undefined} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <section className="glass rounded-3xl p-5">
-          <p className="label-mono mb-2">Műfaj-radar</p>
+          <p className="label-mono mb-2">{t('genreRadar')}</p>
           {stats.topGenres.length >= 3 ? (
-            <GenreRadar data={stats.topGenres} />
+            <GenreRadar data={stats.topGenres} ariaLabel={t('genreRadar')} />
           ) : (
             <ul className="flex flex-col gap-2 mt-2">
               {stats.topGenres.map((g) => (
@@ -304,21 +317,21 @@ export default function StatsPage() {
         </section>
 
         <section className="glass rounded-3xl p-5 flex flex-col">
-          <p className="label-mono mb-4">Pontszám-eloszlás</p>
+          <p className="label-mono mb-4">{t('scoreDistribution')}</p>
           <div className="mt-auto">
-            <Bars data={stats.scoreDist} ariaLabel="Pontszám-eloszlás 1-től 10-ig" />
+            <Bars data={stats.scoreDist} ariaLabel={t('scoreDistributionAria')} />
           </div>
         </section>
 
         <section className="glass rounded-3xl p-5 flex flex-col">
-          <p className="label-mono mb-4">Évek</p>
+          <p className="label-mono mb-4">{t('years')}</p>
           <div className="mt-auto">
-            <Bars data={stats.years} ariaLabel="Animék száma évenként" />
+            <Bars data={stats.years} ariaLabel={t('yearsAria')} />
           </div>
         </section>
 
         <section className="glass rounded-3xl p-5">
-          <p className="label-mono mb-4">Stúdió-toplista</p>
+          <p className="label-mono mb-4">{t('topStudios')}</p>
           <ul className="flex flex-col gap-2.5">
             {stats.topStudios.map(([name, count]) => (
               <li key={name} className="flex items-center gap-3 text-sm">
@@ -340,25 +353,25 @@ export default function StatsPage() {
 
       {heatCells.some((c) => c.count > 0) && (
         <section className="glass rounded-3xl p-5">
-          <p className="label-mono mb-4">Aktivitás — az elmúlt fél év</p>
+          <p className="label-mono mb-4">{t('activity')}</p>
           <div className="overflow-x-auto no-scrollbar">
             <div className="grid grid-rows-7 grid-flow-col gap-[3px] w-max">
               {heatCells.map((c) => (
                 <span
                   key={c.date}
-                  title={`${c.date} · ${c.count} rész`}
+                  title={t('heatTooltip', { date: c.date, count: c.count })}
                   className="w-2.5 h-2.5 rounded-[3px]"
                   style={{ background: `rgba(250,250,250,${HEAT_ALPHA[c.level]})` }}
                 />
               ))}
             </div>
           </div>
-          <p className="label-mono mt-3">A „+1 rész” kattintásaidból épül</p>
+          <p className="label-mono mt-3">{t('heatSource')}</p>
         </section>
       )}
 
       <section className="glass rounded-3xl p-5">
-        <p className="label-mono mb-4">Státusz-megoszlás</p>
+        <p className="label-mono mb-4">{t('statusBreakdown')}</p>
         <div className="flex h-3 rounded-full overflow-hidden gap-[2px]">
           {stats.statusCounts.filter((s) => s.count > 0).map((s) => (
             <span
@@ -369,7 +382,7 @@ export default function StatsPage() {
                 background: STATUS_CSS_VARS[s.status],
               }}
             >
-              <span className="sr-only">{STATUS_LABELS[s.status]}: {s.count}</span>
+              <span className="sr-only">{statusLabel(s.status)}: {s.count}</span>
             </span>
           ))}
         </div>
@@ -377,7 +390,7 @@ export default function StatsPage() {
           {stats.statusCounts.map((s) => (
             <li key={s.status} className="flex items-center gap-2 text-sm text-text-2">
               <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: STATUS_CSS_VARS[s.status] }} />
-              {STATUS_LABELS[s.status]}
+              {statusLabel(s.status)}
               <span className="font-mono text-xs text-text-3">{s.count}</span>
             </li>
           ))}

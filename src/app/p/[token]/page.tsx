@@ -1,16 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import { useTranslations } from 'next-intl'
+import { useStatusLabel } from '@/components/useLabels'
+import { STATUS_KEYS, STATUS_CSS_VARS } from '@/lib/status'
 import { sortPublicList, type PublicAnime, type PublicPinned, type PublicSort } from '@/lib/public-view'
 import CompatChip from '@/components/CompatChip'
 import PinnedShowcase from '@/components/PinnedShowcase'
 
-const SORT_OPTIONS: { id: PublicSort; label: string }[] = [
-  { id: 'score', label: 'Pont ↓' },
-  { id: 'title', label: 'Cím A–Z' },
-  { id: 'year', label: 'Év ↓' },
-]
+const SORT_OPTIONS = ['score', 'title', 'year'] as const satisfies readonly PublicSort[]
 
 type PublicData = {
   username: string | null
@@ -22,25 +20,32 @@ type PublicData = {
 export default function PublicProfilePage() {
   const { token } = useParams<{ token: string }>()
   const [data, setData] = useState<PublicData | null>(null)
-  const [error, setError] = useState('')
+  // null = nincs hiba; '' = van hiba, de a szerver nem adott sajat uzenetet
+  const [error, setError] = useState<string | null>(null)
   const [sort, setSort] = useState<PublicSort>('score')
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  const t = useTranslations('publicProfile')
+  const tc = useTranslations('common')
+  const ts = useTranslations('status')
+  const statusLabel = useStatusLabel()
 
   useEffect(() => {
     fetch(`/api/public/${token}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Hiba')
+        // Nem `tc(...)`: a forditó nem referencia-stabil, fuggosegkent minden
+        // renderben ujrainditana a fetchet. Az alapertelmezes a renderben lep be.
+        if (!r.ok) throw new Error((await r.json()).error ?? '')
         setData(await r.json())
       })
       .catch((e) => setError(String(e.message ?? e)))
   }, [token])
 
-  if (error) {
+  if (error != null) {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="glass rounded-3xl px-10 py-12 text-center">
           <p className="label-mono mb-2">Anime Graph</p>
-          <p className="text-sm text-text-2">{error}</p>
+          <p className="text-sm text-text-2">{error || tc('error')}</p>
         </div>
       </main>
     )
@@ -50,9 +55,11 @@ export default function PublicProfilePage() {
   return (
     <main className="min-h-screen max-w-4xl mx-auto px-4 pt-24 pb-16 flex flex-col gap-6">
       <div>
-        <p className="label-mono mb-1">アニメグラフ · {data.username ?? 'megosztott'} gyűjteménye</p>
+        <p className="label-mono mb-1">
+          アニメグラフ · {t('collectionOf', { user: data.username ?? t('shared') })}
+        </p>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {data.stats.total} anime · {data.stats.completed} befejezve
+          {t('totals', { total: data.stats.total, completed: data.stats.completed })}
         </h1>
         <div className="mt-3">
           <CompatChip token={token} />
@@ -71,13 +78,13 @@ export default function PublicProfilePage() {
       <div className="glass rounded-2xl px-3 py-2 flex flex-wrap items-center gap-1.5 text-xs">
         {SORT_OPTIONS.map((o) => (
           <button
-            key={o.id}
-            onClick={() => setSort(o.id)}
+            key={o}
+            onClick={() => setSort(o)}
             className={`rounded-full px-3 py-1 transition-colors ${
-              sort === o.id ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
+              sort === o ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
             }`}
           >
-            {o.label}
+            {t(`sort_${o}`)}
           </button>
         ))}
         <span className="h-4 w-px bg-white/10 mx-1" />
@@ -87,9 +94,9 @@ export default function PublicProfilePage() {
             statusFilter === null ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
           }`}
         >
-          Mind
+          {ts('all')}
         </button>
-        {Object.entries(STATUS_LABELS).map(([key, label]) => (
+        {STATUS_KEYS.map((key) => (
           <button
             key={key}
             onClick={() => setStatusFilter(key)}
@@ -97,7 +104,7 @@ export default function PublicProfilePage() {
               statusFilter === key ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
             }`}
           >
-            {label}
+            {ts(key)}
           </button>
         ))}
       </div>
@@ -122,7 +129,7 @@ export default function PublicProfilePage() {
                   style={{ background: STATUS_CSS_VARS[a.status] ?? 'white' }}
                 />
                 <span className="label-mono !text-[9px]">
-                  {STATUS_LABELS[a.status] ?? a.status}{a.myScore != null ? ` · ${a.myScore}` : ''}
+                  {statusLabel(a.status)}{a.myScore != null ? ` · ${a.myScore}` : ''}
                 </span>
               </p>
             </figcaption>

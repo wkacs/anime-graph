@@ -1,22 +1,31 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import { useTranslations } from 'next-intl'
+import { useStatusLabel } from '@/components/useLabels'
+import { STATUS_CSS_VARS } from '@/lib/status'
 import type { OpinionQueueInput } from '@/lib/opinion-queue'
 
 // Vélemény-váró oldal: minden saját cím, amihez még nincs (sikeres) vélemény —
 // a kártyán azonnal írható, nem kell átugrani a címoldalra.
 export default function VelemenyekPage() {
   const [items, setItems] = useState<OpinionQueueInput[] | null>(null)
-  const [error, setError] = useState('')
+  // null = nincs hiba; '' = van hiba, de a szerver nem adott sajat uzenetet
+  const [error, setError] = useState<string | null>(null)
   const [drafts, setDrafts] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState<Set<number>>(new Set())
   const [cardErrors, setCardErrors] = useState<Record<number, string>>({})
+  const t = useTranslations('opinions')
+  const tc = useTranslations('common')
+  const statusLabel = useStatusLabel()
 
   useEffect(() => {
     fetch('/api/opinions/pending')
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json()).error ?? 'Hiba történt')
+        // Ures uzenet = "nincs sajat szoveg", a forditott alapertelmezes a
+        // renderben lep be. A `tc` itt fuggosegge valna, es mivel a forditó
+        // nem referencia-stabil, minden renderben ujra lefutna a fetch.
+        if (!r.ok) throw new Error((await r.json()).error ?? '')
         const j = await r.json() as { items: OpinionQueueInput[] }
         setItems(j.items)
       })
@@ -35,7 +44,7 @@ export default function VelemenyekPage() {
         body: JSON.stringify({ animeId: item.id, rawText }),
       })
       const j = await res.json()
-      if (!res.ok) throw new Error(j.error ?? 'Hiba történt')
+      if (!res.ok) throw new Error(j.error ?? tc('error'))
       // failed extract is mentve van — a szöveg megmaradt, az AI-kinyerés újrázható,
       // de a sorból már kikerülhet a kártya, mert vélemény létezik
       setItems((list) => (list ?? []).filter((i) => i.id !== item.id))
@@ -49,28 +58,27 @@ export default function VelemenyekPage() {
   return (
     <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
       <div>
-        <p className="label-mono mb-1">Vélemények</p>
+        <p className="label-mono mb-1">{t('kicker')}</p>
         <h1 className="text-2xl font-semibold tracking-tight">
-          Véleményre vár{items != null ? ` · ${items.length}` : ''}
+          {t('heading')}{items != null ? ` · ${items.length}` : ''}
         </h1>
-        <p className="text-sm text-text-2 mt-1">
-          Írd le pár mondatban, mi tetszett és mi nem — az AI ízlés-tényeket nyer ki belőle,
-          és ettől lesz pontosabb minden ajánlás.
-        </p>
+        <p className="text-sm text-text-2 mt-1">{t('lead')}</p>
       </div>
 
-      {error && <p className="text-sm text-[color:var(--status-dropped)]">{error}</p>}
+      {error != null && (
+        <p className="text-sm text-[color:var(--status-dropped)]">{error || tc('error')}</p>
+      )}
 
       {items == null && !error && (
         <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1.6, repeat: Infinity }} className="label-mono">
-          Betöltés…
+          {tc('loading')}
         </motion.p>
       )}
 
       {items != null && items.length === 0 && (
         <div className="glass rounded-3xl px-8 py-12 text-center">
-          <p className="text-lg font-medium">Minden címedről van vélemény 🎉</p>
-          <p className="text-sm text-text-2 mt-1">Ha új animét fejezel be, itt fog várni rád.</p>
+          <p className="text-lg font-medium">{t('emptyTitle')}</p>
+          <p className="text-sm text-text-2 mt-1">{t('emptyText')}</p>
         </div>
       )}
 
@@ -90,16 +98,16 @@ export default function VelemenyekPage() {
                   <p className="flex items-center gap-1.5 mt-1">
                     <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: STATUS_CSS_VARS[item.status] ?? 'white' }} />
                     <span className="label-mono !text-[9px]">
-                      {STATUS_LABELS[item.status] ?? item.status}
+                      {statusLabel(item.status)}
                       {item.myScore != null ? ` · ${item.myScore}/10` : ''}
-                      {item.extractStatus === 'failed' ? ' · előző kinyerés hibázott' : ''}
+                      {item.extractStatus === 'failed' ? ` · ${t('previousExtractFailed')}` : ''}
                     </span>
                   </p>
                 </div>
                 <textarea
                   value={drafts[item.id] ?? ''}
                   onChange={(e) => setDrafts((d) => ({ ...d, [item.id]: e.target.value }))}
-                  placeholder="Mi tetszett? Mi nem? Milyen hangulata volt?"
+                  placeholder={t('placeholder')}
                   rows={3}
                   className="field rounded-2xl px-3 py-2 text-sm resize-y min-h-16"
                 />
@@ -111,7 +119,7 @@ export default function VelemenyekPage() {
                   disabled={saving.has(item.id) || !(drafts[item.id] ?? '').trim()}
                   className="btn-solid self-end px-4 py-1.5 text-xs disabled:opacity-40"
                 >
-                  {saving.has(item.id) ? 'AI dolgozik…' : 'Mentés'}
+                  {saving.has(item.id) ? t('aiWorking') : tc('save')}
                 </button>
               </div>
             </div>

@@ -1,11 +1,13 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Button from '@/components/ui/Button'
 import ScoreBadge from '@/components/ui/ScoreBadge'
-import { SEASON_LABELS, nextSeason } from '@/lib/seasonal'
+import { useSeasonLabel } from '@/components/useLabels'
+import { nextSeason } from '@/lib/seasonal'
 import type { NextSeasonRow, UpcomingItem } from './types'
 
 type Props = {
@@ -23,6 +25,9 @@ type Props = {
 // togglelel: ugyanaz az informacio, fele annyi vizualis suly.
 export default function NextSeason({ upcoming, upcomingSeason, all, allFit, onPlan, planned }: Props) {
   const [mode, setMode] = useState<'mine' | 'all'>(upcoming.length > 0 ? 'mine' : 'all')
+  // `tr`, nem `t`: az also map parametere `t` (a katalogus-sor), az arnyekolna.
+  const tr = useTranslations('home')
+  const seasonLabel = useSeasonLabel()
   const ns = upcomingSeason ?? nextSeason(new Date())
   if (upcoming.length === 0 && (all == null || all.length === 0)) return null
 
@@ -31,12 +36,12 @@ export default function NextSeason({ upcoming, upcomingSeason, all, allFit, onPl
   return (
     <section>
       <SectionHeader
-        eyebrow="Következő szezon"
-        title={`${ns.year} ${SEASON_LABELS[ns.season] ?? ns.season}`}
+        eyebrow={tr('nextSeasonEyebrow')}
+        title={`${ns.year} ${seasonLabel(ns.season)}`}
         action={
           <div className="flex items-center gap-2">
             <div className="flex rounded-full hairline overflow-hidden">
-              {([['mine', 'Neked'], ['all', 'Mind']] as const).map(([k, label]) => (
+              {([['mine', tr('tabForYou')], ['all', tr('tabAll')]] as const).map(([k, label]) => (
                 <button
                   key={k}
                   onClick={() => setMode(k)}
@@ -53,7 +58,7 @@ export default function NextSeason({ upcoming, upcomingSeason, all, allFit, onPl
               href="/bongeszo?season=next"
               className="text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20"
             >
-              Böngészőben →
+              {tr('inBrowser')}
             </Link>
           </div>
         }
@@ -71,10 +76,10 @@ export default function NextSeason({ upcoming, upcomingSeason, all, allFit, onPl
               streaming={s.streaming}
               badge={<ScoreBadge score={s.tasteScore} kind="taste" title={s.tasteReason} />}
               footer={s.owned ? (
-                <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
+                <span className="label-mono text-[color:var(--status-watching)]">{tr('onYourList')}</span>
               ) : (
                 <Button onClick={() => onPlan(s.anilistId)} disabled={planned.has(s.anilistId)}>
-                  {planned.has(s.anilistId) ? '✓' : '+ Tervezem'}
+                  {planned.has(s.anilistId) ? '✓' : tr('planIt')}
                 </Button>
               )}
             />
@@ -90,7 +95,7 @@ export default function NextSeason({ upcoming, upcomingSeason, all, allFit, onPl
               genres={t.genres}
               href={`/${t.mediaType === 'MANGA' ? 'manga' : 'anime'}/${t.slug}`}
               badge={allFit[t.anilistId] != null ? (
-                <ScoreBadge score={allFit[t.anilistId]} suffix="%" title="Ennyire illik az ízlésedhez" />
+                <ScoreBadge score={allFit[t.anilistId]} suffix="%" title={tr('fitTooltip')} />
               ) : undefined}
               footer={t.format ? <span className="label-mono">{t.format}</span> : undefined}
             />

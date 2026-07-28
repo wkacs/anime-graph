@@ -1,24 +1,22 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
 import OnboardingCTA from '@/components/OnboardingCTA'
 import PageShell from '@/components/ui/PageShell'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import { useStatusLabel } from '@/components/useLabels'
 import { filterByMedia, type MediaMode } from '@/lib/graph-builder'
-import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import { STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime } from '@/lib/types'
 
 type SortKey = 'titleRomaji' | 'year' | 'studio' | 'status' | 'myScore'
 
 const FILTERS = ['all', 'watching', 'completed', 'planned', 'dropped'] as const
 
-const MEDIA_MODES: { value: MediaMode; label: string }[] = [
-  { value: 'ANIME', label: 'Anime' },
-  { value: 'MANGA', label: 'Manga' },
-  { value: 'ALL', label: 'Mind' },
-]
+const MEDIA_MODES = ['ANIME', 'MANGA', 'ALL'] as const satisfies readonly MediaMode[]
 
 export default function ListaPage() {
   const [list, setList] = useState<ApiAnime[]>([])
@@ -28,6 +26,10 @@ export default function ListaPage() {
   const [sortKey, setSortKey] = useState<SortKey>('titleRomaji')
   const [sortDir, setSortDir] = useState<1 | -1>(1)
   const router = useRouter()
+  const t = useTranslations('list')
+  const tc = useTranslations('common')
+  const ts = useTranslations('status')
+  const statusLabel = useStatusLabel()
 
   const reload = useCallback(() => {
     fetch('/api/anime').then((r) => r.json()).then((j) => setList(j.anime ?? []))
@@ -55,7 +57,7 @@ export default function ListaPage() {
       body: JSON.stringify({ titles: next }),
     })
     if (res.ok) setPinnedTitles(next)
-    else alert((await res.json()).error ?? 'Nem sikerült a kitűzés')
+    else alert((await res.json()).error ?? t('pinFailed'))
   }
 
   // egykattintasos haladas a soron: korabban ehhez meg kellett nyitni a
@@ -111,7 +113,7 @@ export default function ListaPage() {
     })
     const json = await res.json()
     setAiLoading(false)
-    if (!res.ok) { setAiAnswer(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setAiAnswer(json.error ?? tc('error')); return }
     setAiAnswer(json.answer)
     setAiMatches(new Set(json.matchIds))
   }
@@ -146,20 +148,20 @@ export default function ListaPage() {
   return (
     <PageShell width="wide">
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <h1 className="display-l text-text-1 mr-auto">Lista</h1>
+        <h1 className="display-l text-text-1 mr-auto">{t('heading')}</h1>
         <AddAnimeSearch onAdded={() => reload()} />
       </div>
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex rounded-full border border-white/10 overflow-hidden">
           {MEDIA_MODES.map((m) => (
             <button
-              key={m.value}
-              onClick={() => setMediaMode(m.value)}
+              key={m}
+              onClick={() => setMediaMode(m)}
               className={`px-3 py-1.5 text-xs transition-colors ${
-                mediaMode === m.value ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
+                mediaMode === m ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1'
               }`}
             >
-              {m.label}
+              {t(`media_${m}`)}
             </button>
           ))}
         </div>
@@ -172,7 +174,7 @@ export default function ListaPage() {
                 filter === f ? 'bg-white/12 text-text-1' : 'text-text-2 hover:text-text-1 hover:bg-white/5'
               }`}
             >
-              {f === 'all' ? 'Mind' : STATUS_LABELS[f]}
+              {ts(f)}
             </button>
           ))}
         </div>
@@ -180,13 +182,13 @@ export default function ListaPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && e.shiftKey) runNlSearch() }}
-          placeholder="Keresés…"
+          placeholder={t('searchPlaceholder')}
           className="field rounded-full px-4 py-2 text-sm w-52"
         />
         <button
           onClick={runNlSearch}
           disabled={aiLoading || !q.trim()}
-          title="AI-keresés a listádban (Shift+Enter)"
+          title={t('aiSearchTooltip')}
           className="btn-ghost border border-white/10 rounded-full px-3 py-2 text-xs disabled:opacity-40"
         >
           {aiLoading ? '…' : '✨ AI'}
@@ -210,14 +212,14 @@ export default function ListaPage() {
           <thead className="sticky top-[4.5rem] z-20 backdrop-blur-md bg-[#0d0d10]/95">
             <tr className="border-b border-white/8">
               <th className="w-20" />
-              <Th k="titleRomaji">Cím</Th>
-              <Th k="year" className="hidden sm:table-cell">Év</Th>
-              <Th k="studio" className="hidden md:table-cell">Stúdió</Th>
-              <Th k="status">Státusz</Th>
+              <Th k="titleRomaji">{t('colTitle')}</Th>
+              <Th k="year" className="hidden sm:table-cell">{t('colYear')}</Th>
+              <Th k="studio" className="hidden md:table-cell">{t('colStudio')}</Th>
+              <Th k="status">{t('colStatus')}</Th>
               <th className="px-3 py-2.5 text-left hidden lg:table-cell">
-                <span className="label-mono">Haladás</span>
+                <span className="label-mono">{t('colProgress')}</span>
               </th>
-              <Th k="myScore" className="text-right">Pont</Th>
+              <Th k="myScore" className="text-right">{t('colScore')}</Th>
               {/* a +1 hover-affordancia: mobilon nincs hover, es a 48px-es
                   oszlop 390px-en vizszintes tulcsordulast okozott */}
               <th className="w-12 hidden sm:table-cell" />
@@ -257,7 +259,7 @@ export default function ListaPage() {
                       className={`inline-block w-2 h-2 rounded-full shrink-0 ${a.status === 'watching' ? 'animate-pulse' : ''}`}
                       style={{ background: STATUS_CSS_VARS[a.status] ?? 'white' }}
                     />
-                    {STATUS_LABELS[a.status] ?? a.status}
+                    {statusLabel(a.status)}
                   </span>
                 </td>
                 <td className="px-3 py-2 hidden lg:table-cell w-28">
@@ -283,7 +285,7 @@ export default function ListaPage() {
                 <td className="px-2 py-2 text-right hidden sm:table-cell">
                   <Button
                     onClick={(e) => { e.stopPropagation(); bumpOne(a) }}
-                    title="Megnéztem egy részt"
+                    title={t('watchedOneEpisode')}
                     className="opacity-40 group-hover:opacity-100 transition-opacity"
                   >
                     +1
@@ -293,7 +295,7 @@ export default function ListaPage() {
                   {pinnedTitles != null && (
                     <button
                       onClick={(e) => { e.stopPropagation(); togglePin(a.titleId) }}
-                      title={pinnedTitles.includes(a.titleId) ? 'Levétel a profilodról' : 'Kitűzés a profilodra (max 3)'}
+                      title={pinnedTitles.includes(a.titleId) ? t('unpinTooltip') : t('pinTooltip')}
                       className={`text-sm transition-opacity ${
                         pinnedTitles.includes(a.titleId) ? 'opacity-100' : 'opacity-25 hover:opacity-80'
                       }`}
@@ -311,12 +313,12 @@ export default function ListaPage() {
                     <OnboardingCTA compact />
                   ) : (
                     <EmptyState
-                      eyebrow="Szűrő"
-                      title="Nincs találat"
-                      text="Erre a szűrőre és keresésre egy cím sem illik a listádon."
+                      eyebrow={t('filterEyebrow')}
+                      title={t('noMatch')}
+                      text={t('noMatchText')}
                       action={
                         <Button onClick={() => { setQ(''); setFilter('all'); setAiAnswer(null); setAiMatches(null) }}>
-                          Szűrők törlése
+                          {t('clearFilters')}
                         </Button>
                       }
                     />
@@ -327,13 +329,15 @@ export default function ListaPage() {
           </tbody>
         </table>
       </div>
-      <p className="label-mono mt-3 text-right">{rows.length} / {list.length} cím</p>
+      <p className="label-mono mt-3 text-right">{t('countOf', { shown: rows.length, total: list.length })}</p>
 
       {undoBundle && (
         // mobilon a toast a also tab-sav fole kerul, kulonben az fedne
         <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 surface-3 rounded-[var(--r-md)] px-5 py-3 flex items-center gap-4 text-sm">
-          <span className="text-text-2">Törölve: <span className="text-text-1">{undoBundle.anime.titleRomaji}</span></span>
-          <button onClick={undoDelete} className="btn-solid px-4 py-1.5 text-xs">Visszavonás</button>
+          <span className="text-text-2">
+            {t('deleted')} <span className="text-text-1">{undoBundle.anime.titleRomaji}</span>
+          </span>
+          <button onClick={undoDelete} className="btn-solid px-4 py-1.5 text-xs">{t('undo')}</button>
         </div>
       )}
     </PageShell>

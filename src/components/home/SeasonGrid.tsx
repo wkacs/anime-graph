@@ -1,5 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import Countdown from '@/components/Countdown'
 import SectionHeader from '@/components/ui/SectionHeader'
@@ -8,7 +9,7 @@ import ScoreBadge from '@/components/ui/ScoreBadge'
 import EmptyState from '@/components/ui/EmptyState'
 import { reveal } from '@/lib/motion'
 import SeasonFilterBar from '@/components/SeasonFilterBar'
-import { SEASON_LABELS } from '@/lib/seasonal'
+import { useSeasonLabel } from '@/components/useLabels'
 import { EMPTY_SEASON_VIEW, type SeasonView } from '@/lib/season-filter'
 import type { SeasonItem } from './types'
 
@@ -32,11 +33,13 @@ type Props = {
 export default function SeasonGrid({
   season, items, visible, fit, view, onView, facets, scored, scoresFailed, onPlan, planned,
 }: Props) {
+  const t = useTranslations('home')
+  const seasonLabel = useSeasonLabel()
   return (
     <section>
       <SectionHeader
-        eyebrow="A szezon"
-        title={`${season.year} ${SEASON_LABELS[season.season] ?? season.season}`}
+        eyebrow={t('seasonEyebrow')}
+        title={`${season.year} ${seasonLabel(season.season)}`}
       />
       <div className="mb-5">
         <SeasonFilterBar
@@ -52,12 +55,12 @@ export default function SeasonGrid({
 
       {visible.length === 0 ? (
         <EmptyState
-          eyebrow="Szűrő"
-          title="Nincs találat"
-          text="A beállított szűrőkre egy cím sem illik. Lazíts az ízlés-küszöbön, vagy vedd le a műfaj-szűrőt."
+          eyebrow={t('filterEyebrow')}
+          title={t('noMatch')}
+          text={t('noMatchText')}
           action={
             <Button onClick={() => onView({ ...EMPTY_SEASON_VIEW, sort: view.sort })}>
-              Szűrők lazítása
+              {t('relaxFilters')}
             </Button>
           }
         />
@@ -77,7 +80,7 @@ export default function SeasonGrid({
                 badge={s.tasteScore != null ? (
                   <ScoreBadge score={s.tasteScore} kind="taste" title={s.tasteReason ?? undefined} />
                 ) : fit[s.anilistId] != null ? (
-                  <ScoreBadge score={fit[s.anilistId]} suffix="%" title="Ennyire illik az ízlésedhez (lokális becslés)" />
+                  <ScoreBadge score={fit[s.anilistId]} suffix="%" title={t('fitTooltipLocal')} />
                 ) : undefined}
                 footer={
                   <div className="flex items-center justify-between gap-2">
@@ -85,14 +88,14 @@ export default function SeasonGrid({
                       {s.airingAt != null ? (
                         <>EP {s.nextEpisode} · <Countdown airingAt={s.airingAt} /></>
                       ) : (
-                        <span className="text-text-3">nincs adásban</span>
+                        <span className="text-text-3">{t('notAiring')}</span>
                       )}
                     </p>
                     {s.owned ? (
-                      <span className="label-mono text-[color:var(--status-watching)]">listádon</span>
+                      <span className="label-mono text-[color:var(--status-watching)]">{t('onYourList')}</span>
                     ) : (
                       <Button onClick={() => onPlan(s.anilistId)} disabled={planned.has(s.anilistId)}>
-                        {planned.has(s.anilistId) ? '✓' : '+ Tervezem'}
+                        {planned.has(s.anilistId) ? '✓' : t('planIt')}
                       </Button>
                     )}
                   </div>

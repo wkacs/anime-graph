@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
 import AddAnimeSearch from '@/components/AddAnimeSearch'
@@ -12,26 +13,18 @@ import {
   buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildStaffLayer, buildTimeline, filterByMedia,
   COVER_AUTO_LIMIT, DEFAULT_CONFIG, type FavChar, type GraphConfig, type GraphNode, type MediaMode, type StaffRow,
 } from '@/lib/graph-builder'
-import { STATUS_LABELS, STATUS_CSS_VARS } from '@/lib/status'
+import { useStatusLabel } from '@/components/useLabels'
+import { STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
 
 const CONFIG_KEY = 'anime-graph-config'
 const VIEW_KEY = 'anime-graph-view'
 
-const GRAF_TOUR: TourStep[] = [
-  { selector: 'graph', title: '3D térkép', text: 'A műfaj-buborékok mérete = hány animéd van benne. Kattints egy buborékra a műfaj animéihez, húzással forgatsz.' },
-  { selector: 'view-toggle', title: 'Haladó nézet', text: 'Többszintes hierarchia (műfaj → stúdió → anime), átrendezhető szintekkel — ha mélyebbre másznál.' },
-  { selector: 'graph', title: 'Repülés', text: 'WASD + Q/E: szabad repülés a saját anime-univerzumodban. Az idővonal-mód a jobb-alsó sarokban van.' },
-]
 const MEDIA_KEY = 'anime-graph-media'
 const CHARS_KEY = 'anime-graph-chars'
 const STAFF_KEY = 'anime-graph-staff'
 
-const MEDIA_MODES: { value: MediaMode; label: string }[] = [
-  { value: 'ANIME', label: 'Anime' },
-  { value: 'MANGA', label: 'Manga' },
-  { value: 'ALL', label: 'Mind' },
-]
+const MEDIA_MODES = ['ANIME', 'MANGA', 'ALL'] as const satisfies readonly MediaMode[]
 
 export default function GrafPage() {
   const [animeList, setAnimeList] = useState<ApiAnime[]>([])
@@ -47,6 +40,14 @@ export default function GrafPage() {
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
+  const t = useTranslations('graph')
+  const statusLabel = useStatusLabel()
+  // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
+  const GRAF_TOUR: TourStep[] = [
+    { selector: 'graph', title: t('tour1Title'), text: t('tour1Text') },
+    { selector: 'view-toggle', title: t('tour2Title'), text: t('tour2Text') },
+    { selector: 'graph', title: t('tour3Title'), text: t('tour3Text') },
+  ]
   const [showChars, setShowChars] = useState(false)
   const [favChars, setFavChars] = useState<FavChar[]>([])
   const [showStaff, setShowStaff] = useState(false)
@@ -233,7 +234,7 @@ export default function GrafPage() {
             onClick={() => { setFocusGenre(null); setFitKey(Date.now()) }}
             className="surface-overlay rounded-full px-4 py-2 text-sm text-text-1 hover:bg-white/10 transition-colors"
           >
-            ← Minden műfaj
+            {t('allGenres')}
             <span className="label-mono ml-2">{focusGenre} · {animeNodeCount}</span>
           </button>
         </div>
@@ -249,18 +250,18 @@ export default function GrafPage() {
         <div className="surface-overlay rounded-full p-1 flex shrink-0">
           {MEDIA_MODES.map((m) => (
             <button
-              key={m.value}
+              key={m}
               onClick={() => {
-                setMediaMode(m.value)
-                localStorage.setItem(MEDIA_KEY, m.value)
+                setMediaMode(m)
+                localStorage.setItem(MEDIA_KEY, m)
                 setFocusGenre(null)
                 setFitKey(Date.now())
               }}
               className={`rounded-full px-3 py-2 text-xs text-text-2 transition-colors ${
-                mediaMode === m.value ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
+                mediaMode === m ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
               }`}
             >
-              {m.label}
+              {t(`media_${m}`)}
             </button>
           ))}
         </div>
@@ -270,7 +271,7 @@ export default function GrafPage() {
             onClick={() => setView(!advanced)}
             className="surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 hover:text-text-1 transition-colors"
           >
-            {advanced ? 'Egyszerű nézet' : 'Haladó nézet'}
+            {advanced ? t('simpleView') : t('advancedView')}
           </button>
         )}
         <button
@@ -279,7 +280,7 @@ export default function GrafPage() {
             timelineMode ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
           }`}
         >
-          {timelineMode ? '✕ Idővonal' : 'Idővonal'}
+          {timelineMode ? t('timelineOff') : t('timeline')}
         </button>
         {!timelineMode && (
           <button
@@ -288,12 +289,12 @@ export default function GrafPage() {
               setShowChars(next)
               localStorage.setItem(CHARS_KEY, next ? '1' : '0')
             }}
-            title="Kedvenc karakterek a gráfban, azonos seiyuu-nál keresztéllel"
+            title={t('charactersTooltip')}
             className={`surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 transition-colors ${
               showChars ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
             }`}
           >
-            ♥ Karakterek
+            {t('characters')}
           </button>
         )}
         {!timelineMode && (
@@ -303,12 +304,12 @@ export default function GrafPage() {
               setShowStaff(next)
               localStorage.setItem(STAFF_KEY, next ? '1' : '0')
             }}
-            title="Rendezők a gráfban — közös rendező összeköti az animéidet"
+            title={t('staffTooltip')}
             className={`surface-overlay shrink-0 rounded-full px-4 py-2.5 text-xs text-text-2 transition-colors ${
               showStaff ? 'bg-white/15 !text-text-1' : 'hover:bg-white/10'
             }`}
           >
-            🎬 Stáb
+            {t('staff')}
           </button>
         )}
         </div>
@@ -319,7 +320,7 @@ export default function GrafPage() {
           bottom-értékkel, ezért rácsúszott a gombsorra. */}
       {!timelineMode && minYear < maxYear && (
         <div className="surface-overlay pointer-events-auto flex shrink-0 items-center gap-3 self-start rounded-full px-4 py-2.5 md:self-end">
-          <span className="label-mono">Időutazás</span>
+          <span className="label-mono">{t('timeTravel')}</span>
           <input
             type="range"
             min={minYear}
@@ -365,14 +366,15 @@ export default function GrafPage() {
               <p className="text-[11px] text-text-3 leading-tight mt-0.5">{hoverAnime.titleNative}</p>
             )}
             <p className="label-mono mt-1.5">
-              {hoverAnime.year ?? '?'} · {hoverAnime.format ?? '?'} · {hoverAnime.episodes ?? '?'} rész
+              {hoverAnime.year ?? '?'} · {hoverAnime.format ?? '?'} ·{' '}
+              {t('episodeCount', { count: hoverAnime.episodes ?? '?' })}
             </p>
             <p className="flex items-center gap-1.5 mt-1.5 text-xs text-text-2">
               <span
                 className={`inline-block w-2 h-2 rounded-full ${hoverAnime.status === 'watching' ? 'animate-pulse' : ''}`}
                 style={{ background: STATUS_CSS_VARS[hoverAnime.status] ?? 'white' }}
               />
-              {STATUS_LABELS[hoverAnime.status] ?? hoverAnime.status}
+              {statusLabel(hoverAnime.status)}
               {hoverAnime.myScore != null && <span className="text-text-3">· {hoverAnime.myScore}/10</span>}
             </p>
           </div>

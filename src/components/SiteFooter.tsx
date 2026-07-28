@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { isFooterHidden } from '@/lib/nav'
 
 // A jogi oldalak enélkül elérhetetlenek lennének: a nav tele van, a
@@ -8,6 +9,7 @@ import { isFooterHidden } from '@/lib/nav'
 // A pb a mobil alsó tab-sáv helyét tartja fenn.
 export default function SiteFooter() {
   const pathname = usePathname()
+  const t = useTranslations('footer')
   if (isFooterHidden(pathname)) return null
 
   return (
@@ -15,13 +17,13 @@ export default function SiteFooter() {
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-3">
         <span className="text-text-2">Anime Graph</span>
         <Link href="/adatvedelem" className="transition-colors hover:text-text-1">
-          Adatvédelem
+          {t('privacy')}
         </Link>
         <Link href="/aszf" className="transition-colors hover:text-text-1">
-          Felhasználási feltételek
+          {t('terms')}
         </Link>
         <span className="ml-auto">
-          Katalógusadatok:{' '}
+          {t('catalogueData')}{' '}
           <a
             href="https://anilist.co"
             target="_blank"

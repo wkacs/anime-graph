@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { AnimeTheme } from '@/lib/themes'
 
 // OP/ED player (animethemes.moe), trailer fallback. Client-side by anilistId.
@@ -14,6 +15,7 @@ export default function ThemesPlayer({
 }) {
   const [themes, setThemes] = useState<AnimeTheme[]>([])
   const [active, setActive] = useState<AnimeTheme | null>(null)
+  const t = useTranslations('themes')
 
   useEffect(() => {
     fetch(`/api/themes/${anilistId}`)
@@ -24,7 +26,7 @@ export default function ThemesPlayer({
 
   return (
     <section className="glass rounded-3xl p-5">
-      <p className="label-mono mb-3">{themes.length ? 'Openingek & endingek' : 'Opening / trailer'}</p>
+      <p className="label-mono mb-3">{themes.length ? t('openingsEndings') : t('openingTrailer')}</p>
       {themes.length > 0 ? (
         <>
           <div className="flex flex-wrap gap-1.5 mb-3">
@@ -71,7 +73,7 @@ export default function ThemesPlayer({
           href={`https://www.youtube.com/results?search_query=${encodeURIComponent(titleRomaji + ' opening')}`}
           target="_blank" rel="noreferrer"
           className="text-sm text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20"
-        >Opening keresése YouTube-on ↗</a>
+        >{t('searchOnYoutube')}</a>
       )}
     </section>
   )

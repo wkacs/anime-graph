@@ -1,15 +1,22 @@
+'use client'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import type { PublicPinned } from '@/lib/public-view'
 
 // Kitűzött kedvencek sávja — a publikus profil hero-ja és a saját stats teteje
 // ugyanazt a megjelenítést kapja. linkable=false a publikus nézeten (ott nincs kattintás-cél).
+//
+// 'use client': a szerver-render nyelve fixen `en` (lásd src/i18n/request.ts), a
+// tenyleges nyelvvaltas kliens-oldalon tortenik. A komponens csak propokat kap,
+// ugyhogy a kliensre helyezese nem kerul semmibe.
 export default function PinnedShowcase({ pinned, linkable = true }: { pinned: PublicPinned; linkable?: boolean }) {
+  const t = useTranslations('pinned')
   if (pinned.titles.length === 0 && pinned.chars.length === 0) return null
   return (
     <section className="glass rounded-3xl p-5 flex flex-wrap items-center gap-6">
       {pinned.titles.length > 0 && (
         <div className="flex items-center gap-3">
-          <span className="label-mono shrink-0">📌 Kedvencek</span>
+          <span className="label-mono shrink-0">{t('favourites')}</span>
           <div className="flex gap-2">
             {pinned.titles.map((t) => {
               const img = t.coverUrl ? (
@@ -32,7 +39,7 @@ export default function PinnedShowcase({ pinned, linkable = true }: { pinned: Pu
       )}
       {pinned.chars.length > 0 && (
         <div className="flex items-center gap-3">
-          <span className="label-mono shrink-0">Karakterek</span>
+          <span className="label-mono shrink-0">{t('characters')}</span>
           <div className="flex gap-2">
             {pinned.chars.map((c) => (
               c.image ? (

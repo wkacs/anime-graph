@@ -1,6 +1,11 @@
 'use client'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { ApiAnime } from '@/lib/types'
+
+// A vasznon rajzolt szoveg nem JSX, ezert a forditott stringeket a komponens
+// adja at — a rajzolo fuggveny nem hivhat hookot.
+type CardLabels = { hours: string; summary: string; top5: string; myGenres: string }
 
 const proxied = (url: string) => `/_next/image?url=${encodeURIComponent(url)}&w=256&q=80`
 
@@ -23,7 +28,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-async function drawWrapped(list: ApiAnime[]): Promise<string> {
+async function drawWrapped(list: ApiAnime[], labels: CardLabels): Promise<string> {
   const W = 1080, H = 1350
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -44,19 +49,14 @@ async function drawWrapped(list: ApiAnime[]): Promise<string> {
   ctx.font = '600 30px Geist Mono, monospace'
   ctx.fillText(`ANIME WRAPPED · ${year}`, 72, 110)
 
-  // headline numbers
-  const completed = list.filter((a) => a.status === 'completed').length
-  const minutes = list.reduce((s, a) => {
-    const dur = a.durationMin ?? 24
-    const eps = a.status === 'completed' ? (a.episodes ?? a.progress) : a.progress
-    return s + dur * (eps ?? 0)
-  }, 0)
+  // headline numbers (a szamokat mar a hivo szamolta ki, hogy a forditasba
+  // behelyettesitheto legyen — itt csak rajzoljuk)
   ctx.fillStyle = '#fafafa'
   ctx.font = '700 120px Instrument Sans, sans-serif'
-  ctx.fillText(`${Math.round(minutes / 60)} óra`, 68, 250)
+  ctx.fillText(labels.hours, 68, 250)
   ctx.font = '400 34px Instrument Sans, sans-serif'
   ctx.fillStyle = 'rgba(250,250,250,0.65)'
-  ctx.fillText(`${list.length} anime a térképen · ${completed} befejezve`, 72, 310)
+  ctx.fillText(labels.summary, 72, 310)
 
   // top 5 covers
   const top = [...list]
@@ -65,7 +65,7 @@ async function drawWrapped(list: ApiAnime[]): Promise<string> {
     .slice(0, 5)
   ctx.fillStyle = 'rgba(250,250,250,0.55)'
   ctx.font = '600 26px Geist Mono, monospace'
-  ctx.fillText('TOP 5', 72, 420)
+  ctx.fillText(labels.top5, 72, 420)
 
   const cw = 168, ch = 238, gap = 24
   await Promise.all(top.map(async (a, i) => {
@@ -98,7 +98,7 @@ async function drawWrapped(list: ApiAnime[]): Promise<string> {
 
   ctx.fillStyle = 'rgba(250,250,250,0.55)'
   ctx.font = '600 26px Geist Mono, monospace'
-  ctx.fillText('MŰFAJAIM', 72, 830)
+  ctx.fillText(labels.myGenres, 72, 830)
   topGenres.forEach(([name, count], i) => {
     const y = 870 + i * 74
     ctx.fillStyle = '#fafafa'
@@ -124,11 +124,23 @@ async function drawWrapped(list: ApiAnime[]): Promise<string> {
 
 export default function WrappedCard({ list }: { list: ApiAnime[] }) {
   const [busy, setBusy] = useState(false)
+  const t = useTranslations('wrappedCard')
 
   async function generate() {
     setBusy(true)
     try {
-      const url = await drawWrapped(list)
+      const completed = list.filter((a) => a.status === 'completed').length
+      const minutes = list.reduce((s, a) => {
+        const dur = a.durationMin ?? 24
+        const eps = a.status === 'completed' ? (a.episodes ?? a.progress) : a.progress
+        return s + dur * (eps ?? 0)
+      }, 0)
+      const url = await drawWrapped(list, {
+        hours: t('hours', { count: Math.round(minutes / 60) }),
+        summary: t('summary', { total: list.length, completed }),
+        top5: t('top5'),
+        myGenres: t('myGenres'),
+      })
       const a = document.createElement('a')
       a.href = url
       a.download = `anime-wrapped-${new Date().getFullYear()}.png`
@@ -144,7 +156,7 @@ export default function WrappedCard({ list }: { list: ApiAnime[] }) {
       disabled={busy || list.length === 0}
       className="btn-ghost border border-white/10 px-4 py-2 text-sm"
     >
-      {busy ? 'Készül…' : '⬇ Wrapped-kártya'}
+      {busy ? t('busy') : t('download')}
     </button>
   )
 }

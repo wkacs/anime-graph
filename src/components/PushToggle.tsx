@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 function b64ToUint8(base64: string): Uint8Array {
   const pad = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -9,6 +10,7 @@ function b64ToUint8(base64: string): Uint8Array {
 
 export default function PushToggle() {
   const [state, setState] = useState<'unsupported' | 'off' | 'on' | 'busy'>('busy')
+  const t = useTranslations('push')
 
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setState('unsupported'); return }
@@ -39,17 +41,18 @@ export default function PushToggle() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint: sub.endpoint, keys: json.keys }),
       })
-      if (!res.ok) throw new Error('mentés sikertelen')
+      // A hibaüzenet nem jut felületre: a catch csak visszaállítja a gomb allapotat.
+      if (!res.ok) throw new Error('subscribe failed')
       setState('on')
     } catch {
       setState(prev === 'busy' ? 'off' : prev)
     }
   }
 
-  if (state === 'unsupported') return <p className="text-xs text-text-3">Ez a böngésző nem támogatja a web pusht.</p>
+  if (state === 'unsupported') return <p className="text-xs text-text-3">{t('unsupported')}</p>
   return (
     <button onClick={toggle} disabled={state === 'busy'} className="btn-ghost border border-white/10 px-4 py-2 text-sm">
-      {state === 'on' ? '🔔 Push bekapcsolva — kikapcsol' : state === 'busy' ? '…' : '🔕 Push-értesítés bekapcsolása'}
+      {state === 'on' ? t('on') : state === 'busy' ? '…' : t('off')}
     </button>
   )
 }
