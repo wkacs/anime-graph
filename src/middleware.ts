@@ -46,5 +46,7 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|favicon\\.ico).*)'],
+  // A statikus public fájloknak nem szabad auth-redirecten átmenniük: a landing
+  // képei, manifestje és más assetei különben HTML login-választ kapnának.
+  matcher: ['/((?!_next|.*\\..*).*)'],
 }

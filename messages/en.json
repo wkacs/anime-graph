@@ -49,6 +49,10 @@
     "closingTitle": "Start with the list you already have, or explore first.",
     "closingText": "After creating an account, you can begin with a MAL or AniList import.",
     "create": "Create an account",
+    "visualAlt": "Minimal floating liquid-glass cards representing anime and manga discovery.",
+    "visualKicker": "Your taste, in focus",
+    "visualTitle": "A calmer way to discover",
+    "visualMeta": "ANIME · MANGA",
     "seo": "Personal anime and manga tracker with taste-based discovery."
   },
   "community": {

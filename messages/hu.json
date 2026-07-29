@@ -49,6 +49,10 @@
     "closingTitle": "Kezdd a meglévő listáddal, vagy nézz körül előbb.",
     "closingText": "A fiók létrehozása után MAL- vagy AniList-importtal indulhatsz.",
     "create": "Fiók létrehozása",
+    "visualAlt": "Minimalista, lebegő liquid-glass kártyák anime- és manga-felfedezéshez.",
+    "visualKicker": "Az ízlésed fókuszban",
+    "visualTitle": "Nyugodtabb felfedezés",
+    "visualMeta": "ANIME · MANGA",
     "seo": "Személyes anime- és manga-követő ízlésalapú felfedezéssel."
   },
   "community": {
