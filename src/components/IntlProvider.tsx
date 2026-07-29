@@ -23,6 +23,14 @@ export default function IntlProvider({ children }: { children: React.ReactNode }
     const next = cookieLocale()
     setLocale(next)
     document.documentElement.lang = next
+    const onLocaleChange = (event: Event) => {
+      const nextLocale = (event as CustomEvent<Locale>).detail
+      if (nextLocale !== 'en' && nextLocale !== 'hu') return
+      setLocale(nextLocale)
+      document.documentElement.lang = nextLocale
+    }
+    window.addEventListener('anime-graph:locale-change', onLocaleChange)
+    return () => window.removeEventListener('anime-graph:locale-change', onLocaleChange)
   }, [])
 
   // Fix időzóna: enélkül a next-intl a futtató környezetére esik vissza

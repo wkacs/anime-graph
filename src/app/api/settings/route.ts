@@ -5,6 +5,7 @@ import { requireUserId } from '@/lib/session'
 import { validateRegistration } from '@/lib/registration'
 import { newToken, hashToken, tokenExpiry } from '@/lib/auth-token'
 import { sendEmail, verifyEmailTemplate } from '@/lib/email'
+import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -108,6 +109,9 @@ export async function PUT(req: NextRequest) {
   if (body.tasteLikes !== undefined || body.tasteDislikes !== undefined) {
     const likes = String(body.tasteLikes ?? '')
     const dislikes = String(body.tasteDislikes ?? '')
+    if (exceedsTextLimit(likes, INPUT_LIMITS.tasteText) || exceedsTextLimit(dislikes, INPUT_LIMITS.tasteText)) {
+      return NextResponse.json({ error: `Az ízléslista legfeljebb ${INPUT_LIMITS.tasteText} karakter lehet` }, { status: 413 })
+    }
     await upsert(userId, 'tasteLikes', likes)
     await upsert(userId, 'tasteDislikes', dislikes)
 

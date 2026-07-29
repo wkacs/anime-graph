@@ -1,16 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSession, verifySession, SESSION_DAYS, SESSION_RENEW_AFTER_MS } from '@/lib/auth'
 import { isPublicPath } from '@/lib/public-paths'
+import { internalRoute, legacyRedirect } from '@/lib/route-migration'
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  if (isPublicPath(pathname)) return NextResponse.next()
+  const canonical = legacyRedirect(pathname)
+  if (canonical) return NextResponse.redirect(new URL(canonical, req.url), { status: 308 })
+  const internalPath = internalRoute(pathname)
+  const response = () => {
+    if (!internalPath) return NextResponse.next()
+    const url = req.nextUrl.clone()
+    url.pathname = internalPath
+    return NextResponse.rewrite(url)
+  }
+  if (isPublicPath(pathname)) return response()
   const claims = await verifySession(
     process.env.SESSION_SECRET!,
     req.cookies.get('session')?.value,
   )
   if (claims) {
-    const res = NextResponse.next()
+    const res = response()
     // Csúszó megújítás: a felezőpont után friss sütit adunk, így az aktív user
     // sosem esik ki. Adatbázis nem kell hozzá — a meglévő claimeket írjuk alá
     // új lejárattal, a tokenVersion változatlan marad, tehát egy reset utáni

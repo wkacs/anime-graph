@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useScroll, useMotionValueEvent } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import LocaleSwitcher from './LocaleSwitcher'
-import { PRIMARY_TABS, MORE_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
+import { PRIMARY_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
+import { useAuthStatus } from '@/lib/use-auth-status'
 
 export default function TopNav() {
   const t = useTranslations('nav')
@@ -15,15 +16,19 @@ export default function TopNav() {
   const [scrolled, setScrolled] = useState(false)
   const moreRef = useRef<HTMLLIElement>(null)
   const hidden = isNavHidden(pathname)
+  const authenticated = useAuthStatus()
+  // Amíg a session-check fut, a biztonságos vendég-nézetet mutatjuk. Így az
+  // első paint sem indít privát badge-kérést 401-gyel.
+  const guest = authenticated !== true
 
   // velemeny-varo darabszam a badge-hez; oldalvaltasnal frissul
   useEffect(() => {
-    if (hidden) return
+    if (hidden || guest) return
     fetch('/api/opinions/pending?countOnly=1')
       .then((r) => (r.ok ? r.json() : { count: 0 }))
       .then((j: { count: number }) => setPendingCount(j.count ?? 0))
       .catch(() => { /* badge nelkul is el a nav */ })
-  }, [pathname, hidden])
+  }, [pathname, hidden, guest])
 
   // A nav lefele scrollnal surubb lesz. Nyers window scroll-listener helyett a
   // Motion useScroll-ja: a pozicio motion-value-kent el, a React fan kivul.
@@ -87,7 +92,7 @@ export default function TopNav() {
       <div className="h-4 w-px bg-white/10 shrink-0" />
 
       <ul className="flex items-center gap-0.5">
-        {PRIMARY_TABS.map((tab) => (
+        {(guest ? GUEST_TABS : PRIMARY_TABS).map((tab) => (
           <li key={tab.href}>
             <Link href={tab.href} className={tabClass(isTabActive(tab.href, pathname))}>
               {t(tab.key)}
@@ -99,7 +104,7 @@ export default function TopNav() {
             </Link>
           </li>
         ))}
-        <li ref={moreRef} className="relative">
+        {!guest && <li ref={moreRef} className="relative">
           <button
             onClick={() => setMoreOpen((o) => !o)}
             aria-expanded={moreOpen}
@@ -130,28 +135,33 @@ export default function TopNav() {
               ))}
             </ul>
           )}
-        </li>
+        </li>}
       </ul>
 
       <div className="h-4 w-px bg-white/10 shrink-0" />
 
-      <Link href="/bongeszo?focus=1" aria-label={t('search')} title={t('search')} className="btn-ghost p-2">
+      <Link href="/browse?focus=1" aria-label={t('search')} title={t('search')} className="btn-ghost p-2">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden>
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
         </svg>
       </Link>
       <LocaleSwitcher compact />
-      <Link
-        href="/beallitasok"
+      {!guest && <Link
+        href="/settings"
         aria-label={t('settings')}
-        className={`btn-ghost p-2 ${isTabActive('/beallitasok', pathname) ? 'bg-white/10 text-text-1' : ''}`}
+        className={`btn-ghost p-2 ${isTabActive('/settings', pathname) ? 'bg-white/10 text-text-1' : ''}`}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <circle cx="12" cy="12" r="3" />
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
-      </Link>
+      </Link>}
+      {guest && (
+        <Link href="/login" className="btn-solid px-3 py-1.5 text-sm">
+          {t('signIn')}
+        </Link>
+      )}
     </nav>
     </>
   )

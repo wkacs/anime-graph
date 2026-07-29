@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const email = String(body.email ?? '').trim().toLowerCase()
 
-  await rateLimit('forgot-ip', clientIp(req.headers), 10, 3600)
+  const ipAllowed = await rateLimit('forgot-ip', clientIp(req.headers), 10, 3600)
   const allowed = await rateLimit('forgot-email', email, 3, 3600)
 
-  if (allowed && email) {
+  if (ipAllowed && allowed && email) {
     const [user] = await db.select().from(users).where(sql`lower(${users.email}) = ${email}`)
     if (user) {
       const raw = newToken()

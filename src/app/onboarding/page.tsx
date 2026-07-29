@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import PushToggle from '@/components/PushToggle'
 import type { TasteProfile } from '@/lib/profile'
+import { readMalExport } from '@/lib/mal-export'
 
 const SEED_MIN = 5
 
@@ -88,7 +89,14 @@ export default function OnboardingPage() {
   async function importMal(file: File) {
     setImporting('mal')
     setImportResult('')
-    const xml = await file.text()
+    let xml: string
+    try {
+      xml = await readMalExport(file)
+    } catch (e) {
+      setImporting(null)
+      setImportResult(`✕ ${e instanceof Error ? e.message : 'A fájl megnyitása nem sikerült'}`)
+      return
+    }
     const res = await fetch('/api/import/mal', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ xml }),
     })
@@ -173,9 +181,9 @@ export default function OnboardingPage() {
                 </button>
               </div>
               <label className={`btn-ghost border border-white/10 px-4 py-2 text-sm cursor-pointer self-start ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
-                {importing === 'mal' ? 'Import…' : 'Vagy MAL-export (.xml) feltöltése'}
+                {importing === 'mal' ? 'Import…' : 'Vagy MAL-export (.xml vagy .xml.gz) feltöltése'}
                 <input
-                  type="file" accept=".xml,text/xml" className="hidden"
+                  type="file" accept=".xml,.gz,application/xml,text/xml,application/gzip" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) importMal(f); e.target.value = '' }}
                 />
               </label>

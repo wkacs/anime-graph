@@ -26,6 +26,16 @@ export async function resolveRelationLocal(
   return row ?? null
 }
 
+/** Relation JSON-ben nincs mediaType; a kapcsolt címnél ezért bármely publikus katalógussort elfogadunk. */
+export async function resolveAnyRelationLocal(
+  anilistId: number,
+): Promise<{ slug: string; mediaType: string; coverUrl: string | null } | null> {
+  const [row] = await db.select({ slug: title.slug, mediaType: title.mediaType, coverUrl: title.coverUrl })
+    .from(title)
+    .where(and(eq(title.anilistId, anilistId), eq(title.isAdult, 0)))
+  return row ?? null
+}
+
 export function canonicalPath(mediaType: string, slug: string): string {
   return `/${mediaType === 'MANGA' ? 'manga' : 'anime'}/${slug}`
 }

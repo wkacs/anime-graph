@@ -44,9 +44,10 @@ export default function Podium({ rows, tab }: Props) {
     <div className="grid gap-3 md:grid-cols-[1.55fr_1fr]">
       <Link
         href={href(first)}
-        className="surface-2 relative isolate overflow-hidden rounded-[var(--r-lg)] p-5 transition-transform active:scale-[0.99]"
+        className="surface-2 relative isolate overflow-hidden rounded-[var(--r-lg)] p-5 transition-transform active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         <PosterAmbient src={first.coverUrl} intensity="hero" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/30 to-black/15" aria-hidden />
         <div className="relative flex items-center gap-6">
           <Poster row={first} w="w-28 sm:w-32" rankClass="display-xl" />
           <div className="min-w-0 flex-1">
@@ -64,9 +65,10 @@ export default function Podium({ rows, tab }: Props) {
           <Link
             key={r.id}
             href={href(r)}
-            className="surface-1 relative isolate flex items-center gap-4 overflow-hidden rounded-[var(--r-md)] p-3 pl-4 transition-colors hover:bg-white/[0.06]"
+            className="surface-1 relative isolate flex items-center gap-4 overflow-hidden rounded-[var(--r-md)] p-3 pl-4 transition-colors hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             <PosterAmbient src={r.coverUrl} intensity="row" />
+            <div className="absolute inset-0 bg-black/35" aria-hidden />
             <Poster row={r} w="w-12" rankClass="display-l" />
             <p className="relative line-clamp-2 min-w-0 flex-1 text-sm font-medium text-text-1">
               {r.titleRomaji}

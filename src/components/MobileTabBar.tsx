@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { MOBILE_TABS, MORE_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
+import { MOBILE_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
+import { useAuthStatus } from '@/lib/use-auth-status'
 
 // Also tab-sav <md alatt. Korabban a felso pillt vizszintesen kellett huzni
 // mobilon; ez volt a legnagyobb mobil-hianyossag.
@@ -12,6 +13,8 @@ export default function MobileTabBar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const hidden = isNavHidden(pathname)
+  const authenticated = useAuthStatus()
+  const guest = authenticated !== true
 
   useEffect(() => { setOpen(false) }, [pathname])
 
@@ -24,7 +27,7 @@ export default function MobileTabBar() {
 
   return (
     <>
-      {open && (
+      {!guest && open && (
         <div className="md:hidden fixed inset-0 z-40" onClick={() => setOpen(false)}>
           <ul
             className="surface-menu absolute right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] min-w-44 rounded-[var(--r-md)] p-1.5 flex flex-col gap-0.5"
@@ -39,12 +42,12 @@ export default function MobileTabBar() {
             ))}
             {/* a graf mobilon innen erheto el */}
             <li>
-              <Link href="/graf" className={itemClass(isTabActive('/graf', pathname))}>
+              <Link href="/graph" className={itemClass(isTabActive('/graph', pathname))}>
                 {t('graph')}
               </Link>
             </li>
             <li>
-              <Link href="/beallitasok" className={itemClass(isTabActive('/beallitasok', pathname))}>
+              <Link href="/settings" className={itemClass(isTabActive('/settings', pathname))}>
                 {t('settings')}
               </Link>
             </li>
@@ -56,7 +59,7 @@ export default function MobileTabBar() {
         className="surface-3 md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around rounded-t-[var(--r-lg)] px-1 pt-1.5"
         style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom))' }}
       >
-        {MOBILE_TABS.map((tab) => {
+        {(guest ? GUEST_TABS : MOBILE_TABS).map((tab) => {
           const active = isTabActive(tab.href, pathname)
           return (
             <Link
@@ -75,7 +78,7 @@ export default function MobileTabBar() {
             </Link>
           )
         })}
-        <button
+        {!guest && <button
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           className={`flex-1 rounded-[var(--r-sm)] px-1 py-2 text-center text-[11px] transition-colors ${
@@ -88,7 +91,16 @@ export default function MobileTabBar() {
               isMoreActive(pathname) ? 'bg-white/70 opacity-100' : 'opacity-0'
             }`}
           />
-        </button>
+        </button>}
+        {guest && (
+          <Link
+            href="/login"
+            className="flex-1 rounded-[var(--r-sm)] px-1 py-2 text-center text-[11px] text-text-1"
+          >
+            <span className="block truncate font-medium">{t('signIn')}</span>
+            <span className="mx-auto mt-1 block h-0.5 w-5 rounded-full bg-white/70" />
+          </Link>
+        )}
       </nav>
     </>
   )

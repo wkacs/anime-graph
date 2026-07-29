@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { canonicalPath, pickSourceRelation, resolveRelationLocal, resolveTitleBySlug } from '@/lib/catalog-page'
+import { canonicalPath, pickSourceRelation, resolveAnyRelationLocal, resolveRelationLocal, resolveTitleBySlug } from '@/lib/catalog-page'
 import { getCachedStaff } from '@/lib/staff-cache'
 import { buildTitleJsonLd, jsonLdScript, siteUrl } from '@/lib/seo'
 import { stripHtml } from '@/lib/description'
@@ -55,6 +55,10 @@ export default async function CatalogTitlePage({
   const otherRelations = sourceRel
     ? t.relations.filter((r) => !(r.type === sourceRel.type && r.anilistId === sourceRel.anilistId))
     : t.relations
+  const localRelations = await Promise.all(otherRelations.map(async (relation) => ({
+    relation,
+    local: await resolveAnyRelationLocal(relation.anilistId),
+  })))
 
   const jsonLd = buildTitleJsonLd(t, `${siteUrl()}${canonicalPath(t.mediaType, t.slug)}`)
 
@@ -215,24 +219,23 @@ export default async function CatalogTitlePage({
           bannerUrl={t.bannerUrl}
         />
 
-        {otherRelations.length > 0 && (
+        {localRelations.length > 0 && (
           <section>
             <SectionHeader title={<T ns="catalog" k="otherParts" />} />
             <ul className="surface-1 rounded-[var(--r-lg)] p-2 flex flex-col">
-              {otherRelations.map((r) => (
+              {localRelations.map(({ relation: r, local }) => (
                 <li key={`${r.type}-${r.anilistId}`}>
                   <MediaCard
                     variant="row"
                     title={r.title}
                     coverUrl={null}
                     genres={[r.type.toLowerCase().replace('_', ' ')]}
-                    footer={
-                      <a
-                        href={`https://anilist.co/anime/${r.anilistId}`}
-                        target="_blank" rel="noreferrer"
-                        className="label-mono hover:text-text-1"
-                      >AniList ↗</a>
-                    }
+                    href={local ? canonicalPath(local.mediaType, local.slug) : undefined}
+                    footer={local ? (
+                      <Link href={canonicalPath(local.mediaType, local.slug)} className="label-mono hover:text-text-1">Megnyitás →</Link>
+                    ) : (
+                      <a href={`https://anilist.co/anime/${r.anilistId}`} target="_blank" rel="noreferrer" className="label-mono hover:text-text-1">AniList ↗</a>
+                    )}
                   />
                 </li>
               ))}

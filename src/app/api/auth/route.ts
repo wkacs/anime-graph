@@ -5,6 +5,13 @@ import { createSession, SESSION_DAYS } from '@/lib/auth'
 import { verifyPassword } from '@/lib/password'
 import { clientIp, rateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
+import { requireUserId } from '@/lib/session'
+
+export async function GET() {
+  return NextResponse.json({ authenticated: Boolean(await requireUserId()) }, {
+    headers: { 'Cache-Control': 'no-store' },
+  })
+}
 
 function sessionResponse(token: string, body: object = { ok: true }) {
   const res = NextResponse.json(body)

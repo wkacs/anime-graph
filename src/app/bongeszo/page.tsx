@@ -1,8 +1,11 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores } from '@/lib/use-fit-scores'
+import { SEASON_LABELS } from '@/lib/seasonal'
+import { useAuthStatus } from '@/lib/use-auth-status'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import PageShell from '@/components/ui/PageShell'
 import SectionHeader from '@/components/ui/SectionHeader'
@@ -15,7 +18,6 @@ import type { TourStep } from '@/lib/tour'
 
 import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
-import { useSeasonLabel } from '@/components/useLabels'
 
 // a /api/trending title-sorai TitleHit-alakra képezve, hogy a kártya-rács közös legyen
 type TrendingRow = {
@@ -36,6 +38,8 @@ const ADD_OPTIONS = ['completed', 'watching', 'planned'] as const
 const PAGE_SIZE = 24
 
 export default function BrowsePage() {
+  const router = useRouter()
+  const authenticated = useAuthStatus()
   const [search, setSearch] = useState('')
   const [type, setType] = useState<'ANIME' | 'MANGA'>('ANIME')
   const [page, setPage] = useState(0) // 0-based offset page
@@ -48,8 +52,6 @@ export default function BrowsePage() {
   // `tr`, nem `t`: a fajlban tobb helyi `t` van (setTimeout-id, media-tipus param).
   const tr = useTranslations('browse')
   const ta = useTranslations('addSearch')
-  const tc = useTranslations('common')
-  const seasonLabel = useSeasonLabel()
   // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
   const BONGESZO_TOUR: TourStep[] = [
     { selector: 'search', title: tr('tourCatalogTitle'), text: tr('tourCatalogText') },
@@ -99,7 +101,7 @@ export default function BrowsePage() {
     // a nav kereső-ikonja ide navigál: fókuszáljuk a meglévő inputot
     if (sp.get('focus') === '1') {
       searchRef.current?.focus()
-      window.history.replaceState(null, '', '/bongeszo')
+      window.history.replaceState(null, '', '/browse')
     }
   }, [])
 
@@ -121,7 +123,7 @@ export default function BrowsePage() {
     if (studio) sp.set('studio', studio)
     if (season) sp.set('season', season)
     const qs = sp.toString()
-    window.history.replaceState(null, '', qs ? `/bongeszo?${qs}` : '/bongeszo')
+    window.history.replaceState(null, '', qs ? `/browse?${qs}` : '/browse')
   }
 
   useEffect(() => {
@@ -175,12 +177,12 @@ export default function BrowsePage() {
           <span className="flex flex-wrap gap-1">
             {ADD_OPTIONS.map((o) => (
               <Button
-                key={o.status}
-                onClick={() => quickAdd(h, o.status)}
-                title={`Hozzáadás: ${o.label}`}
+                key={o}
+                onClick={() => quickAdd(h, o)}
+                title={ta('addAs', { label: ta(`add_${o}`) })}
                 className="font-mono text-[10px] uppercase tracking-wide"
               >
-                {o.label}
+                {ta(`add_${o}`)}
               </Button>
             ))}
           </span>
@@ -195,6 +197,10 @@ export default function BrowsePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ anilistId: h.anilistId, status }),
     })
+    if (res.status === 401) {
+      router.push(`/login?next=${encodeURIComponent(`/browse?focus=1`)}`)
+      return
+    }
     if (res.ok) {
       const j = await res.json()
       setAdded((s) => new Set(s).add(h.titleId))
@@ -209,7 +215,7 @@ export default function BrowsePage() {
         <h1 className="display-l text-text-1">Katalógus-keresés</h1>
       </div>
 
-      <TourSpotlight page="bongeszo" steps={BONGESZO_TOUR} />
+      {authenticated === true && <TourSpotlight page="bongeszo" steps={BONGESZO_TOUR} />}
 
       <div
         data-tour="search"

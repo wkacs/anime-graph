@@ -22,6 +22,9 @@ export function validateRegistration(input: RegistrationInput): RegistrationResu
   const username = input.username.trim().toLowerCase()
   if (!EMAIL_RE.test(email)) return { ok: false, field: 'email' }
   if (!USERNAME_RE.test(username)) return { ok: false, field: 'username' }
-  if (input.password.length < MIN_PASSWORD_LENGTH) return { ok: false, field: 'password' }
+  if (input.password.length < MIN_PASSWORD_LENGTH || input.password.length > INPUT_LIMITS.password) {
+    return { ok: false, field: 'password' }
+  }
   return { ok: true, email, username }
 }
+import { INPUT_LIMITS } from './input-limits'

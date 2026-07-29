@@ -13,13 +13,57 @@
     "opinions": "Vélemények",
     "browse": "Böngésző",
     "leaderboard": "Toplista",
+    "community": "Közösség",
+    "notifications": "Újdonságok",
     "vibe": "Vibe",
     "stats": "Stats",
     "vs": "VS",
     "wrapped": "Wrapped",
     "more": "Több",
     "search": "Keresés",
-    "settings": "Beállítások"
+    "settings": "Beállítások",
+    "signIn": "Belépés"
+  },
+  "browse": {
+    "tourCatalogTitle": "Keresés a katalógusban",
+    "tourCatalogText": "Keress anime és manga címek között, vagy szűrj az aktuális szezonra.",
+    "tourFitTitle": "Személyes találatok",
+    "tourFitText": "Bejelentkezve itt megjelenik, mely címek illenek leginkább az ízlésedhez."
+  },
+  "landing": {
+    "kicker": "Anime Graph · a lista, ami dolgozik neked",
+    "title": "Ne csak vezesd az anime- és manga-listádat. Értsd is, mit szeretsz.",
+    "body": "Hozd át a MAL- vagy AniList-listádat, kövesd a szezont, és kapj személyes találatokat az értékeléseid, nem pusztán a népszerűség alapján.",
+    "start": "Kezdem a listámmal",
+    "browse": "Nézz körül a katalógusban",
+    "catalogKicker": "Élő katalógus",
+    "catalogTitle": "Nézz bele, mielőtt regisztrálsz",
+    "catalogLink": "Teljes katalógus →",
+    "catalogFallback": "Anime, manga, aktuális szezon és közösségi toplisták — bejelentkezés nélkül is böngészhetők.",
+    "feature1Title": "Import, nem újrakezdés",
+    "feature1Text": "A MAL- és AniList-listád státuszai, pontjai és haladása áthozható; a régi listád nem vész el.",
+    "feature2Title": "Ízlés, nem csak algoritmus",
+    "feature2Text": "A saját értékeléseidből épülő fit-score megmutatja, melyik cím miért lehet neked való.",
+    "feature3Title": "Katalógus, ami felfedezésre kész",
+    "feature3Text": "Publikus címoldalak, szezonális nézetek és toplisták segítenek új kedvenceket találni.",
+    "closingTitle": "Kezdd a meglévő listáddal, vagy nézz körül előbb.",
+    "closingText": "A fiók létrehozása után MAL- vagy AniList-importtal indulhatsz.",
+    "create": "Fiók létrehozása",
+    "seo": "Személyes anime- és manga-követő ízlésalapú felfedezéssel."
+  },
+  "community": {
+    "eyebrow": "Közösségi vélemények",
+    "heading": "Mit néznek és mit gondolnak mások",
+    "description": "A nyilvános profilok véleményei. A saját profilod láthatóságát a Beállításokban szabályozod.",
+    "empty": "Még nincs nyilvános vélemény."
+  },
+  "notifications": {
+    "eyebrow": "Saját újdonságok",
+    "heading": "Közelgő epizódok",
+    "description": "A következő két hét a nézett vagy tervezett animéidből. Az időben érkező jelzéshez kapcsold be a böngészős push-t a Beállításokban.",
+    "empty": "Még nincs ütemezett epizód. Vegyél fel egy futó animét a listádra.",
+    "episode": "{episode}. epizód",
+    "now": "Most adásban"
   },
   "fit": {
     "title": "Neked való?",
@@ -393,7 +437,10 @@
   "emailPrompt": {
     "saved": "Elmentve. Küldtünk egy megerősítő levelet — kattints a benne lévő linkre.",
     "noEmail": "Nincs e-mail a fiókodon, így nincs jelszó-visszaállításod.",
-    "placeholder": "email@pelda.hu"
+    "placeholder": "email@pelda.hu",
+    "unverified": "Az e-mail-címed még nincs megerősítve.",
+    "resend": "Megerősítő e-mail újraküldése",
+    "resent": "Megerősítő e-mail elküldve."
   },
   "profileReveal": {
     "kicker": "Import kész ✓",

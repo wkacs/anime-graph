@@ -13,6 +13,7 @@ import { requireUserId } from '@/lib/session'
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { glmChat } from '@/lib/glm'
 import { aiUserErrorMessage } from '@/lib/ai-error'
+import { INPUT_LIMITS, exceedsTextLimit, isBoundedStringList } from '@/lib/input-limits'
 
 // GLM only names new titles — attach real AniList data so the cards are
 // addable with one click. If the best match is already on the list, the pick
@@ -48,6 +49,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const prompt = String(body?.prompt ?? '').trim()
   const animeIds: number[] = Array.isArray(body?.animeIds) ? body.animeIds.map(Number) : []
+  const custom = String(body?.custom ?? '').trim()
+  const chipIds: string[] = Array.isArray(body?.chipIds) ? body.chipIds : []
+  if (exceedsTextLimit(prompt, INPUT_LIMITS.vibePrompt) || exceedsTextLimit(custom, INPUT_LIMITS.vibePrompt)) {
+    return NextResponse.json({ error: `A szöveges kérés legfeljebb ${INPUT_LIMITS.vibePrompt} karakter lehet` }, { status: 413 })
+  }
+  if (animeIds.length > INPUT_LIMITS.maxVibeAnimeIds
+    || !isBoundedStringList(chipIds, INPUT_LIMITS.maxVibeChipIds, 80)) {
+    return NextResponse.json({ error: 'Túl sok vagy hibás kiválasztott szűrő' }, { status: 400 })
+  }
   if (!prompt && !animeIds.length) {
     return NextResponse.json({ error: 'Írj be egy kérést vagy válassz animét' }, { status: 400 })
   }
@@ -60,8 +70,6 @@ export async function POST(req: NextRequest) {
 
   // Chip-only ut: ha nincs szabad szoveg es nincs kivalasztott anime, ES minden
   // chip lekepezheto katalogus-feature-re, akkor nem kell modell.
-  const chipIds: string[] = Array.isArray(body?.chipIds) ? body.chipIds : []
-  const custom = String(body?.custom ?? '').trim()
   const { keys, unmapped } = chipFeatureKeys(chipIds)
   if (!custom && !animeIds.length && keys.length > 0 && unmapped.length === 0) {
     const [signals, catalog] = await Promise.all([

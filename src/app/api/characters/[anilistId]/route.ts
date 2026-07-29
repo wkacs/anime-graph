@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ anilistId: string }> }) {
   const userId = await requireUserId()
-  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { anilistId: raw } = await params
   const anilistId = Number(raw)
   if (!Number.isInteger(anilistId) || anilistId <= 0) {
@@ -18,8 +17,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ani
   try {
     const [characters, favs] = await Promise.all([
       fetchCharacters(anilistId),
-      db.select({ charId: favoriteCharacters.charId }).from(favoriteCharacters)
-        .where(eq(favoriteCharacters.userId, userId)),
+      userId
+        ? db.select({ charId: favoriteCharacters.charId }).from(favoriteCharacters)
+          .where(eq(favoriteCharacters.userId, userId))
+        : Promise.resolve([]),
     ])
     return NextResponse.json({ characters, favoriteIds: favs.map((f) => f.charId) })
   } catch (e) {

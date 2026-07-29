@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import OnboardingCTA from '@/components/OnboardingCTA'
@@ -23,6 +24,10 @@ import type {
 
 export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
+  // A publikus landing az SSR-ben is megjelenik, ezért kereső és első látogató
+  // azonnal valódi tartalmat kap. Bejelentkezve az /api/news sikere után váltunk
+  // a személyes kezdőlapra.
+  const [guest, setGuest] = useState(true)
   // null = nincs hiba; '' = van hiba, de a szerver nem adott sajat uzenetet
   const [error, setError] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<number>>(new Set())
@@ -37,6 +42,7 @@ export default function NewsPage() {
   const [view, setView] = useState<SeasonView>(EMPTY_SEASON_VIEW)
   const t = useTranslations('news')
   const tc = useTranslations('common')
+  const landing = useTranslations('landing')
   // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
   const NEWS_TOUR: TourStep[] = [
     { selector: 'season', title: t('tourSeasonTitle'), text: t('tourSeasonText') },
@@ -49,8 +55,10 @@ export default function NewsPage() {
       .then(async (r) => {
         // Nem `tc(...)`: a forditó nem referencia-stabil, fuggosegkent minden
         // renderben ujrainditana a fetchet. Az alapertelmezes a renderben lep be.
+        if (r.status === 401) { setGuest(true); return }
         if (!r.ok) throw new Error((await r.json()).error ?? '')
         setData(await r.json())
+        setGuest(false)
       })
       .catch((e) => setError(String(e.message ?? e)))
     fetch('/api/digest')
@@ -148,6 +156,84 @@ export default function NewsPage() {
       body: JSON.stringify({ id: w.id }),
     })
     if (res.ok) setWatchlist((l) => l.filter((x) => x.id !== w.id))
+  }
+
+  if (guest) {
+    return (
+      <main className="min-h-screen">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org', '@type': 'WebSite', name: 'Anime Graph',
+            description: landing('seo'),
+          }).replace(/</g, '\\u003c') }}
+        />
+        <section className="mx-auto flex max-w-6xl flex-col px-4 pb-16 pt-28 md:pt-36">
+          <p className="label-mono mb-4">{landing('kicker')}</p>
+          <h1 className="display-xl max-w-4xl text-text-1">{landing('title')}</h1>
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-text-2">
+            {landing('body')}
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/login" className="btn-solid px-5 py-3">{landing('start')}</Link>
+            <Link href="/browse" className="btn-ghost border border-white/15 px-5 py-3">{landing('browse')}</Link>
+          </div>
+        </section>
+
+        <section className="border-y border-white/8 bg-white/[0.015]">
+          <div className="mx-auto max-w-6xl px-4 py-12">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className="label-mono">{landing('catalogKicker')}</p>
+                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text-1">{landing('catalogTitle')}</h2>
+              </div>
+              <Link href="/browse" className="text-sm text-text-2 underline decoration-white/20 underline-offset-4 hover:text-text-1">{landing('catalogLink')}</Link>
+            </div>
+            {nextList && nextList.length > 0 ? (
+              <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {nextList.slice(0, 6).map((item) => (
+                  <Link key={item.id} href={`/${item.mediaType === 'MANGA' ? 'manga' : 'anime'}/${item.slug}`} className="group min-w-0">
+                    <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--r-md)] bg-white/5">
+                      {item.coverUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.coverUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      )}
+                    </div>
+                    <p className="mt-2 truncate text-sm font-medium text-text-1">{item.titleRomaji}</p>
+                    <p className="label-mono mt-0.5">{item.format ?? item.mediaType}</p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-6 text-sm text-text-2">{landing('catalogFallback')}</p>
+            )}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              [landing('feature1Title'), landing('feature1Text')],
+              [landing('feature2Title'), landing('feature2Text')],
+              [landing('feature3Title'), landing('feature3Text')],
+            ].map(([title, text], index) => (
+              <article key={title} className="surface-2 rounded-[var(--r-lg)] p-6">
+                <p className="label-mono">0{index + 1}</p>
+                <h2 className="mt-5 text-lg font-semibold text-text-1">{title}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-text-2">{text}</p>
+              </article>
+            ))}
+          </div>
+          <div className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-[var(--r-lg)] border border-white/10 p-6">
+            <div>
+              <p className="text-lg font-semibold text-text-1">{landing('closingTitle')}</p>
+              <p className="mt-1 text-sm text-text-2">{landing('closingText')}</p>
+            </div>
+            <Link href="/login" className="btn-solid px-5 py-3">{landing('create')}</Link>
+          </div>
+        </section>
+      </main>
+    )
   }
 
   if (error != null) {

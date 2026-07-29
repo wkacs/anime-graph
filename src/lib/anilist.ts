@@ -35,15 +35,26 @@ export type SearchResult = {
 }
 
 export async function anilistFetch<T>(query: string, variables: Record<string, unknown>): Promise<T> {
-  const res = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  })
-  if (!res.ok) throw new Error(`AniList HTTP ${res.status}`)
-  const json = await res.json()
-  if (json.errors?.length) throw new Error(`AniList: ${json.errors[0].message}`)
-  return json.data as T
+  // Importoknál több kérés fut egymás után. Egy rövid AniList 429 ezért nem
+  // nullázza le az egész folyamatot: a Retry-After szerint még kétszer próbálunk.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    })
+    if (res.status === 429 && attempt < 2) {
+      const retryAfter = Number(res.headers.get('retry-after'))
+      const delayMs = Math.min(5000, Math.max(500, Number.isFinite(retryAfter) ? retryAfter * 1000 : 1000))
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+      continue
+    }
+    if (!res.ok) throw new Error(`AniList HTTP ${res.status}`)
+    const json = await res.json()
+    if (json.errors?.length) throw new Error(`AniList: ${json.errors[0].message}`)
+    return json.data as T
+  }
+  throw new Error('AniList HTTP 429')
 }
 
 const SEARCH_QUERY = `

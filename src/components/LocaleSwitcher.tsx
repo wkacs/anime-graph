@@ -12,6 +12,7 @@ export default function LocaleSwitcher({ compact = false }: { compact?: boolean 
   async function pick(next: string) {
     if (next === current) return
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`
+    window.dispatchEvent(new CustomEvent('anime-graph:locale-change', { detail: next }))
     await fetch('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

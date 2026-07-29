@@ -7,13 +7,14 @@
 // a hozzajuk tartozo olvaso-API-k anonim-biztosak (owned/fit: authed:false agat
 // adnak, sosem 500).
 export const PUBLIC_PATHS = [
+  '/',
   '/login', '/api/auth', '/api/cron', '/p/', '/api/public/',
-  '/anime/', '/manga/', '/bongeszo', '/toplista', '/u/',
+  '/anime/', '/manga/', '/browse', '/leaderboard', '/community', '/u/',
   // A jogi tajekoztatokra a lablec MINDEN publikus oldalrol es a regisztracios
   // urlap is linkel. Auth mogott a link holt, es elfogadhatatlan feltetelt kerne.
   '/aszf', '/adatvedelem',
   '/api/search', '/api/browse', '/api/characters/', '/api/themes/', '/api/links/',
-  '/api/leaderboard',
+  '/api/leaderboard', '/api/reviews', '/api/health',
   '/api/anime/owned', '/api/fit',
   '/sitemap.xml', '/sitemaps/', '/robots.txt',
   '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/sw.js',
@@ -26,6 +27,6 @@ export const PUBLIC_PATHS = [
  */
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) =>
-    p.endsWith('/') ? pathname.startsWith(p) : pathname === p || pathname.startsWith(`${p}/`),
+    p === '/' ? pathname === '/' : p.endsWith('/') ? pathname.startsWith(p) : pathname === p || pathname.startsWith(`${p}/`),
   )
 }

@@ -14,6 +14,12 @@ export async function POST(req: NextRequest) {
   if (mode === 'closed') {
     return NextResponse.json({ error: 'A regisztráció jelenleg zárva' }, { status: 503 })
   }
+  // Éles rendszerben nem hozunk létre olyan új fiókot, amelyhez nem tudunk
+  // megerősítő- és jelszó-visszaállító e-mailt kézbesíteni. Fejlesztésben a
+  // no-op küldő marad, hogy a helyi munka ne igényeljen külső szolgáltatást.
+  if (process.env.NODE_ENV === 'production' && (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL)) {
+    return NextResponse.json({ error: 'A regisztráció e-mail szolgáltatása még nincs beállítva' }, { status: 503 })
+  }
   const body = await req.json().catch(() => ({}))
   const invite = String(body.invite ?? '')
   const locale = body.locale === 'hu' ? 'hu' : 'en'

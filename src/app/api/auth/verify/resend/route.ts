@@ -24,6 +24,9 @@ export async function POST() {
     userId, kind: 'verify', tokenHash: hashToken(raw), expiresAt: tokenExpiry('verify'),
   })
   const mail = verifyEmailTemplate(raw, user.locale)
-  await sendEmail(user.email, mail.subject, mail.html)
+  const delivery = await sendEmail(user.email, mail.subject, mail.html)
+  if (!delivery.sent) {
+    return NextResponse.json({ error: 'A megerősítő e-mail küldése jelenleg nem elérhető' }, { status: 503 })
+  }
   return NextResponse.json({ ok: true })
 }

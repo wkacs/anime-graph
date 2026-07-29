@@ -10,16 +10,20 @@ describe('isPublicPath', () => {
   })
 
   it('a katalogus-wedge publikus marad', () => {
+    expect(isPublicPath('/')).toBe(true)
     expect(isPublicPath('/anime/sousou-no-frieren-154587')).toBe(true)
     expect(isPublicPath('/manga/berserk-30002')).toBe(true)
-    expect(isPublicPath('/bongeszo')).toBe(true)
-    expect(isPublicPath('/toplista')).toBe(true)
+    expect(isPublicPath('/browse')).toBe(true)
+    expect(isPublicPath('/leaderboard')).toBe(true)
+    expect(isPublicPath('/community')).toBe(true)
     expect(isPublicPath('/u/wkacs')).toBe(true)
     expect(isPublicPath('/sitemap.xml')).toBe(true)
     expect(isPublicPath('/robots.txt')).toBe(true)
+    expect(isPublicPath('/api/health')).toBe(true)
   })
 
   it('a sajat adat vedve marad', () => {
+    expect(isPublicPath('/graf')).toBe(false)
     expect(isPublicPath('/lista')).toBe(false)
     expect(isPublicPath('/beallitasok')).toBe(false)
     expect(isPublicPath('/stats')).toBe(false)

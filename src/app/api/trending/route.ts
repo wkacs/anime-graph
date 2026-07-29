@@ -2,15 +2,12 @@ import { NextResponse } from 'next/server'
 import { and, desc, eq, gte, isNotNull } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { title } from '@/db/schema'
-import { requireUserId } from '@/lib/session'
 import { trendingSeasonParams, TRENDING_LIMIT } from '@/lib/trending'
 
 export const dynamic = 'force-dynamic'
 
 // A böngésző üres állapotát tölti: tisztán lokális katalógus-query, külső hívás nélkül.
 export async function GET() {
-  const userId = await requireUserId()
-  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const s = trendingSeasonParams(new Date())
   try {
     const [seasonal, popular] = await Promise.all([

@@ -13,13 +13,57 @@
     "opinions": "Reviews",
     "browse": "Browse",
     "leaderboard": "Top list",
+    "community": "Community",
+    "notifications": "Updates",
     "vibe": "Vibe",
     "stats": "Stats",
     "vs": "VS",
     "wrapped": "Wrapped",
     "more": "More",
     "search": "Search",
-    "settings": "Settings"
+    "settings": "Settings",
+    "signIn": "Sign in"
+  },
+  "browse": {
+    "tourCatalogTitle": "Search the catalogue",
+    "tourCatalogText": "Search across anime and manga, or filter for the current season.",
+    "tourFitTitle": "Personal matches",
+    "tourFitText": "When signed in, this is where titles that fit your taste appear."
+  },
+  "landing": {
+    "kicker": "Anime Graph · the list that works for you",
+    "title": "Don't just track anime and manga. Understand what you love.",
+    "body": "Bring over your MAL or AniList library, follow each season, and find personal matches based on your ratings — not just popularity.",
+    "start": "Start with my list",
+    "browse": "Browse the catalogue first",
+    "catalogKicker": "Live catalogue",
+    "catalogTitle": "Take a look before you sign up",
+    "catalogLink": "Browse the full catalogue →",
+    "catalogFallback": "Anime, manga, current seasons and community rankings are available to browse without an account.",
+    "feature1Title": "Import, don't restart",
+    "feature1Text": "Bring across MAL and AniList statuses, scores and progress. Your old list stays useful.",
+    "feature2Title": "Taste, not just an algorithm",
+    "feature2Text": "A fit score built from your own ratings shows which titles may work for you, and why.",
+    "feature3Title": "A catalogue made for discovery",
+    "feature3Text": "Public title pages, seasonal views and rankings make finding a new favourite easier.",
+    "closingTitle": "Start with the list you already have, or explore first.",
+    "closingText": "After creating an account, you can begin with a MAL or AniList import.",
+    "create": "Create an account",
+    "seo": "Personal anime and manga tracker with taste-based discovery."
+  },
+  "community": {
+    "eyebrow": "Community reviews",
+    "heading": "What people are watching and thinking",
+    "description": "Reviews from profiles that are publicly visible. You control yours in Settings.",
+    "empty": "No public reviews yet."
+  },
+  "notifications": {
+    "eyebrow": "Your updates",
+    "heading": "Upcoming episodes",
+    "description": "The next two weeks for anime you are watching or planning. Enable browser push in Settings for timely alerts.",
+    "empty": "Nothing is scheduled yet. Add an airing anime to your list to see it here.",
+    "episode": "Episode {episode}",
+    "now": "Airing now"
   },
   "fit": {
     "title": "Is it for you?",
@@ -393,7 +437,10 @@
   "emailPrompt": {
     "saved": "Saved. We sent a confirmation email — click the link inside it.",
     "noEmail": "There is no email on your account, so you have no password reset.",
-    "placeholder": "you@example.com"
+    "placeholder": "you@example.com",
+    "unverified": "Your email address has not been confirmed yet.",
+    "resend": "Resend confirmation email",
+    "resent": "Confirmation email sent."
   },
   "profileReveal": {
     "kicker": "Import done ✓",

@@ -93,7 +93,8 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 - **MAL-import** (`/api/import/mal`) és **AniList-import** (`/api/import/anilist`) — teljes lista áthozása, upsert-tel.
 - **Kétirányú MAL/AniList-szinkron (D3)**: OAuth-flow (`/api/sync/[provider]/start` + `callback`), `sync_accounts` tábla, visszaírás (`sync-back`) és státusz-lekérdezés. ⚠️ *OAuth-app-regisztráció + env-kulcsok kellenek hozzá, élő API ellen még nem tesztelt.*
-- ~~Export~~: az adatmentés-funkció 2026-07-24-én kikerült (user-döntés).
+- **Adat-export**: letölthető JSON a teljes személyes adatkészletről; jelszó- és OAuth-tokenek nélkül.
+- **Fióktörlés**: jelszó + `DELETE` megerősítés után tranzakciósan törli a személyes adatokat és kijelentkeztet.
 
 ## 9. Onboarding és túra
 

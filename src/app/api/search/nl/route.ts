@@ -6,6 +6,7 @@ import { userLocale } from '@/lib/user-locale'
 import { glmChat } from '@/lib/glm'
 import { buildNlMessages, parseNlResult, type NlItem } from '@/lib/nl-search'
 import { requireUserId } from '@/lib/session'
+import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -16,6 +17,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const query = String(body?.query ?? '').trim()
   if (!query) return NextResponse.json({ error: 'Üres kérdés' }, { status: 400 })
+  if (exceedsTextLimit(query, INPUT_LIMITS.nlSearch)) {
+    return NextResponse.json({ error: `A keresés legfeljebb ${INPUT_LIMITS.nlSearch} karakter lehet` }, { status: 413 })
+  }
 
   const rows = await db.select({
     id: anime.id, title: anime.titleRomaji, genres: anime.genres, year: anime.year,

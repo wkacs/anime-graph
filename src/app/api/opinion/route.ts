@@ -6,6 +6,7 @@ import { titleFeatureKeys } from '@/lib/taste-features'
 import { userLocale } from '@/lib/user-locale'
 import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
+import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { and, eq, like, sql } from 'drizzle-orm'
 
 export async function GET(req: NextRequest) {
@@ -39,12 +40,19 @@ export async function POST(req: NextRequest) {
   } else {
     rawText = String(body.rawText ?? '').trim()
     if (!rawText) return NextResponse.json({ error: 'Üres vélemény' }, { status: 400 })
+    if (exceedsTextLimit(rawText, INPUT_LIMITS.opinion)) {
+      return NextResponse.json({ error: `A vélemény legfeljebb ${INPUT_LIMITS.opinion} karakter lehet` }, { status: 413 })
+    }
     await db.insert(opinions)
       .values({ animeId, rawText, extractStatus: 'pending', updatedAt: new Date() })
       .onConflictDoUpdate({
         target: opinions.animeId,
         set: { rawText, extractStatus: 'pending', updatedAt: new Date() },
       })
+  }
+
+  if (exceedsTextLimit(rawText, INPUT_LIMITS.opinion)) {
+    return NextResponse.json({ error: 'A mentett vélemény túl hosszú az AI-feldolgozáshoz' }, { status: 422 })
   }
 
   try {

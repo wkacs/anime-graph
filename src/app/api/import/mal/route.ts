@@ -6,6 +6,9 @@ import { upsertImported, type ImportRow } from '@/lib/import-upsert'
 import { requireUserId } from '@/lib/session'
 import { rateLimit } from '@/lib/rate-limit'
 
+const MAX_XML_CHARS = 10 * 1024 * 1024
+const MAX_ENTRIES = 10_000
+
 function chunks<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
@@ -22,6 +25,9 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json().catch(() => null)
   const xml = String(body?.xml ?? '')
+  if (xml.length > MAX_XML_CHARS) {
+    return NextResponse.json({ error: 'A MAL export legfeljebb 10 MB lehet' }, { status: 413 })
+  }
   if (!xml.includes('<anime>')) {
     return NextResponse.json({ error: 'Nem MAL-export XML' }, { status: 400 })
   }
@@ -29,15 +35,23 @@ export async function POST(req: NextRequest) {
   if (!entries.length) {
     return NextResponse.json({ error: 'Nincs anime a fájlban' }, { status: 400 })
   }
+  if (entries.length > MAX_ENTRIES) {
+    return NextResponse.json({ error: 'Túl sok cím van az exportban' }, { status: 413 })
+  }
 
   // resolve MAL ids to AniList media in batches of 50
   const byMalId = new Map<number, AnilistMedia & { idMal: number }>()
-  try {
-    for (const chunk of chunks(entries.map((e) => e.malId), 50)) {
+  let unavailable = 0
+  for (const chunk of chunks(entries.map((e) => e.malId), 50)) {
+    try {
       for (const m of await fetchByMalIds(chunk)) byMalId.set(m.idMal, m)
+    } catch (e) {
+      console.warn('MAL import AniList batch failed:', String(e))
+      unavailable += chunk.length
     }
-  } catch (e) {
-    return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
+  }
+  if (!byMalId.size && unavailable) {
+    return NextResponse.json({ error: 'Az AniList átmenetileg nem elérhető. Próbáld később újra.' }, { status: 503 })
   }
 
   const rows: ImportRow[] = []
@@ -56,5 +70,5 @@ export async function POST(req: NextRequest) {
     })
   }
   const result = await upsertImported(userId, rows)
-  return NextResponse.json({ ...result, notFound })
+  return NextResponse.json({ ...result, notFound, unavailable })
 }

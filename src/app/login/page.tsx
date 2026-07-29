@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import LocaleSwitcher from '@/components/LocaleSwitcher'
 
 type Mode = 'login' | 'register' | 'forgot' | 'reset'
 
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [nextPath, setNextPath] = useState('/')
   const router = useRouter()
 
   // window.location-ből olvassuk, nem useSearchParams-szal: az Suspense-határt
@@ -27,6 +29,10 @@ export default function LoginPage() {
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('reset')
     if (token) { setResetToken(token); setMode('reset') }
+    const next = new URLSearchParams(window.location.search).get('next')
+    // Csak belső, abszolút útvonalra irányítunk vissza; a //example.com
+    // formátum nyitott redirect lenne.
+    if (next?.startsWith('/') && !next.startsWith('//')) setNextPath(next)
   }, [])
 
   function switchTo(next: Mode) {
@@ -71,7 +77,7 @@ export default function LoginPage() {
             : { username, email, password, invite, locale },
         ),
       })
-      if (res.ok) { router.push(mode === 'register' ? '/onboarding' : '/'); return }
+      if (res.ok) { router.push(mode === 'register' ? '/onboarding' : nextPath); return }
       const json = await res.json().catch(() => null)
       if (res.status === 403) setInviteNeeded(true)
       setError(json?.error ?? t('genericError'))
@@ -88,7 +94,11 @@ export default function LoginPage() {
   }[mode]
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-4">
+    <main className="min-h-screen flex items-center justify-center px-4 relative">
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+        <Link href="/" className="label-mono text-text-2 hover:text-text-1">Anime Graph</Link>
+        <LocaleSwitcher compact />
+      </div>
       <form onSubmit={submit} className="glass rounded-3xl flex flex-col gap-4 w-80 px-8 py-10">
         <div className="text-center mb-1">
           <p className="label-mono mb-2">アニメグラフ</p>

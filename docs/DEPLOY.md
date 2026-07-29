@@ -68,7 +68,8 @@ A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-description
 | `VAPID_SUBJECT` | push-hoz | `mailto:...` |
 | `AI_DAILY_LIMIT` | – | opcionális, default 20 (tier-limitek az `ai-limits.ts`-ben) |
 | `OPENROUTER_API_KEY` | – | GLM-429 failover |
-| `RESEND_API_KEY`, `NOTIFY_EMAIL`, `FROM_EMAIL` | – | napi e-mail digest |
+| `RESEND_API_KEY`, `FROM_EMAIL` | ✅ | regisztrációs megerősítés és jelszó-reset. A `FROM_EMAIL` domainjét előbb a Resendben verifikálni kell; hiány esetén productionben a regisztráció fail-closed. |
+| `NOTIFY_EMAIL` | – | napi admin-digest címzettje |
 | `APP_URL` | ✅ | a prod URL (pl. `https://anime-graph.vercel.app`). **Enélkül a sitemap/robots/canonical/JSON-LD localhost-URL-eket ad ki** (a kód a `VERCEL_PROJECT_PRODUCTION_URL`-re esik vissza, de az OAuth-callbackek ettől még ezt olvassák) |
 | `MAL_CLIENT_ID`, `MAL_CLIENT_SECRET` | – | kétirányú MAL-szinkron (myanimelist.net/apiconfig, redirect: `<APP_URL>/api/sync/mal/callback`) |
 | `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET` | – | kétirányú AniList-szinkron (anilist.co/settings/developer, redirect: `<APP_URL>/api/sync/anilist/callback`) |
@@ -96,3 +97,4 @@ A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-description
 - A scriptek `process.env.DATABASE_URL`-t olvasnak (NEM .env.local-t) — GH-cronban a secret adja.
 - `next build`+`next dev` közös `.next` → lokális buildnél dev-server le.
 - Web-push localhoston nem megy, prod HTTPS-en igen.
+- Uptime monitorhoz a publikus `GET /api/health` endpointot használd. A 200 a Neon adatbázist is ellenőrzi; a 503 hibát jelez.

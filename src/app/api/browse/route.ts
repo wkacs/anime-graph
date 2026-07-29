@@ -3,7 +3,6 @@ import { db } from '@/db/client'
 import { title } from '@/db/schema'
 import { type BrowseFilters } from '@/lib/browse'
 import { browseWhere, browseOrder, resolveSeason } from '@/lib/browse-local'
-import { requireUserId } from '@/lib/session'
 import { and, eq, sql } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -31,8 +30,6 @@ function parseFilters(sp: URLSearchParams): BrowseFilters {
 // A Böngésző UI a /api/search (katalógus) felől olvas; ez a route a title katalógusból
 // szolgálja ki a szűrt/rendezett listát élő AniList-hívás NÉLKÜL.
 export async function GET(req: NextRequest) {
-  const userId = await requireUserId()
-  if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const sp = req.nextUrl.searchParams
   const filters = parseFilters(sp)
   try {

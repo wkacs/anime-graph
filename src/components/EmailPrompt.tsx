@@ -8,6 +8,7 @@ export default function EmailPrompt() {
   const t = useTranslations('emailPrompt')
   const tc = useTranslations('common')
   const [needed, setNeeded] = useState(false)
+  const [unverified, setUnverified] = useState(false)
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
@@ -16,11 +17,14 @@ export default function EmailPrompt() {
   useEffect(() => {
     fetch('/api/settings')
       .then((r) => (r.ok ? r.json() : null))
-      .then((j) => setNeeded(j != null && !j.email))
+      .then((j) => {
+        setNeeded(j != null && !j.email)
+        setUnverified(j != null && Boolean(j.email) && !j.emailVerified)
+      })
       .catch(() => {})
   }, [])
 
-  if (!needed) return null
+  if (!needed && !unverified) return null
   if (done) {
     return (
       <div className="glass rounded-2xl p-4 text-sm text-text-2">
@@ -31,6 +35,26 @@ export default function EmailPrompt() {
 
   return (
     <div className="glass rounded-2xl p-4 flex flex-col gap-2">
+      {unverified && (
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span className="text-text-2 flex-1 min-w-[200px]">{t('unverified')}</span>
+          <button
+            disabled={busy}
+            className="btn-ghost border border-white/10 px-3.5 py-1.5 text-xs"
+            onClick={async () => {
+              setError(''); setBusy(true)
+              try {
+                const r = await fetch('/api/auth/verify/resend', { method: 'POST' })
+                if (r.ok) setDone(true)
+                else setError((await r.json().catch(() => null))?.error ?? tc('error'))
+              } finally {
+                setBusy(false)
+              }
+            }}
+          >{busy ? '…' : t('resend')}</button>
+        </div>
+      )}
+      {needed && (
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <span className="text-text-2 flex-1 min-w-[200px]">
           {t('noEmail')}
@@ -61,6 +85,7 @@ export default function EmailPrompt() {
           }}
         >{busy ? '…' : tc('save')}</button>
       </div>
+      )}
       {error && <p className="text-[13px] text-[color:var(--status-dropped)]">{error}</p>}
     </div>
   )
