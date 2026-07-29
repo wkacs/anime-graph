@@ -32,7 +32,7 @@ export async function GET() {
       ? db.select({
           titleId: title.id, titleRomaji: title.titleRomaji, coverUrl: title.coverUrl,
           slug: title.slug, mediaType: title.mediaType,
-        }).from(title).where(inArray(title.id, titleIds))
+        }).from(title).where(and(inArray(title.id, titleIds), eq(title.isAdult, 0)))
       : Promise.resolve([]),
     charIds.length
       ? db.select({ charId: favoriteCharacters.charId, name: favoriteCharacters.name, image: favoriteCharacters.image })

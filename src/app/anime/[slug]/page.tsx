@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   if (/^\d+$/.test(slug)) return {}
   const t = await resolveTitleBySlug('ANIME', slug)
-  if (!t) return {}
+  if (!t || t.isAdult) return { robots: { index: false, follow: false } }
   return titleMetadata(t, canonicalPath(t.mediaType, t.slug))
 }
 

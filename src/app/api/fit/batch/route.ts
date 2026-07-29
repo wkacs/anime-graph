@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     db.select({ genres: anime.genres, tags: anime.tags, status: anime.status, myScore: anime.myScore })
       .from(anime).where(eq(anime.userId, userId)),
     db.select({ anilistId: title.anilistId, genres: title.genres, tags: title.tags })
-      .from(title).where(and(eq(title.mediaType, 'ANIME'), inArray(title.anilistId, ids))),
+      .from(title).where(and(eq(title.mediaType, 'ANIME'), eq(title.isAdult, 0), inArray(title.anilistId, ids))),
   ])
   const vector = buildTasteVector(items)
   const scores: Record<number, number> = {}

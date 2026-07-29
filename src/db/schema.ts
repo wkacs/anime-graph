@@ -69,6 +69,7 @@ export const title = pgTable('title', {
   relations: jsonb('relations').$type<RelationEntry[]>().notNull().default([]),
   trailerSite: text('trailer_site'),
   trailerId: text('trailer_id'),
+  isAdult: integer('is_adult').notNull().default(0), // AniList isAdult; 0/1 for existing Postgres compatibility
   avgScore: integer('avg_score'),               // AniList average (external)
   communityScore: real('community_score'),        // our bayesian score, null until computed
   communityCount: integer('community_count').notNull().default(0),

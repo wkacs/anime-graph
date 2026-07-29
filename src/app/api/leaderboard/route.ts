@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { title } from '@/db/schema'
 import { leaderboardQuery, parseLeaderboardTab, LEADERBOARD_LIMIT } from '@/lib/leaderboard'
+import { and, eq } from 'drizzle-orm'
 
 // PUBLIKUS route (middleware-whitelisten) — csak katalogus-adatot ad ki, user-adatot nem.
 export async function GET(req: NextRequest) {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
       communityScore: title.communityScore,
       communityCount: title.communityCount,
       popularity: title.popularity,
-    }).from(title).where(where).orderBy(order).limit(LEADERBOARD_LIMIT)
+    }).from(title).where(and(where, eq(title.isAdult, 0))).orderBy(order).limit(LEADERBOARD_LIMIT)
     return NextResponse.json(
       { items: rows.map((r, i) => ({ rank: i + 1, ...r })) },
       { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate=600' } },

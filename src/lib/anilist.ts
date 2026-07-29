@@ -18,6 +18,7 @@ export type AnilistMedia = {
   chapters: number | null
   volumes: number | null
   averageScore: number | null
+  isAdult: boolean
   trailer: { id: string; site: string } | null
   relations: { edges: { relationType: string; node: { id: number; type: string; title: { romaji: string } } }[] }
 }
@@ -94,6 +95,7 @@ const MEDIA_FIELDS = `
     chapters
     volumes
     averageScore
+    isAdult
     trailer { id site }
     relations { edges { relationType node { id type title { romaji } } } }`
 

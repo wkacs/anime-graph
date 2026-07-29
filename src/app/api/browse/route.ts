@@ -4,7 +4,7 @@ import { title } from '@/db/schema'
 import { type BrowseFilters } from '@/lib/browse'
 import { browseWhere, browseOrder, resolveSeason } from '@/lib/browse-local'
 import { requireUserId } from '@/lib/session'
-import { sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const filters = parseFilters(sp)
   try {
-    const where = browseWhere(filters)
+    const where = and(browseWhere(filters), eq(title.isAdult, 0))
     const perPage = 30
     if (sp.get('random') === '1') {
       const [pick] = await db.select().from(title).where(where).orderBy(sql`random()`).limit(1)

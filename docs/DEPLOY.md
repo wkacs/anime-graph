@@ -32,6 +32,18 @@ listájába kerülnek. A scriptet előbb Neon branchen, majd productionön futta
 A migráció idempotens. Megőrzi a meglévő sorokat, a globális címazonosságot
 `(user_id, anilist_id)` párosra cseréli, és kötelezővé teszi a tulajdont.
 
+## 0/d. Adult-tartalom migráció (P1)
+
+`DATABASE_URL="<prod>" node scripts/migrate-adult-content.mjs` — felveszi az
+AniList `isAdult` jelét a katalógusba, és azonnal elrejti a meglévő `Hentai`
+taggel jelölt címeket. Ezután a teljes katalógus-szinkront futtasd le, hogy
+minden korhatáros cím a hivatalos AniList jelölést kapja:
+
+`DATABASE_URL="<prod>" node scripts/sync-catalog.mjs --type=ANIME`
+
+majd ugyanez `--type=MANGA` opcióval. A szinkron végéig ne nyisd meg a
+regisztrációt nyilvánosan.
+
 ## 0. Előfeltétel — DB-adatlánc kész
 
 A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-descriptions.mjs --only-missing` → `sync-title-recs.mjs` → `recompute-scores.mjs`, majd app-smoke. Amíg nincs kész, a recommend/browse kevés jelöltet ad (502 „nincs elég katalógus-adat", nem crash).

@@ -22,7 +22,7 @@ export async function resolveRelationLocal(
 ): Promise<{ slug: string; mediaType: string; coverUrl: string | null } | null> {
   const [row] = await db.select({ slug: title.slug, mediaType: title.mediaType, coverUrl: title.coverUrl })
     .from(title)
-    .where(and(eq(title.anilistId, anilistId), eq(title.mediaType, mediaType)))
+    .where(and(eq(title.anilistId, anilistId), eq(title.mediaType, mediaType), eq(title.isAdult, 0)))
   return row ?? null
 }
 

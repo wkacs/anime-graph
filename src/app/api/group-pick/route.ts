@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }).from(title)
     // pool = a katalógus AniList-pontszám szerinti krémje (a belső popularity/communityScore
     // kis instancián még üres/torz lenne)
-    .where(and(eq(title.mediaType, 'ANIME'), isNotNull(title.avgScore)))
+    .where(and(eq(title.mediaType, 'ANIME'), eq(title.isAdult, 0), isNotNull(title.avgScore)))
     .orderBy(desc(title.avgScore))
     .limit(POOL_SIZE)
 

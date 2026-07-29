@@ -38,6 +38,7 @@ export type TitleMetadata = {
   relations: RelationEntry[]
   trailerSite: string | null
   trailerId: string | null
+  isAdult: number
   avgScore: number | null
 }
 
@@ -70,6 +71,7 @@ export function mapTitle(m: AnilistMedia): TitleMetadata {
       })),
     trailerSite: m.trailer?.site ?? null,
     trailerId: m.trailer?.id ?? null,
+    isAdult: m.isAdult ? 1 : 0,
     avgScore: m.averageScore,
   }
 }

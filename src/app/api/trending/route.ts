@@ -15,10 +15,10 @@ export async function GET() {
   try {
     const [seasonal, popular] = await Promise.all([
       db.select().from(title)
-        .where(and(eq(title.mediaType, 'ANIME'), eq(title.season, s.season), eq(title.year, s.year), isNotNull(title.avgScore)))
+        .where(and(eq(title.mediaType, 'ANIME'), eq(title.isAdult, 0), eq(title.season, s.season), eq(title.year, s.year), isNotNull(title.avgScore)))
         .orderBy(desc(title.avgScore)).limit(TRENDING_LIMIT),
       db.select().from(title)
-        .where(gte(title.popularity, 1))
+        .where(and(eq(title.isAdult, 0), gte(title.popularity, 1)))
         .orderBy(desc(title.popularity)).limit(TRENDING_LIMIT),
     ])
     return NextResponse.json({ seasonal, popular, season: s })

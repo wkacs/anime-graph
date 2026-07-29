@@ -3,7 +3,7 @@ import { title } from '@/db/schema'
 import { canonicalPath } from '@/lib/catalog-page'
 import { siteUrl } from '@/lib/seo'
 import { sitemapChunkBounds, sitemapXml } from '@/lib/sitemap-chunks'
-import { asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 
 // Gyerek-sitemap: a title tábla id-rendezett szelete (stabil lapozás), ≤45k URL.
 export const revalidate = 86400
@@ -14,7 +14,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ chunk: string 
   if (!Number.isInteger(n) || n < 0) return new Response('not found', { status: 404 })
   const { limit, offset } = sitemapChunkBounds(n)
   const rows = await dbStatic.select({ slug: title.slug, mediaType: title.mediaType, syncedAt: title.syncedAt })
-    .from(title).orderBy(asc(title.id)).limit(limit).offset(offset)
+    .from(title).where(eq(title.isAdult, 0)).orderBy(asc(title.id)).limit(limit).offset(offset)
   if (!rows.length) return new Response('not found', { status: 404 })
   const xml = sitemapXml(siteUrl(), rows.map((r) => ({
     path: canonicalPath(r.mediaType, r.slug),

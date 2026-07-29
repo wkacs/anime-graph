@@ -23,7 +23,9 @@ export default async function CatalogTitlePage({
   mediaType, slug,
 }: { mediaType: 'ANIME' | 'MANGA'; slug: string }) {
   const t = await resolveTitleBySlug(mediaType, slug)
-  if (!t) notFound()
+  // Adult content is not served on public canonical URLs. A later, explicit
+  // age-verified mode may opt in, but the launch-safe default is exclusion.
+  if (!t || t.isAdult) notFound()
 
   // A mertekegyseges chipek `<T>`-vel mennek: az oldal ISR-elt szerver-komponens,
   // ott nincs `useTranslations` — a `<T>` a kliensen hidratal a nezo nyelvere.

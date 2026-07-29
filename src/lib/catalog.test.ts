@@ -28,7 +28,7 @@ describe('mapTitle', () => {
     genres: ['Action'], tags: [{ name: 'Military', rank: 90 }],
     studios: { nodes: [{ name: 'Bones' }] },
     season: 'SPRING', seasonYear: 2009, episodes: 64, duration: 24, format: 'TV',
-    description: 'desc', chapters: null, volumes: null, averageScore: 91,
+    description: 'desc', chapters: null, volumes: null, averageScore: 91, isAdult: false,
     trailer: { id: 'abc', site: 'youtube' },
     relations: { edges: [{ relationType: 'PREQUEL', node: { id: 121, type: 'ANIME', title: { romaji: 'X' } } }] },
   }
@@ -39,12 +39,16 @@ describe('mapTitle', () => {
     expect(t.slug).toBe('hagane-no-renkinjutsushi-5114')
     expect(t.studio).toBe('Bones')
     expect(t.avgScore).toBe(91)
+    expect(t.isAdult).toBe(0)
     expect(t.tags).toEqual([{ name: 'Military', rank: 90 }])
     expect(t.trailerSite).toBe('youtube')
     expect(t.trailerId).toBe('abc')
   })
   it('defaults mediaType to ANIME when type is null', () => {
     expect(mapTitle({ ...media, type: null }).mediaType).toBe('ANIME')
+  })
+  it('preserves the AniList adult flag', () => {
+    expect(mapTitle({ ...media, isAdult: true }).isAdult).toBe(1)
   })
   it('drops non-ANIME relation edges', () => {
     const withMangaRelation: AnilistMedia = {

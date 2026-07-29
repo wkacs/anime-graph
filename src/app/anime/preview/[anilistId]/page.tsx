@@ -7,7 +7,7 @@ import { stripHtml } from '@/lib/description'
 import { canonicalPath } from '@/lib/catalog-page'
 import { serverT } from '@/lib/server-i18n'
 import PreviewAddButtons from '@/components/PreviewAddButtons'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,12 +19,12 @@ export default async function PreviewPage({ params }: { params: Promise<{ anilis
 
   // in our catalog -> the canonical page serves it (public sections + owner overlay)
   const [cat] = await db.select({ mediaType: title.mediaType, slug: title.slug }).from(title)
-    .where(eq(title.anilistId, anilistId)).orderBy(title.mediaType)
+    .where(and(eq(title.anilistId, anilistId), eq(title.isAdult, 0))).orderBy(title.mediaType)
   if (cat) redirect(canonicalPath(cat.mediaType, cat.slug))
 
   // not synced yet -> AniList fallback preview
   const media = await fetchMedia(anilistId, true).catch(() => null)
-  if (!media) notFound()
+  if (!media || media.isAdult) notFound()
 
   const isManga = media.type === 'MANGA'
   const desc = stripHtml(media.description)

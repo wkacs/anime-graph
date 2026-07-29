@@ -31,7 +31,7 @@ export async function POST() {
     genres: title.genres, tags: title.tags,
     communityScore: title.communityScore, avgScore: title.avgScore,
     relations: title.relations,
-  }).from(title).where(eq(title.mediaType, 'ANIME'))
+  }).from(title).where(and(eq(title.mediaType, 'ANIME'), eq(title.isAdult, 0)))
   const owned = new Set(rows.map((r) => r.anilistId))
   // batch-cache-elt AniList-recs (heti sync) a kedvenc címekre — kollaboratív jel élő hívás nélkül
   const topIds = top.map((t) => t.anilistId)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, animeStaff, tasteMemory, userTitle } from '@/db/schema'
+import { anime, animeStaff, tasteMemory, title, userTitle } from '@/db/schema'
 import { fetchDirectors, fetchMedia } from '@/lib/anilist'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   const catalogTitleId = Number(body?.titleId)
   if (Number.isInteger(catalogTitleId) && catalogTitleId > 0) {
     const status = ADD_STATUSES.includes(body?.status) ? body.status as string : 'planned'
+    const [catalogTitle] = await db.select({ isAdult: title.isAdult }).from(title)
+      .where(eq(title.id, catalogTitleId))
+    if (!catalogTitle || catalogTitle.isAdult) {
+      return NextResponse.json({ error: 'Ez a cím nem érhető el' }, { status: 404 })
+    }
     const existing = await db.select({ id: userTitle.id }).from(userTitle)
       .where(and(eq(userTitle.userId, userId), eq(userTitle.titleId, catalogTitleId)))
     if (existing.length) {
@@ -71,6 +76,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ anime: existing[0] })
   }
   const media = await fetchMedia(anilistId, true) // típus-szűrő nélkül: manga-id-ra is működik
+  if (media.isAdult) return NextResponse.json({ error: 'Ez a cím nem érhető el' }, { status: 404 })
   const titleId = await ensureTitle(media)
   const row = await addUserTitle(userId, titleId, userFields)
   // rendező best-effort mentése — hibája nem akaszthatja meg az add-ot

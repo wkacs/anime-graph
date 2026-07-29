@@ -37,7 +37,7 @@ query ($page: Int!) {
       coverImage { large } bannerImage genres
       tags { name rank } studios { nodes { name } }
       season seasonYear episodes duration format chapters volumes
-      description(asHtml: true) averageScore
+      description(asHtml: true) averageScore isAdult
       trailer { id site }
       relations { edges { relationType node { id type title { romaji } } } }
     }
@@ -79,19 +79,19 @@ async function upsert(m) {
     INSERT INTO title (anilist_id, mal_id, slug, media_type, title_romaji, title_english,
       title_native, cover_url, banner_url, genres, tags, studio, season, year, episodes,
       duration_min, format, chapters, volumes, description, relations, trailer_site,
-      trailer_id, avg_score, synced_at)
+      trailer_id, is_adult, avg_score, synced_at)
     VALUES (${m.id}, ${m.idMal}, ${slug}, ${mediaType}, ${m.title.romaji}, ${m.title.english},
       ${m.title.native}, ${m.coverImage?.large ?? null}, ${m.bannerImage}, ${m.genres ?? []},
       ${JSON.stringify(m.tags ?? [])}, ${studio}, ${m.season}, ${m.seasonYear}, ${m.episodes},
       ${m.duration}, ${m.format}, ${m.chapters}, ${m.volumes}, ${m.description},
       ${JSON.stringify(relations)}, ${m.trailer?.site ?? null}, ${m.trailer?.id ?? null},
-      ${m.averageScore}, now())
+      ${m.isAdult ? 1 : 0}, ${m.averageScore}, now())
     ON CONFLICT (anilist_id, media_type) DO UPDATE SET
       mal_id = excluded.mal_id, cover_url = excluded.cover_url, banner_url = excluded.banner_url,
       genres = excluded.genres, tags = excluded.tags, studio = excluded.studio,
       episodes = excluded.episodes, chapters = excluded.chapters, volumes = excluded.volumes,
       description = excluded.description, relations = excluded.relations,
-      avg_score = excluded.avg_score, synced_at = now()`
+      is_adult = excluded.is_adult, avg_score = excluded.avg_score, synced_at = now()`
 }
 
 async function syncRange(from, to) {

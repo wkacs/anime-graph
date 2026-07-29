@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         anilistId: title.anilistId, titleRomaji: title.titleRomaji, coverUrl: title.coverUrl,
         genres: title.genres, tags: title.tags, year: title.year, description: title.description,
       }).from(title)
-        .where(and(eq(title.mediaType, 'ANIME'), isNotNull(title.coverUrl)))
+        .where(and(eq(title.mediaType, 'ANIME'), eq(title.isAdult, 0), isNotNull(title.coverUrl)))
         .orderBy(desc(title.popularity)).limit(500),
     ])
     const vector = buildTasteVector(rows, signals)

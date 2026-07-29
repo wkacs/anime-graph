@@ -38,7 +38,7 @@ export async function searchTitles(
       cover_url AS "coverUrl", year, format,
       community_score AS "communityScore", popularity
     FROM title, websearch_to_tsquery('simple', ${query}) AS q
-    WHERE search_vector @@ q ${typeFilter}
+    WHERE search_vector @@ q AND is_adult = 0 ${typeFilter}
     ORDER BY ts_rank_cd(search_vector, q) + log(popularity + 1) * 0.05 DESC,
       popularity DESC
     LIMIT ${limit} OFFSET ${offset}`)

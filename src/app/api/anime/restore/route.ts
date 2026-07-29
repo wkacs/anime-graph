@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
     format: a.format ?? null, chapters: a.chapters ?? null, volumes: a.volumes ?? null,
     description: a.description ?? null, relations: a.relations ?? [],
     trailerSite: a.trailerSite ?? null, trailerId: a.trailerId ?? null,
+    // Legacy export bundles do not carry this field. Those titles are still
+    // reclassified by the authoritative catalog sync after restoration.
+    isAdult: a.isAdult ? 1 : 0,
     avgScore: a.avgScore ?? null,
   }
   const titleId = await ensureTitleByFields(meta)

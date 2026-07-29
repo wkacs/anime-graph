@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { users, settings, title as titleTable, favoriteCharacters } from '@/db/schema'
 import { toPublicPinned } from '@/lib/public-view'
@@ -30,7 +30,7 @@ async function load(username: string) {
     ? await db.select({
         titleRomaji: titleTable.titleRomaji, coverUrl: titleTable.coverUrl,
         slug: titleTable.slug, mediaType: titleTable.mediaType,
-      }).from(titleTable).where(inArray(titleTable.id, titleIds))
+      }).from(titleTable).where(and(inArray(titleTable.id, titleIds), eq(titleTable.isAdult, 0)))
     : []
   const chars = charIds.length
     ? await db.select({ name: favoriteCharacters.name, image: favoriteCharacters.image })

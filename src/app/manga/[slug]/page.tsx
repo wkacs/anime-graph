@@ -14,7 +14,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const t = await resolveTitleBySlug('MANGA', slug)
-  if (!t) return {}
+  if (!t || t.isAdult) return { robots: { index: false, follow: false } }
   return titleMetadata(t, canonicalPath(t.mediaType, t.slug))
 }
 

@@ -3,7 +3,7 @@ import { db } from '@/db/client'
 import { anime, title } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { buildTasteVector, computeFit, computeDropRisk } from '@/lib/fit-score'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ fit: null, authed: false })
 
   const [target] = await db.select({ genres: title.genres, tags: title.tags })
-    .from(title).where(eq(title.id, titleId))
+    .from(title).where(and(eq(title.id, titleId), eq(title.isAdult, 0)))
   if (!target) return NextResponse.json({ error: 'nincs ilyen cím' }, { status: 404 })
 
   const items = await db.select({
