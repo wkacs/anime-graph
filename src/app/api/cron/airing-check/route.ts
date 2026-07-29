@@ -4,6 +4,7 @@ import { db } from '@/db/client'
 import { anime, notifiedAiring, pushSubscriptions } from '@/db/schema'
 import { fetchAiringFor, type AiringInfo } from '@/lib/anilist'
 import { buildAiringPayload, pickUpcoming } from '@/lib/push'
+import { authorizeCron } from '@/lib/cron-auth'
 import { eq, inArray } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -12,12 +13,9 @@ export const dynamic = 'force-dynamic'
 // (anilistId, episode) dedup a notified_airing táblán.
 // ?mode=email (napi Vercel-cron): a napi e-mail digest az ownernek (user_id=1).
 export async function GET(req: NextRequest) {
-  if (process.env.CRON_SECRET) {
-    const auth = req.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-    }
-  }
+  const auth = authorizeCron(process.env.CRON_SECRET, req.headers.get('authorization'))
+  if (auth === 'misconfigured') return NextResponse.json({ error: 'cron_not_configured' }, { status: 500 })
+  if (auth === 'unauthorized') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const rows = await db.select().from(anime).where(eq(anime.mediaType, 'ANIME'))
   const followed = rows.filter((r) => r.status === 'watching' || r.status === 'planned')
   if (!followed.length) return NextResponse.json({ sent: 0, reason: 'nincs követett anime' })

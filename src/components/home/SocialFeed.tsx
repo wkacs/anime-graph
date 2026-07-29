@@ -8,12 +8,11 @@ import type { FeedItem, WatchItem } from './types'
 type Props = {
   feed: FeedItem[]
   watchlist: WatchItem[]
-  usernames: Record<number, string>
   onWatchBump: (w: WatchItem) => void
   onWatchRemove: (w: WatchItem) => void
 }
 
-export default function SocialFeed({ feed, watchlist, usernames, onWatchBump, onWatchRemove }: Props) {
+export default function SocialFeed({ feed, watchlist, onWatchBump, onWatchRemove }: Props) {
   const t = useTranslations('home')
   const locale = useLocale()
   if (feed.length === 0 && watchlist.length === 0) return null
@@ -53,7 +52,7 @@ export default function SocialFeed({ feed, watchlist, usernames, onWatchBump, on
 
       {watchlist.length > 0 && (
         <div className="mt-5">
-          <p className="label-mono mb-2">{t('sharedList')}</p>
+          <p className="label-mono mb-2">{t('myWatchlist')}</p>
           <ul className="flex flex-col gap-2">
             {watchlist.map((w) => (
               <li key={w.id} className="surface-1 rounded-[var(--r-md)] p-2.5 flex items-center gap-3">
@@ -64,10 +63,10 @@ export default function SocialFeed({ feed, watchlist, usernames, onWatchBump, on
                     {w.title}
                   </Link>
                   <p className="label-mono">
-                    {t('addedByTogether', { user: usernames[w.addedBy] ?? '?', count: w.watchedEpisodes })}
+                    {t('watchedEpisodes', { count: w.watchedEpisodes })}
                   </p>
                 </div>
-                <Button onClick={() => onWatchBump(w)} title={t('watchedTogether')}>+1</Button>
+                <Button onClick={() => onWatchBump(w)} title={t('markWatched')}>+1</Button>
                 <Button variant="ghost" onClick={() => onWatchRemove(w)} title={t('remove')} className="text-text-3">✕</Button>
               </li>
             ))}

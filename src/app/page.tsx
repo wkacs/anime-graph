@@ -29,7 +29,6 @@ export default function NewsPage() {
   const [digest, setDigest] = useState<string | null>(null)
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [watchlist, setWatchlist] = useState<WatchItem[]>([])
-  const [wlUsers, setWlUsers] = useState<Record<number, string>>({})
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([])
   const [upcomingSeason, setUpcomingSeason] = useState<{ season: string; year: number } | null>(null)
   const [nextList, setNextList] = useState<NextSeasonRow[] | null>(null)
@@ -64,7 +63,7 @@ export default function NewsPage() {
       .catch(() => { /* feed nélkül is él az oldal */ })
     fetch('/api/watchlist')
       .then((r) => r.json())
-      .then((j) => { setWatchlist(j.items ?? []); setWlUsers(j.usernames ?? {}) })
+      .then((j) => setWatchlist(j.items ?? []))
       .catch(() => { /* watchlist nélkül is él az oldal */ })
     fetch('/api/browse?season=next&type=ANIME&sort=SCORE_DESC')
       .then((r) => (r.ok ? r.json() : { media: [] }))
@@ -217,7 +216,6 @@ export default function NewsPage() {
       <SocialFeed
         feed={feed}
         watchlist={watchlist}
-        usernames={wlUsers}
         onWatchBump={watchBump}
         onWatchRemove={watchRemove}
       />

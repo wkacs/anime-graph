@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { users, watchlistItems } from '@/db/schema'
+import { watchlistItems } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
-import { desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  const [items, us] = await Promise.all([
-    db.select().from(watchlistItems).orderBy(desc(watchlistItems.createdAt)),
-    db.select({ id: users.id, username: users.username }).from(users),
-  ])
-  return NextResponse.json({ items, usernames: Object.fromEntries(us.map((u) => [u.id, u.username])) })
+  const items = await db.select().from(watchlistItems)
+    .where(eq(watchlistItems.userId, userId))
+    .orderBy(desc(watchlistItems.createdAt))
+  return NextResponse.json({ items })
 }
 
 export async function POST(req: NextRequest) {
@@ -27,12 +26,12 @@ export async function POST(req: NextRequest) {
   }
   const [row] = await db.insert(watchlistItems)
     .values({
+      userId,
       anilistId, title,
       coverUrl: body?.coverUrl ?? null,
       mediaType: body?.mediaType === 'MANGA' ? 'MANGA' : 'ANIME',
-      addedBy: userId,
     })
-    .onConflictDoNothing({ target: watchlistItems.anilistId })
+    .onConflictDoNothing({ target: [watchlistItems.userId, watchlistItems.anilistId] })
     .returning()
   return NextResponse.json({ item: row ?? null }, { status: row ? 201 : 200 })
 }
@@ -48,8 +47,9 @@ export async function PATCH(req: NextRequest) {
   }
   const [row] = await db.update(watchlistItems)
     .set({ watchedEpisodes: sql`greatest(${watchlistItems.watchedEpisodes} + ${delta}, 0)` })
-    .where(eq(watchlistItems.id, id))
+    .where(and(eq(watchlistItems.id, id), eq(watchlistItems.userId, userId)))
     .returning()
+  if (!row) return NextResponse.json({ error: 'not found' }, { status: 404 })
   return NextResponse.json({ item: row ?? null })
 }
 
@@ -59,6 +59,9 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const id = Number(body?.id)
   if (!Number.isInteger(id)) return NextResponse.json({ error: 'id kötelező' }, { status: 400 })
-  await db.delete(watchlistItems).where(eq(watchlistItems.id, id))
+  const [deleted] = await db.delete(watchlistItems)
+    .where(and(eq(watchlistItems.id, id), eq(watchlistItems.userId, userId)))
+    .returning({ id: watchlistItems.id })
+  if (!deleted) return NextResponse.json({ error: 'not found' }, { status: 404 })
   return NextResponse.json({ ok: true })
 }

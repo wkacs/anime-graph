@@ -168,9 +168,9 @@
     "feedWatched": "nézett",
     "feedEpisodeCount": "{count} rész",
     "feedFavourite": "kedvence lett:",
-    "sharedList": "Közös lista",
-    "addedByTogether": "{user} tette fel · együtt: {count} rész",
-    "watchedTogether": "Együtt megnéztünk egy részt",
+    "myWatchlist": "Saját watchlist",
+    "watchedEpisodes": "Megnézve: {count} rész",
+    "markWatched": "Rész megjelölése megnézettként",
     "remove": "Levétel"
   },
   "common": {

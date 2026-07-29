@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, title, users } from '@/db/schema'
+import { anime, settings, title, users } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
+import { canViewProfile } from '@/lib/profile-visibility'
 import { buildTasteVector } from '@/lib/fit-score'
 import { rankGroupPicks } from '@/lib/group-pick'
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm'
@@ -26,6 +27,15 @@ export async function POST(req: NextRequest) {
   const missing = names.filter((n) => !found.some((f) => f.username === n))
   if (missing.length) {
     return NextResponse.json({ error: `nincs ilyen felhasználó: ${missing.join(', ')}` }, { status: 404 })
+  }
+  const visibilityRows = found.length
+    ? await db.select({ userId: settings.userId, value: settings.value }).from(settings)
+        .where(and(inArray(settings.userId, found.map((f) => f.id)), eq(settings.key, 'profileVisibility')))
+    : []
+  const visibilityByUser = new Map(visibilityRows.map((row) => [row.userId, row.value]))
+  const hidden = found.filter((user) => !canViewProfile(callerId, user.id, visibilityByUser.get(user.id)))
+  if (hidden.length) {
+    return NextResponse.json({ error: `nincs ilyen felhasználó: ${hidden.map((u) => u.username).join(', ')}` }, { status: 404 })
   }
   const memberIds = [...new Set([callerId, ...found.map((f) => f.id)])]
   if (memberIds.length < 2) return NextResponse.json({ error: 'magadon kívül adj meg legalább egy tagot' }, { status: 400 })

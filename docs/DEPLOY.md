@@ -21,6 +21,17 @@ A backfill AI nélkül dolgozik, és a jelenlegi adaton **nulla jelet talált** 
 magyar prózában vannak, az AniList tagnevei angolul). A valódi jelek az új vélemények
 `extract`-jéből jönnek — a lokális rangsor addig is a viselkedési vektorral működik.
 
+## 0/c. Watchlist-tulajdon migráció (P0)
+
+A watchlist többé nem globális: a meglévő sorok az eredeti hozzáadó személyes
+listájába kerülnek. A scriptet előbb Neon branchen, majd productionön futtasd,
+**még az alkalmazáskód deployja előtt**:
+
+`DATABASE_URL="<prod>" node scripts/migrate-watchlist-ownership.mjs`
+
+A migráció idempotens. Megőrzi a meglévő sorokat, a globális címazonosságot
+`(user_id, anilist_id)` párosra cseréli, és kötelezővé teszi a tulajdont.
+
 ## 0. Előfeltétel — DB-adatlánc kész
 
 A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-descriptions.mjs --only-missing` → `sync-title-recs.mjs` → `recompute-scores.mjs`, majd app-smoke. Amíg nincs kész, a recommend/browse kevés jelöltet ad (502 „nincs elég katalógus-adat", nem crash).
@@ -39,7 +50,7 @@ A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-description
 | `REGISTRATION_MODE` | ✅ | `open` \| `invite` \| `closed`. Nyílt regisztrációhoz `open`. Ismeretlen érték = `closed` |
 | `INVITE_CODE` | – | csak `REGISTRATION_MODE=invite` esetén kell |
 | `FROM_EMAIL` | ✅ | a rendszer-levelek feladója (megerősítés, jelszó-reset) |
-| `CRON_SECRET` | ✅ (cronhoz) | random string; a Vercel-cron és a GH-cron is ezt küldi |
+| `CRON_SECRET` | ✅ | random string; enélkül a cron endpointok fail-closed módban HTTP 500-at adnak. A Vercel- és GH-cron is ezt küldi |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | push-hoz | .env.local-ban generálva van |
 | `VAPID_PRIVATE_KEY` | push-hoz | .env.local-ból |
 | `VAPID_SUBJECT` | push-hoz | `mailto:...` |

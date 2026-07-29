@@ -74,7 +74,7 @@ Az Anime Graph egy személyes 3D anime-térképből indult, mára egy **publikus
 
 - **Multi-tenant**: meghívó-kódos regisztráció (felhasználónév + jelszó), session-alapú auth; az első regisztrált fiók örökli a multi-tenant előtti adatokat.
 - **Feed**: a többiek aktivitása (`/api/feed`).
-- **Közös watchlist** (`/api/watchlist`).
+- **Személyes watchlist** (`/api/watchlist`); a közös lista külön, szerepkörös csoportmodellben jön majd.
 - **Kompatibilitás-% (D4)**: két felhasználó ízlés-egyezése, `CompatChip` a publikus profilon.
 - **Publikus profil** (`/p/[token]`): token-alapú, megosztható nézet; **rendezés** (pont/cím/év) + **státusz-szűrő** chipek; **kitűzött kedvencek hero-sávja**.
 - **Kitűzés**: max 3 kedvenc cím (lista 📌-oszlop, címoldali overlay-gomb) + max 3 kedvenc karakter (karakter-rács 📌) — a publikus profilon és a stats tetején jelenik meg; szigorú whitelist (vélemény-adat nem megy ki).

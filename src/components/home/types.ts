@@ -51,11 +51,11 @@ export type NextSeasonRow = {
 
 export type WatchItem = {
   id: number
+  userId: number
   anilistId: number
   mediaType: string
   title: string
   coverUrl: string | null
-  addedBy: number
   watchedEpisodes: number
 }
 

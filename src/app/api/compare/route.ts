@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, users } from '@/db/schema'
+import { anime, settings, users } from '@/db/schema'
 import { fetchUserList } from '@/lib/anilist'
 import { compareLists, type TheirEntry } from '@/lib/compare'
 import { requireUserId } from '@/lib/session'
+import { canViewProfile } from '@/lib/profile-visibility'
 import { and, eq } from 'drizzle-orm'
 
 export async function POST(req: NextRequest) {
@@ -27,6 +28,13 @@ export async function POST(req: NextRequest) {
     if (!other) return NextResponse.json({ error: 'Nincs ilyen felhasználó' }, { status: 404 })
     if (other.id === userId) {
       return NextResponse.json({ error: 'Saját magaddal nem megy az összehasonlítás' }, { status: 400 })
+    }
+    const [visibility] = await db.select({ value: settings.value }).from(settings)
+      .where(and(eq(settings.userId, other.id), eq(settings.key, 'profileVisibility')))
+    // Ugyanaz a 404, mint ismeretlen névnél: a privát profil létezését sem
+    // szabad az API-nak elárulnia.
+    if (!canViewProfile(userId, other.id, visibility?.value)) {
+      return NextResponse.json({ error: 'Nincs ilyen felhasználó' }, { status: 404 })
     }
     const otherRows = await db.select().from(anime)
       .where(and(eq(anime.userId, other.id), eq(anime.mediaType, 'ANIME')))

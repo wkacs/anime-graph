@@ -4,6 +4,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { users, settings, title as titleTable, favoriteCharacters } from '@/db/schema'
 import { toPublicPinned } from '@/lib/public-view'
+import { profileVisibility } from '@/lib/profile-visibility'
 import PinnedShowcase from '@/components/PinnedShowcase'
 import Avatar from '@/components/Avatar'
 
@@ -38,7 +39,7 @@ async function load(username: string) {
 
   return {
     user,
-    visibility: (map.profileVisibility as string) ?? 'public',
+    visibility: profileVisibility(map.profileVisibility),
     pinned: toPublicPinned(titles, chars),
   }
 }

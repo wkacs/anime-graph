@@ -4,6 +4,7 @@ import { db } from '@/db/client'
 import { anime, apiCache, pushSubscriptions, title } from '@/db/schema'
 import { anniversaryYears, buildCapsulePayload } from '@/lib/time-capsule'
 import { seasonStartInfo, buildSeasonPayload } from '@/lib/season-push'
+import { authorizeCron } from '@/lib/cron-auth'
 import { eq, inArray, isNotNull, and } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -13,12 +14,9 @@ export const dynamic = 'force-dynamic'
 // 2) Szezonváltás: az új szezon első napjaiban egyszeri „nézd meg, mik valók neked"
 //    (dedup: api_cache kulcs userenként+szezononként).
 export async function GET(req: NextRequest) {
-  if (process.env.CRON_SECRET) {
-    const auth = req.headers.get('authorization')
-    if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-    }
-  }
+  const auth = authorizeCron(process.env.CRON_SECRET, req.headers.get('authorization'))
+  if (auth === 'misconfigured') return NextResponse.json({ error: 'cron_not_configured' }, { status: 500 })
+  if (auth === 'unauthorized') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   if (!process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
     return NextResponse.json({ skipped: 'VAPID kulcsok nincsenek beállítva' })
   }

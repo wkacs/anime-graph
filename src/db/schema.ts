@@ -251,17 +251,21 @@ export const aiUsageLog = pgTable('ai_usage_log', {
   index('ai_usage_user_day').on(t.userId, t.createdAt),
 ])
 
-// egy globális közös "együtt nézzük" lista az instance-nek (housemates-modell)
+// Személyes watchlist. Egy valódi közös lista később külön csoport-
+// és tagsági modellen keresztül kap majd jogosultságokat.
 export const watchlistItems = pgTable('watchlist_items', {
   id: serial('id').primaryKey(),
-  anilistId: integer('anilist_id').notNull().unique(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  anilistId: integer('anilist_id').notNull(),
   mediaType: text('media_type').notNull().default('ANIME'),
   title: text('title').notNull(),
   coverUrl: text('cover_url'),
-  addedBy: integer('added_by').notNull(),
   watchedEpisodes: integer('watched_episodes').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-})
+}, (t) => [
+  uniqueIndex('watchlist_items_user_anilist_unique').on(t.userId, t.anilistId),
+  index('watchlist_items_user_created_at').on(t.userId, t.createdAt),
+])
 
 export const pushSubscriptions = pgTable('push_subscriptions', {
   id: serial('id').primaryKey(),

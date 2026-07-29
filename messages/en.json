@@ -168,9 +168,9 @@
     "feedWatched": "watched",
     "feedEpisodeCount": "{count} episodes",
     "feedFavourite": "made a favourite:",
-    "sharedList": "Shared list",
-    "addedByTogether": "{user} added it · together: {count} episodes",
-    "watchedTogether": "We watched an episode together",
+    "myWatchlist": "My watchlist",
+    "watchedEpisodes": "Watched: {count} episodes",
+    "markWatched": "Mark an episode watched",
     "remove": "Remove"
   },
   "common": {
