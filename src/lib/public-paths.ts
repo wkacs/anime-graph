@@ -14,7 +14,9 @@ export const PUBLIC_PATHS = [
   // urlap is linkel. Auth mogott a link holt, es elfogadhatatlan feltetelt kerne.
   '/aszf', '/adatvedelem',
   '/api/search', '/api/browse', '/api/trending', '/api/characters/', '/api/themes/', '/api/links/',
-  '/api/leaderboard', '/api/reviews', '/api/health',
+  // /api/monitor: a global-error hibariportja vendegkent is mennie kell
+  // (rate-limit + mezovagas vedi, lasd a route-ot).
+  '/api/leaderboard', '/api/reviews', '/api/health', '/api/monitor',
   // Az OG-kepet a crawler suti nelkul keri: login-redirect eseten HTML jonne kep helyett.
   '/opengraph-image',
   '/api/anime/owned', '/api/fit',

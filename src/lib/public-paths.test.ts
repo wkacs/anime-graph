@@ -30,6 +30,11 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/opengraph-image')).toBe(true)
   })
 
+  it('a hibariport-vegpont vendegkent is elerheto', () => {
+    // a global-error vendeg-oldalon is elsulhet; login-redirect = elveszett riport
+    expect(isPublicPath('/api/monitor')).toBe(true)
+  })
+
   it('a sajat adat vedve marad', () => {
     expect(isPublicPath('/graf')).toBe(false)
     expect(isPublicPath('/lista')).toBe(false)

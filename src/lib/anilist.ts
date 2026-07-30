@@ -87,8 +87,9 @@ export async function searchAnime(q: string, type: 'ANIME' | 'MANGA' = 'ANIME'):
   }))
 }
 
-// shared media field selection — MEDIA_QUERY, list import and MAL batch all map through mapTitle
-const MEDIA_FIELDS = `
+// shared media field selection — MEDIA_QUERY, list import, MAL batch and the
+// daily catalog-sync cron all map through mapTitle
+export const MEDIA_FIELDS = `
     id
     type
     title { romaji english native }

@@ -1,14 +1,20 @@
 // Az üzemeltető adatai EGY helyen. A jogi oldalak innen olvasnak, hogy ne
 // kelljen két dokumentumban külön karbantartani.
 //
-// FIGYELEM: a TODO-értékeket ki KELL tölteni élesítés előtt. Szándékosan
-// nincsenek kitalált cégadatok — egy kitalált székhely vagy adószám a
-// tájékoztatót hamis okirattá tenné.
+// Az értékek env-ből jönnek (NEXT_PUBLIC_*, hogy build-time beégjenek), így a
+// kitöltéshez nem kell kódot módosítani — a Vercel env beállítása elég.
+// Szándékosan nincsenek kitalált cégadatok fallbackként — egy kitalált
+// székhely vagy adószám a tájékoztatót hamis okirattá tenné.
+function operatorField(value: string | undefined, todo: string): string {
+  const v = value?.trim()
+  return v ? v : todo
+}
+
 export const OPERATOR = {
-  name: 'TODO: üzemeltető neve (magánszemély vagy cég)',
-  address: 'TODO: székhely / levelezési cím',
-  registration: 'TODO: cégjegyzékszám vagy nyilvántartási szám (ha van)',
-  email: 'TODO: kapcsolattartó e-mail-cím',
+  name: operatorField(process.env.NEXT_PUBLIC_OPERATOR_NAME, 'TODO: üzemeltető neve (magánszemély vagy cég)'),
+  address: operatorField(process.env.NEXT_PUBLIC_OPERATOR_ADDRESS, 'TODO: székhely / levelezési cím'),
+  registration: operatorField(process.env.NEXT_PUBLIC_OPERATOR_REGISTRATION, 'TODO: cégjegyzékszám vagy nyilvántartási szám (ha van)'),
+  email: operatorField(process.env.NEXT_PUBLIC_OPERATOR_EMAIL, 'TODO: kapcsolattartó e-mail-cím'),
 } as const
 
 /** A tájékoztatók utolsó tartalmi módosítása. Kézzel léptetendő. */
