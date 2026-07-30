@@ -49,10 +49,15 @@
     "closingTitle": "Kezdd a meglévő listáddal, vagy nézz körül előbb.",
     "closingText": "A fiók létrehozása után MAL- vagy AniList-importtal indulhatsz.",
     "create": "Fiók létrehozása",
-    "visualAlt": "Minimalista, lebegő liquid-glass kártyák anime- és manga-felfedezéshez.",
     "visualKicker": "Az ízlésed fókuszban",
     "visualTitle": "Nyugodtabb felfedezés",
     "visualMeta": "ANIME · MANGA",
+    "stat1Value": "22 000+",
+    "stat1Label": "anime a katalógusban",
+    "stat2Value": "136 000+",
+    "stat2Label": "manga a katalógusban",
+    "stat3Value": "MAL · AniList",
+    "stat3Label": "import pár perc alatt",
     "seo": "Személyes anime- és manga-követő ízlésalapú felfedezéssel."
   },
   "community": {

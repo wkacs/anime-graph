@@ -8,6 +8,8 @@ import TonightPicker from '@/components/TonightPicker'
 import TourSpotlight from '@/components/TourSpotlight'
 import PageShell from '@/components/ui/PageShell'
 import EmptyState from '@/components/ui/EmptyState'
+import PosterAmbient from '@/components/ui/PosterAmbient'
+import { pickLandingCovers, type LandingCover } from '@/lib/landing'
 import HeroToday from '@/components/home/HeroToday'
 import FollowedRow from '@/components/home/FollowedRow'
 import WeekCalendar from '@/components/home/WeekCalendar'
@@ -37,6 +39,8 @@ export default function NewsPage() {
   const [upcoming, setUpcoming] = useState<UpcomingItem[]>([])
   const [upcomingSeason, setUpcomingSeason] = useState<{ season: string; year: number } | null>(null)
   const [nextList, setNextList] = useState<NextSeasonRow[] | null>(null)
+  // vendég-landing vizuáljai: valódi címek a lokális katalógusból
+  const [trending, setTrending] = useState<{ seasonal: LandingCover[]; popular: LandingCover[] } | null>(null)
   const [scores, setScores] = useState<Map<number, { score: number; reason: string }>>(new Map())
   const [scoresFailed, setScoresFailed] = useState(false)
   const [view, setView] = useState<SeasonView>(EMPTY_SEASON_VIEW)
@@ -51,46 +55,70 @@ export default function NewsPage() {
   ]
 
   useEffect(() => {
-    fetch('/api/news')
-      .then(async (r) => {
-        // Nem `tc(...)`: a forditó nem referencia-stabil, fuggosegkent minden
-        // renderben ujrainditana a fetchet. Az alapertelmezes a renderben lep be.
-        if (r.status === 401) { setGuest(true); return }
-        if (!r.ok) throw new Error((await r.json()).error ?? '')
-        setData(await r.json())
-        setGuest(false)
+    // Vendégként CSAK a publikus trending megy ki: a védett végpontok hívása
+    // hat 401-et zajongana a konzolba, és mind felesleges kérés lenne.
+    function loadGuest() {
+      fetch('/api/trending')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { seasonal: LandingCover[]; popular: LandingCover[] } | null) => { if (j) setTrending(j) })
+        .catch(() => { /* a landing kollázs nélkül is él */ })
+    }
+    function loadSignedIn() {
+      fetch('/api/digest')
+        .then((r) => r.json())
+        .then((j) => setDigest(j.digest ?? null))
+        .catch(() => { /* digest nélkül is él az oldal */ })
+      fetch('/api/feed')
+        .then((r) => r.json())
+        .then((j) => setFeed(j.items ?? []))
+        .catch(() => { /* feed nélkül is él az oldal */ })
+      fetch('/api/watchlist')
+        .then((r) => r.json())
+        .then((j) => setWatchlist(j.items ?? []))
+        .catch(() => { /* watchlist nélkül is él az oldal */ })
+      fetch('/api/browse?season=next&type=ANIME&sort=SCORE_DESC')
+        .then((r) => (r.ok ? r.json() : { media: [] }))
+        .then((j: { media: NextSeasonRow[] }) => setNextList((j.media ?? []).slice(0, 18)))
+        .catch(() => setNextList([]))
+      fetch('/api/news/upcoming')
+        .then((r) => r.json())
+        .then((j) => { setUpcoming(j.items ?? []); setUpcomingSeason(j.season ?? null) })
+        .catch(() => { /* enélkül is él az oldal */ })
+      // ízlés-pontok külön csatornán: lassú AI-futás ne késleltesse a rácsot
+      fetch('/api/news/season-scores')
+        .then(async (r) => {
+          const j = await r.json()
+          const items: { anilistId: number; score: number; reason: string }[] = j.items ?? []
+          if (!r.ok || !items.length) { setScoresFailed(true); return }
+          setScores(new Map(items.map((i) => [i.anilistId, { score: i.score, reason: i.reason }])))
+        })
+        .catch(() => setScoresFailed(true))
+    }
+    // A kapu a /api/auth, nem a /api/news: az mindig 200-at ad, így vendégként
+    // egyetlen 4xx sem kerül a konzolba.
+    fetch('/api/auth')
+      .then((r) => (r.ok ? r.json() : { authenticated: false }))
+      .then((j: { authenticated?: boolean }) => {
+        if (!j.authenticated) { setGuest(true); loadGuest(); return }
+        return fetch('/api/news').then(async (r) => {
+          // Nem `tc(...)`: a forditó nem referencia-stabil, fuggosegkent minden
+          // renderben ujrainditana a fetchet. Az alapertelmezes a renderben lep be.
+          if (r.status === 401) { setGuest(true); loadGuest(); return }
+          if (!r.ok) throw new Error((await r.json()).error ?? '')
+          setData(await r.json())
+          setGuest(false)
+          loadSignedIn()
+        })
       })
       .catch((e) => setError(String(e.message ?? e)))
-    fetch('/api/digest')
-      .then((r) => r.json())
-      .then((j) => setDigest(j.digest ?? null))
-      .catch(() => { /* digest nélkül is él az oldal */ })
-    fetch('/api/feed')
-      .then((r) => r.json())
-      .then((j) => setFeed(j.items ?? []))
-      .catch(() => { /* feed nélkül is él az oldal */ })
-    fetch('/api/watchlist')
-      .then((r) => r.json())
-      .then((j) => setWatchlist(j.items ?? []))
-      .catch(() => { /* watchlist nélkül is él az oldal */ })
-    fetch('/api/browse?season=next&type=ANIME&sort=SCORE_DESC')
-      .then((r) => (r.ok ? r.json() : { media: [] }))
-      .then((j: { media: NextSeasonRow[] }) => setNextList((j.media ?? []).slice(0, 18)))
-      .catch(() => setNextList([]))
-    fetch('/api/news/upcoming')
-      .then((r) => r.json())
-      .then((j) => { setUpcoming(j.items ?? []); setUpcomingSeason(j.season ?? null) })
-      .catch(() => { /* enélkül is él az oldal */ })
-    // ízlés-pontok külön csatornán: lassú AI-futás ne késleltesse a rácsot
-    fetch('/api/news/season-scores')
-      .then(async (r) => {
-        const j = await r.json()
-        const items: { anilistId: number; score: number; reason: string }[] = j.items ?? []
-        if (!r.ok || !items.length) { setScoresFailed(true); return }
-        setScores(new Map(items.map((i) => [i.anilistId, { score: i.score, reason: i.reason }])))
-      })
-      .catch(() => setScoresFailed(true))
   }, [])
+
+  // vendég-vizuálok: az első 3 a hero-kollázs, a következő 6 a katalógus-teaser,
+  // így a két blokk sosem mutatja ugyanazt a címet
+  const guestCovers = useMemo(
+    () => (trending ? pickLandingCovers(trending.seasonal, trending.popular, 9) : []),
+    [trending],
+  )
 
   const scored = scores.size > 0
   const seasonItems = useMemo(
@@ -159,8 +187,17 @@ export default function NewsPage() {
   }
 
   if (guest) {
+    const collage = guestCovers.slice(0, 3)
+    const teaser = guestCovers.slice(3, 9)
+    // 3 borító alatt vázlat áll: SSR-ben és lassú kapcsolaton sincs layout-ugrás
+    const slots: (LandingCover | null)[] = collage.length >= 3 ? collage : [null, null, null]
+    const slotClass = [
+      'relative z-20 block w-44 sm:w-56 shrink-0 aspect-[2/3] overflow-hidden rounded-[var(--r-md)] hairline shadow-[0_30px_80px_rgba(0,0,0,.6)] transition-transform duration-300 hover:scale-[1.03]',
+      'absolute left-0 sm:left-4 top-1/2 z-10 block w-32 sm:w-40 aspect-[2/3] -translate-y-1/2 -rotate-6 overflow-hidden rounded-[var(--r-md)] hairline shadow-2xl shadow-black/60 brightness-[.82] transition-transform duration-300 hover:scale-[1.03]',
+      'absolute right-0 sm:right-4 top-1/2 z-10 block w-32 sm:w-40 aspect-[2/3] -translate-y-1/2 rotate-6 overflow-hidden rounded-[var(--r-md)] hairline shadow-2xl shadow-black/60 brightness-[.82] transition-transform duration-300 hover:scale-[1.03]',
+    ]
     return (
-      <main className="min-h-screen overflow-hidden bg-[#050509]">
+      <main className="min-h-screen overflow-hidden">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -169,45 +206,69 @@ export default function NewsPage() {
           }).replace(/</g, '\\u003c') }}
         />
         <section className="relative isolate">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[42rem] bg-[radial-gradient(ellipse_50%_55%_at_68%_26%,rgba(82,104,191,.16),transparent_72%),radial-gradient(ellipse_35%_35%_at_30%_10%,rgba(255,255,255,.05),transparent_70%)]" />
-          <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 pb-20 pt-28 md:grid-cols-[minmax(0,.92fr)_minmax(0,1.08fr)] md:pb-28 md:pt-36">
+          <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-28 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:pb-20 md:pt-36">
             <div className="relative z-10 max-w-xl">
-              <p className="mb-6 inline-flex rounded-full border border-white/12 bg-white/[.055] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.18em] text-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,.12)] backdrop-blur-xl">
-                {landing('kicker')}
-              </p>
+              <p className="label-mono mb-6">{landing('kicker')}</p>
               <h1 className="display-xl max-w-3xl text-balance text-text-1">{landing('title')}</h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-text-2">
                 {landing('body')}
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/login" className="btn-solid px-5 py-3">{landing('start')}</Link>
-                <Link href="/browse" className="btn-ghost border border-white/15 bg-white/[.035] px-5 py-3 backdrop-blur-xl">{landing('browse')}</Link>
+                <Link href="/browse" className="btn-ghost surface-1 px-5 py-3">{landing('browse')}</Link>
               </div>
             </div>
 
-            <div className="relative mx-auto w-full max-w-2xl md:mx-0">
-              <div aria-hidden className="absolute -inset-10 -z-10 rounded-full bg-indigo-400/10 blur-3xl" />
-              <div className="relative aspect-[16/11] overflow-hidden rounded-[2rem] border border-white/14 bg-white/[.035] p-1 shadow-[0_30px_100px_rgba(0,0,0,.42),inset_0_1px_0_rgba(255,255,255,.17)] backdrop-blur-2xl">
-                {/* A generált PNG C2PA-metaadatait a Next optimizer nem minden környezetben olvassa;
-                    közvetlenül szolgáljuk ki, hogy a hero mindig látható és teljes minőségű legyen. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/landing/liquid-glass-discovery.png"
-                  alt={landing('visualAlt')}
-                  loading="eager"
-                  fetchPriority="high"
-                  className="h-full w-full rounded-[1.8rem] object-cover"
-                />
-                <div aria-hidden className="absolute inset-1 rounded-[1.8rem] bg-[linear-gradient(115deg,rgba(255,255,255,.09),transparent_24%,transparent_72%,rgba(145,157,255,.1))]" />
+            {/* hero-vizuál: 3 valódi borító a katalógusból, a fő borító blur-kópiája
+                adja az ambiens fényt — nincs generált kép, a termék önmagát mutatja */}
+            <div className="relative mx-auto w-full max-w-md md:mx-0 md:justify-self-end">
+              {collage[0]?.coverUrl && (
+                <div
+                  aria-hidden
+                  className="absolute -inset-14 -z-10 overflow-hidden rounded-[5rem] [mask-image:radial-gradient(ellipse_at_center,black_35%,transparent_78%)]"
+                >
+                  <PosterAmbient src={collage[0].coverUrl} intensity="hero" />
+                </div>
+              )}
+              <div className="relative flex items-center justify-center py-10">
+                {slots.map((c, i) =>
+                  c ? (
+                    <Link
+                      key={c.anilistId}
+                      href={`/${c.mediaType === 'MANGA' ? 'manga' : 'anime'}/${c.slug}`}
+                      className={slotClass[i]}
+                      title={c.titleRomaji}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.coverUrl!} alt={c.titleRomaji} loading="eager" className="h-full w-full object-cover" />
+                    </Link>
+                  ) : (
+                    <div key={i} aria-hidden className={`${slotClass[i]} bg-white/5`} />
+                  ),
+                )}
               </div>
-              <div className="absolute -bottom-5 left-4 rounded-2xl border border-white/16 bg-black/35 px-4 py-3 shadow-2xl shadow-black/50 backdrop-blur-2xl md:left-8">
-                <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-white/50">{landing('visualKicker')}</p>
-                <p className="mt-1 text-sm font-medium text-white/90">{landing('visualTitle')}</p>
+              <div className="surface-2 absolute -bottom-3 left-1/2 z-30 -translate-x-1/2 rounded-2xl px-4 py-3 sm:left-6 sm:translate-x-0">
+                <p className="label-mono">{landing('visualKicker')}</p>
+                <p className="mt-1 whitespace-nowrap text-sm font-medium text-text-1">{landing('visualTitle')}</p>
               </div>
-              <div className="absolute -right-2 top-8 hidden rounded-2xl border border-white/14 bg-white/[.07] px-3 py-2.5 shadow-xl shadow-black/30 backdrop-blur-2xl sm:block">
-                <span className="block h-1.5 w-1.5 rounded-full bg-[#b7c6ff] shadow-[0_0_16px_4px_rgba(183,198,255,.4)]" />
-                <p className="mt-2 text-[10px] font-medium tracking-wide text-white/65">{landing('visualMeta')}</p>
+              <div className="surface-2 absolute -right-1 top-4 z-30 hidden rounded-xl px-3 py-2 sm:block">
+                <p className="label-mono">{landing('visualMeta')}</p>
               </div>
+            </div>
+          </div>
+
+          <div className="mx-auto max-w-7xl px-4 pb-16">
+            <div className="grid grid-cols-3 gap-4 border-t border-white/8 pt-8">
+              {[
+                [landing('stat1Value'), landing('stat1Label')],
+                [landing('stat2Value'), landing('stat2Label')],
+                [landing('stat3Value'), landing('stat3Label')],
+              ].map(([value, label]) => (
+                <div key={label} className="min-w-0">
+                  <p className="display-l text-text-1">{value}</p>
+                  <p className="label-mono mt-1">{label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -217,22 +278,25 @@ export default function NewsPage() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="label-mono">{landing('catalogKicker')}</p>
-                <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text-1">{landing('catalogTitle')}</h2>
+                <h2 className="h2 mt-2 text-text-1">{landing('catalogTitle')}</h2>
               </div>
               <Link href="/browse" className="text-sm text-text-2 underline decoration-white/20 underline-offset-4 hover:text-text-1">{landing('catalogLink')}</Link>
             </div>
-            {nextList && nextList.length > 0 ? (
+            {teaser.length > 0 ? (
               <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {nextList.slice(0, 6).map((item) => (
-                  <Link key={item.id} href={`/${item.mediaType === 'MANGA' ? 'manga' : 'anime'}/${item.slug}`} className="group min-w-0 rounded-2xl p-1 transition-colors hover:bg-white/[.055]">
-                    <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/10 bg-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,.1)]">
+                {teaser.map((item) => (
+                  <Link key={item.anilistId} href={`/${item.mediaType === 'MANGA' ? 'manga' : 'anime'}/${item.slug}`} className="group min-w-0 rounded-2xl p-1 transition-colors hover:bg-white/[.055]">
+                    <div className="surface-1 relative aspect-[2/3] overflow-hidden rounded-[var(--r-sm)]">
                       {item.coverUrl && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.coverUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        <img src={item.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                       )}
                     </div>
                     <p className="mt-2 truncate text-sm font-medium text-text-1">{item.titleRomaji}</p>
-                    <p className="label-mono mt-0.5">{item.format ?? item.mediaType}</p>
+                    <p className="label-mono mt-0.5">
+                      {item.format ?? item.mediaType}
+                      {item.year ? ` · ${item.year}` : ''}
+                    </p>
                   </Link>
                 ))}
               </div>
@@ -249,20 +313,20 @@ export default function NewsPage() {
               [landing('feature2Title'), landing('feature2Text')],
               [landing('feature3Title'), landing('feature3Text')],
             ].map(([title, text], index) => (
-              <article key={title} className="rounded-[1.5rem] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.025))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,.12)] backdrop-blur-xl">
-                <p className="label-mono text-white/55">0{index + 1}</p>
-                <h2 className="mt-5 text-lg font-semibold text-text-1">{title}</h2>
+              <article key={title} className="surface-1 rounded-[var(--r-lg)] p-6">
+                <p className="label-mono">0{index + 1}</p>
+                <h2 className="h2 mt-4 text-text-1">{title}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-text-2">{text}</p>
               </article>
             ))}
           </div>
-          <div className="relative mt-12 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-[1.75rem] border border-white/12 bg-[linear-gradient(110deg,rgba(255,255,255,.1),rgba(104,117,202,.1)_48%,rgba(255,255,255,.04))] p-7 shadow-[inset_0_1px_0_rgba(255,255,255,.16)] backdrop-blur-2xl">
-            <div aria-hidden className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-indigo-300/12 blur-3xl" />
-            <div>
-              <p className="text-lg font-semibold text-text-1">{landing('closingTitle')}</p>
+          <div className="surface-2 relative mt-12 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-[var(--r-xl)] p-7">
+            {teaser[0]?.coverUrl && <PosterAmbient src={teaser[0].coverUrl} intensity="card" />}
+            <div className="relative">
+              <p className="h2 text-text-1">{landing('closingTitle')}</p>
               <p className="mt-1 text-sm text-text-2">{landing('closingText')}</p>
             </div>
-            <Link href="/login" className="btn-solid px-5 py-3">{landing('create')}</Link>
+            <Link href="/login" className="btn-solid relative px-5 py-3">{landing('create')}</Link>
           </div>
         </section>
       </main>
