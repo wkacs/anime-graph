@@ -5,6 +5,7 @@ import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 import { updateUserTitle, deleteUserTitle } from '@/lib/anime-write'
 import { pushRowChange } from '@/lib/sync-back'
+import { apiError } from '@/lib/api-error'
 
 const STATUSES = ['watching', 'completed', 'dropped', 'planned'] as const
 
@@ -54,7 +55,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
   if (body.status !== undefined) {
     if (!STATUSES.includes(body.status)) {
-      return NextResponse.json({ error: 'Érvénytelen státusz' }, { status: 400 })
+      return apiError('invalidStatus', 400)
     }
     patch.status = body.status
     if (body.status === 'completed' && body.watchedAt === undefined) {
@@ -70,7 +71,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     patch.watchedAt = body.watchedAt === null ? null : new Date(body.watchedAt)
   }
   if (!Object.keys(patch).length) {
-    return NextResponse.json({ error: 'Üres módosítás' }, { status: 400 })
+    return apiError('emptyUpdate', 400)
   }
 
   // progressz-növekedés → epizód-napló a heatmaphez (max 30 sor/módosítás)

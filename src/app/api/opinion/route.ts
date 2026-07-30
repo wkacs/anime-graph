@@ -8,6 +8,7 @@ import { consumeAiQuota } from '@/lib/ai-quota'
 import { requireUserId } from '@/lib/session'
 import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { and, eq, like, sql } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export async function GET(req: NextRequest) {
   const userId = await requireUserId()
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const animeId = Number(body?.animeId)
-  if (!animeId) return NextResponse.json({ error: 'animeId kötelező' }, { status: 400 })
+  if (!animeId) return apiError('animeIdRequired', 400)
 
   const [animeRow] = await db.select().from(anime)
     .where(and(eq(anime.id, animeId), eq(anime.userId, userId)))
@@ -35,13 +36,13 @@ export async function POST(req: NextRequest) {
   let rawText: string
   if (body.retry === true) {
     const [existing] = await db.select().from(opinions).where(eq(opinions.animeId, animeId))
-    if (!existing) return NextResponse.json({ error: 'Nincs mentett vélemény' }, { status: 404 })
+    if (!existing) return apiError('noSavedOpinion', 404)
     rawText = existing.rawText
   } else {
     rawText = String(body.rawText ?? '').trim()
-    if (!rawText) return NextResponse.json({ error: 'Üres vélemény' }, { status: 400 })
+    if (!rawText) return apiError('emptyOpinion', 400)
     if (exceedsTextLimit(rawText, INPUT_LIMITS.opinion)) {
-      return NextResponse.json({ error: `A vélemény legfeljebb ${INPUT_LIMITS.opinion} karakter lehet` }, { status: 413 })
+      return apiError('opinionMax', 413, { max: INPUT_LIMITS.opinion })
     }
     await db.insert(opinions)
       .values({ animeId, rawText, extractStatus: 'pending', updatedAt: new Date() })
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (exceedsTextLimit(rawText, INPUT_LIMITS.opinion)) {
-    return NextResponse.json({ error: 'A mentett vélemény túl hosszú az AI-feldolgozáshoz' }, { status: 422 })
+    return apiError('opinionTooLong', 422)
   }
 
   try {

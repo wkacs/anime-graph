@@ -8,6 +8,7 @@ import { buildTasteVector, computeFit } from '@/lib/fit-score'
 import { fitReason } from '@/lib/fit-reason'
 import { requireUserId } from '@/lib/session'
 import { and, eq, inArray } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export async function POST() {
   const userId = await requireUserId()
@@ -15,7 +16,7 @@ export async function POST() {
   const rows = await db.select().from(anime)
     .where(and(eq(anime.userId, userId), eq(anime.mediaType, 'ANIME')))
   if (!rows.length) {
-    return NextResponse.json({ error: 'Előbb adj hozzá animéket' }, { status: 400 })
+    return apiError('addAnimeFirst', 400)
   }
 
   // top 5 by my score → lokális jelöltlista a title katalógusból (nincs élő AniList-hívás)
@@ -42,7 +43,7 @@ export async function POST() {
   const recIds = new Set(recRows.map((r) => r.recAnilistId))
   const candidates = buildLocalCandidates(favorites, catalog, owned, 200, recIds)
   if (!candidates.length) {
-    return NextResponse.json({ error: 'Nincs elég katalógus-adat az ajánláshoz' }, { status: 502 })
+    return apiError('notEnoughCatalog', 502)
   }
   const signals = await db.select({
     feature: tasteSignal.feature, polarity: tasteSignal.polarity, strength: tasteSignal.strength,
@@ -62,7 +63,7 @@ export async function POST() {
     .slice(0, 10)
 
   if (!result.length) {
-    return NextResponse.json({ error: 'Nincs elég adat az ajánláshoz' }, { status: 502 })
+    return apiError('notEnoughData', 502)
   }
 
   await db.insert(recommendations).values({

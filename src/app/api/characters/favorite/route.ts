@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { anime, favoriteCharacters } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
@@ -12,12 +13,12 @@ export async function POST(req: NextRequest) {
   const animeId = Number(body?.animeId)
   const name = String(body?.name ?? '').trim()
   if (!Number.isInteger(charId) || charId <= 0 || !Number.isInteger(animeId) || !name) {
-    return NextResponse.json({ error: 'charId, animeId és name kötelező' }, { status: 400 })
+    return apiError('charFavRequired', 400)
   }
   // ownership: a hivatkozott anime a sajátja legyen
   const [owned] = await db.select({ id: anime.id }).from(anime)
     .where(and(eq(anime.userId, userId), eq(anime.id, animeId)))
-  if (!owned) return NextResponse.json({ error: 'nincs ilyen anime a listádon' }, { status: 404 })
+  if (!owned) return apiError('noSuchAnimeInList', 404)
 
   await db.insert(favoriteCharacters).values({
     userId,
@@ -38,7 +39,7 @@ export async function DELETE(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const charId = Number(body?.charId)
   if (!Number.isInteger(charId) || charId <= 0) {
-    return NextResponse.json({ error: 'charId kötelező' }, { status: 400 })
+    return apiError('charIdRequired', 400)
   }
   await db.delete(favoriteCharacters)
     .where(and(eq(favoriteCharacters.userId, userId), eq(favoriteCharacters.charId, charId)))

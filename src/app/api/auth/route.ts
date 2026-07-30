@@ -6,6 +6,7 @@ import { verifyPassword } from '@/lib/password'
 import { clientIp, rateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
 import { requireUserId } from '@/lib/session'
+import { apiError } from '@/lib/api-error'
 
 export async function GET() {
   return NextResponse.json({ authenticated: Boolean(await requireUserId()) }, {
@@ -30,16 +31,16 @@ export async function POST(req: NextRequest) {
   const username = String(body.username ?? '').trim().toLowerCase()
   const password = String(body.password ?? '')
   if (!username || !password) {
-    return NextResponse.json({ error: 'Felhasználónév és jelszó kell' }, { status: 400 })
+    return apiError('credentialsRequired', 400)
   }
   // brute-force fék: 10 próbálkozás / 10 perc / IP; sikeres belépés törli a számlálót
   const ip = clientIp(req.headers)
   if (!(await rateLimit('login', ip, 10, 600))) {
-    return NextResponse.json({ error: 'Túl sok próbálkozás — várj pár percet' }, { status: 429 })
+    return apiError('tooManyTriesMinutes', 429)
   }
   const [user] = await db.select().from(users).where(eq(users.username, username))
   if (!user || !verifyPassword(password, user.passwordHash)) {
-    return NextResponse.json({ error: 'Hibás felhasználónév vagy jelszó' }, { status: 401 })
+    return apiError('badCredentials', 401)
   }
   await clearRateLimit('login', ip)
   const token = await createSession(process.env.SESSION_SECRET!, user.id, user.tokenVersion)

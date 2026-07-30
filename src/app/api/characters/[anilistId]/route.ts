@@ -4,6 +4,7 @@ import { favoriteCharacters } from '@/db/schema'
 import { fetchCharacters } from '@/lib/anilist'
 import { requireUserId } from '@/lib/session'
 import { eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ ani
   const { anilistId: raw } = await params
   const anilistId = Number(raw)
   if (!Number.isInteger(anilistId) || anilistId <= 0) {
-    return NextResponse.json({ error: 'érvénytelen id' }, { status: 400 })
+    return apiError('invalidId', 400)
   }
   try {
     const [characters, favs] = await Promise.all([

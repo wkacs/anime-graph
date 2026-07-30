@@ -6,6 +6,7 @@ import { compareLists, type TheirEntry } from '@/lib/compare'
 import { requireUserId } from '@/lib/session'
 import { canViewProfile } from '@/lib/profile-visibility'
 import { and, eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   const username = String(body?.username ?? '').trim()
   const internalUsername = String(body?.internalUsername ?? '').trim()
   if (!username && !internalUsername) {
-    return NextResponse.json({ error: 'Felhasználónév kötelező' }, { status: 400 })
+    return apiError('usernameRequired', 400)
   }
 
   let theirs: TheirEntry[]
@@ -25,21 +26,21 @@ export async function POST(req: NextRequest) {
     // belső mód: regisztrált user listája a DB-ből (csak lista-szintű adatok,
     // vélemény/taste_memory SOSEM kerül a válaszba)
     const [other] = await db.select().from(users).where(eq(users.username, internalUsername))
-    if (!other) return NextResponse.json({ error: 'Nincs ilyen felhasználó' }, { status: 404 })
+    if (!other) return apiError('noSuchUser', 404)
     if (other.id === userId) {
-      return NextResponse.json({ error: 'Saját magaddal nem megy az összehasonlítás' }, { status: 400 })
+      return apiError('cannotCompareSelf', 400)
     }
     const [visibility] = await db.select({ value: settings.value }).from(settings)
       .where(and(eq(settings.userId, other.id), eq(settings.key, 'profileVisibility')))
     // Ugyanaz a 404, mint ismeretlen névnél: a privát profil létezését sem
     // szabad az API-nak elárulnia.
     if (!canViewProfile(userId, other.id, visibility?.value)) {
-      return NextResponse.json({ error: 'Nincs ilyen felhasználó' }, { status: 404 })
+      return apiError('noSuchUser', 404)
     }
     const otherRows = await db.select().from(anime)
       .where(and(eq(anime.userId, other.id), eq(anime.mediaType, 'ANIME')))
     if (!otherRows.length) {
-      return NextResponse.json({ error: 'Ennek a felhasználónak még üres a listája' }, { status: 404 })
+      return apiError('otherUserEmptyList', 404)
     }
     theirs = otherRows.map((r) => ({
       anilistId: r.anilistId,
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
     }
     if (!entries.length) {
-      return NextResponse.json({ error: 'Üres vagy privát lista ezen a néven' }, { status: 404 })
+      return apiError('emptyOrPrivateList', 404)
     }
     theirs = entries.map((e) => ({
       anilistId: e.media.id,

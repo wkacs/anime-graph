@@ -9,6 +9,7 @@ import { buildDuoCandidates, buildDuoMessages, parseDuoPicks } from '@/lib/duo'
 import { glmChat } from '@/lib/glm'
 import { requireUserId } from '@/lib/session'
 import { desc, eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 const TTL_MS = 24 * 3600 * 1000
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const otherUserId = Number(body?.otherUserId)
   if (!Number.isInteger(otherUserId) || otherUserId === userId) {
-    return NextResponse.json({ error: 'otherUserId kötelező' }, { status: 400 })
+    return apiError('otherUserIdRequired', 400)
   }
   const [other] = await db.select().from(users).where(eq(users.id, otherUserId))
   if (!other) return NextResponse.json({ error: 'Nincs ilyen user' }, { status: 404 })
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
     recPool: recPools.flat(),
     excludeIds,
   })
-  if (!candidates.length) return NextResponse.json({ error: 'Nincs közös jelölt — adjatok hozzá terveket' }, { status: 400 })
+  if (!candidates.length) return apiError('noCommonCandidates', 400)
 
   await consumeAiQuota(userId, 'duo')
   const messages = buildDuoMessages(

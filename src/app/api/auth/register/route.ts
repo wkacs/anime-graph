@@ -8,17 +8,19 @@ import { registrationMode, validateRegistration } from '@/lib/registration'
 import { newToken, hashToken, tokenExpiry } from '@/lib/auth-token'
 import { sendEmail, verifyEmailTemplate } from '@/lib/email'
 import { eq, sql } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
+import { serverT } from '@/lib/server-i18n'
 
 export async function POST(req: NextRequest) {
   const mode = registrationMode()
   if (mode === 'closed') {
-    return NextResponse.json({ error: 'A regisztráció jelenleg zárva' }, { status: 503 })
+    return apiError('registrationClosed', 503)
   }
   // Éles rendszerben nem hozunk létre olyan új fiókot, amelyhez nem tudunk
   // megerősítő- és jelszó-visszaállító e-mailt kézbesíteni. Fejlesztésben a
   // no-op küldő marad, hogy a helyi munka ne igényeljen külső szolgáltatást.
   if (process.env.NODE_ENV === 'production' && (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL)) {
-    return NextResponse.json({ error: 'A regisztráció e-mail szolgáltatása még nincs beállítva' }, { status: 503 })
+    return apiError('registrationEmailUnset', 503)
   }
   const body = await req.json().catch(() => ({}))
   const invite = String(body.invite ?? '')
@@ -27,17 +29,15 @@ export async function POST(req: NextRequest) {
   // brute-force fék: 5 próbálkozás / óra / IP
   const ip = clientIp(req.headers)
   if (!(await rateLimit('register', ip, 5, 3600))) {
-    return NextResponse.json({ error: 'Túl sok próbálkozás — próbáld később' }, { status: 429 })
+    return apiError('tooManyTries', 429)
   }
 
   if (mode === 'invite') {
     if (!process.env.INVITE_CODE) {
-      return NextResponse.json(
-        { error: 'A regisztráció zárva (nincs meghívó-kód beállítva)' }, { status: 503 },
-      )
+      return apiError('registrationClosedNoInvite', 503)
     }
     if (invite !== process.env.INVITE_CODE) {
-      return NextResponse.json({ error: 'Érvénytelen meghívó-kód' }, { status: 403 })
+      return apiError('invalidInvite', 403)
     }
   }
 
@@ -57,18 +57,20 @@ export async function POST(req: NextRequest) {
 
   // címenkénti fiókgyártás fékje
   if (!(await rateLimit('register-email', valid.email, 3, 3600))) {
-    return NextResponse.json({ error: 'Túl sok próbálkozás — próbáld később' }, { status: 429 })
+    return apiError('tooManyTries', 429)
   }
 
   const [byName] = await db.select({ id: users.id }).from(users)
     .where(eq(users.username, valid.username))
   if (byName) {
-    return NextResponse.json({ error: 'Ez a felhasználónév foglalt', field: 'username' }, { status: 409 })
+    const t = await serverT('apiErrors')
+    return NextResponse.json({ error: t('usernameTaken'), field: 'username' }, { status: 409 })
   }
   const [byEmail] = await db.select({ id: users.id }).from(users)
     .where(sql`lower(${users.email}) = ${valid.email}`)
   if (byEmail) {
-    return NextResponse.json({ error: 'Ezzel az e-maillel már van fiók', field: 'email' }, { status: 409 })
+    const t = await serverT('apiErrors')
+    return NextResponse.json({ error: t('emailTaken'), field: 'email' }, { status: 409 })
   }
 
   const [user] = await db.insert(users)

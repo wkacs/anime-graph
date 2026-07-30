@@ -8,6 +8,7 @@ import { buildErasMessages, parseEras } from '@/lib/evolution'
 import { glmChat } from '@/lib/glm'
 import { requireUserId } from '@/lib/session'
 import { and, asc, desc, eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +29,7 @@ export async function POST() {
   const facts = await db.select().from(tasteMemory)
     .where(eq(tasteMemory.userId, userId))
     .orderBy(asc(tasteMemory.createdAt))
-  if (facts.length < 8) return NextResponse.json({ error: 'Még kevés az ízlés-tény (írj véleményeket!)' }, { status: 400 })
+  if (facts.length < 8) return apiError('notEnoughTasteFacts', 400)
   try {
     await consumeAiQuota(userId, 'taste-eras')
     const eras = parseEras(await glmChat(buildErasMessages(

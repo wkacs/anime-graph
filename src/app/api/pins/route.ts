@@ -4,6 +4,7 @@ import { db } from '@/db/client'
 import { favoriteCharacters, settings, title, userTitle } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { PinError, validatePins } from '@/lib/pins'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,7 +54,7 @@ export async function PUT(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Hibás kérés' }, { status: 400 })
+  if (!body) return apiError('badRequest', 400)
   try {
     if (body.titles !== undefined) {
       const owned = await db.select({ titleId: userTitle.titleId }).from(userTitle)

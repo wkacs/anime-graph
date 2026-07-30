@@ -8,6 +8,7 @@ import { buildNlMessages, parseNlResult, type NlItem } from '@/lib/nl-search'
 import { requireUserId } from '@/lib/session'
 import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,9 +17,9 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const query = String(body?.query ?? '').trim()
-  if (!query) return NextResponse.json({ error: 'Üres kérdés' }, { status: 400 })
+  if (!query) return apiError('emptyQuestion', 400)
   if (exceedsTextLimit(query, INPUT_LIMITS.nlSearch)) {
-    return NextResponse.json({ error: `A keresés legfeljebb ${INPUT_LIMITS.nlSearch} karakter lehet` }, { status: 413 })
+    return apiError('nlSearchMax', 413, { max: INPUT_LIMITS.nlSearch })
   }
 
   const rows = await db.select({
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
     opinion: opinions.rawText,
   }).from(anime).leftJoin(opinions, eq(opinions.animeId, anime.id))
     .where(eq(anime.userId, userId))
-  if (!rows.length) return NextResponse.json({ error: 'Üres a listád' }, { status: 400 })
+  if (!rows.length) return apiError('emptyList', 400)
 
   const items: NlItem[] = rows.map((r) => ({
     ...r,

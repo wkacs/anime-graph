@@ -9,6 +9,7 @@ import { glmChat } from '@/lib/glm'
 import { aiUserErrorMessage } from '@/lib/ai-error'
 import { eq } from 'drizzle-orm'
 import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
+import { apiError } from '@/lib/api-error'
 
 // Egyetlen AI-hívás IGÉNYRE: a MÁR lokálisan kiválasztott ajánlásokhoz ír prózát.
 // A rangsort NEM változtatja meg — az a fit-vektor dolga. Hiba esetén a hívó
@@ -18,11 +19,11 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const picks = Array.isArray(body?.picks) ? body.picks : []
-  if (!picks.length) return NextResponse.json({ error: 'picks kötelező' }, { status: 400 })
+  if (!picks.length) return apiError('picksRequired', 400)
   const serializedPicks = JSON.stringify(picks)
   if (picks.length > INPUT_LIMITS.maxRecommendPicks
     || exceedsTextLimit(serializedPicks, INPUT_LIMITS.recommendExplainPayload)) {
-    return NextResponse.json({ error: 'Túl sok vagy túl hosszú ajánláskérés' }, { status: 413 })
+    return apiError('recommendTooLong', 413)
   }
 
   try {

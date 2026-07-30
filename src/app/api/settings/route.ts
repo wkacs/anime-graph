@@ -7,6 +7,7 @@ import { newToken, hashToken, tokenExpiry } from '@/lib/auth-token'
 import { sendEmail, verifyEmailTemplate } from '@/lib/email'
 import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { and, eq, isNull, sql } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +45,7 @@ export async function PUT(req: NextRequest) {
   const userId = await requireUserId()
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Hibás kérés' }, { status: 400 })
+  if (!body) return apiError('badRequest', 400)
 
   if (body.hierarchyDefault !== undefined) {
     await upsert(userId, 'hierarchyDefault', body.hierarchyDefault)
@@ -70,12 +71,12 @@ export async function PUT(req: NextRequest) {
       email: body.email, username: 'placeholder', password: '12345678',
     })
     if (!valid.ok) {
-      return NextResponse.json({ error: 'Érvénytelen e-mail-cím' }, { status: 400 })
+      return apiError('invalidEmail', 400)
     }
     const [dup] = await db.select({ id: users.id }).from(users)
       .where(sql`lower(${users.email}) = ${valid.email}`)
     if (dup && dup.id !== userId) {
-      return NextResponse.json({ error: 'Ezzel az e-maillel már van fiók' }, { status: 409 })
+      return apiError('emailTaken', 409)
     }
     const [user] = await db.update(users)
       .set({ email: valid.email, emailVerifiedAt: null })
@@ -110,7 +111,7 @@ export async function PUT(req: NextRequest) {
     const likes = String(body.tasteLikes ?? '')
     const dislikes = String(body.tasteDislikes ?? '')
     if (exceedsTextLimit(likes, INPUT_LIMITS.tasteText) || exceedsTextLimit(dislikes, INPUT_LIMITS.tasteText)) {
-      return NextResponse.json({ error: `Az ízléslista legfeljebb ${INPUT_LIMITS.tasteText} karakter lehet` }, { status: 413 })
+      return apiError('tasteTextMax', 413, { max: INPUT_LIMITS.tasteText })
     }
     await upsert(userId, 'tasteLikes', likes)
     await upsert(userId, 'tasteDislikes', dislikes)

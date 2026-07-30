@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm'
 import { ensureTitleByFields, addUserTitle } from '@/lib/anime-write'
 import type { TitleMetadata } from '@/lib/catalog'
 import { titleSlug } from '@/lib/catalog'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const b = body?.bundle
   if (!b?.anime?.anilistId) {
-    return NextResponse.json({ error: 'Hiányzó visszaállítási adat' }, { status: 400 })
+    return apiError('missingResetData', 400)
   }
   const a = b.anime
 

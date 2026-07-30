@@ -6,6 +6,7 @@ import { requireUserId } from '@/lib/session'
 import { and, eq } from 'drizzle-orm'
 import { ensureTitle, addUserTitle, updateUserTitle, joinedRow } from '@/lib/anime-write'
 import { pushRowChange } from '@/lib/sync-back'
+import { apiError } from '@/lib/api-error'
 
 // DB-backed GET must not be statically executed at build time
 export const dynamic = 'force-dynamic'
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     const [catalogTitle] = await db.select({ isAdult: title.isAdult }).from(title)
       .where(eq(title.id, catalogTitleId))
     if (!catalogTitle || catalogTitle.isAdult) {
-      return NextResponse.json({ error: 'Ez a cím nem érhető el' }, { status: 404 })
+      return apiError('titleUnavailable', 404)
     }
     const existing = await db.select({ id: userTitle.id }).from(userTitle)
       .where(and(eq(userTitle.userId, userId), eq(userTitle.titleId, catalogTitleId)))
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   const anilistId = Number(body?.anilistId)
   if (!Number.isInteger(anilistId) || anilistId <= 0) {
-    return NextResponse.json({ error: 'anilistId vagy titleId kötelező' }, { status: 400 })
+    return apiError('anilistOrTitleIdRequired', 400)
   }
   const status = ADD_STATUSES.includes(body?.status) ? body.status as string : 'planned'
   const userFields = {
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ anime: existing[0] })
   }
   const media = await fetchMedia(anilistId, true) // típus-szűrő nélkül: manga-id-ra is működik
-  if (media.isAdult) return NextResponse.json({ error: 'Ez a cím nem érhető el' }, { status: 404 })
+  if (media.isAdult) return apiError('titleUnavailable', 404)
   const titleId = await ensureTitle(media)
   const row = await addUserTitle(userId, titleId, userFields)
   // rendező best-effort mentése — hibája nem akaszthatja meg az add-ot

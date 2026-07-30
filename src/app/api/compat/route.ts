@@ -5,6 +5,7 @@ import { requireUserId } from '@/lib/session'
 import { buildTasteVector } from '@/lib/fit-score'
 import { compatScore } from '@/lib/compat'
 import { eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,12 +14,12 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const viewerId = await requireUserId()
   const token = new URL(req.url).searchParams.get('token') ?? ''
-  if (!token) return NextResponse.json({ error: 'token kötelező' }, { status: 400 })
+  if (!token) return apiError('tokenRequired', 400)
   if (!viewerId) return NextResponse.json({ compat: null, authed: false })
 
   const tokenRows = await db.select().from(settings).where(eq(settings.key, 'publicToken'))
   const match = tokenRows.find((r) => r.value === token)
-  if (!match) return NextResponse.json({ error: 'érvénytelen link' }, { status: 404 })
+  if (!match) return apiError('invalidLink', 404)
   if (match.userId === viewerId) return NextResponse.json({ compat: null, authed: true, self: true })
 
   const select = { genres: anime.genres, tags: anime.tags, status: anime.status, myScore: anime.myScore }

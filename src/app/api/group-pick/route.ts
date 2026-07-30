@@ -6,6 +6,7 @@ import { canViewProfile } from '@/lib/profile-visibility'
 import { buildTasteVector } from '@/lib/fit-score'
 import { rankGroupPicks } from '@/lib/group-pick'
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,13 +21,13 @@ export async function POST(req: NextRequest) {
   const names: string[] = Array.isArray(body.usernames)
     ? body.usernames.map((s: unknown) => String(s).trim()).filter(Boolean)
     : []
-  if (!names.length) return NextResponse.json({ error: 'legalább egy felhasználónév kell' }, { status: 400 })
+  if (!names.length) return apiError('atLeastOneUsername', 400)
 
   const found = await db.select({ id: users.id, username: users.username })
     .from(users).where(inArray(users.username, names))
   const missing = names.filter((n) => !found.some((f) => f.username === n))
   if (missing.length) {
-    return NextResponse.json({ error: `nincs ilyen felhasználó: ${missing.join(', ')}` }, { status: 404 })
+    return apiError('noSuchUsers', 404, { names: missing.join(', ') })
   }
   const visibilityRows = found.length
     ? await db.select({ userId: settings.userId, value: settings.value }).from(settings)
@@ -35,10 +36,10 @@ export async function POST(req: NextRequest) {
   const visibilityByUser = new Map(visibilityRows.map((row) => [row.userId, row.value]))
   const hidden = found.filter((user) => !canViewProfile(callerId, user.id, visibilityByUser.get(user.id)))
   if (hidden.length) {
-    return NextResponse.json({ error: `nincs ilyen felhasználó: ${hidden.map((u) => u.username).join(', ')}` }, { status: 404 })
+    return apiError('noSuchUsers', 404, { names: hidden.map((u) => u.username).join(', ') })
   }
   const memberIds = [...new Set([callerId, ...found.map((f) => f.id)])]
-  if (memberIds.length < 2) return NextResponse.json({ error: 'magadon kívül adj meg legalább egy tagot' }, { status: 400 })
+  if (memberIds.length < 2) return apiError('needOtherMembers', 400)
 
   const select = { userId: anime.userId, anilistId: anime.anilistId, genres: anime.genres, tags: anime.tags, status: anime.status, myScore: anime.myScore }
   const allItems = await db.select(select).from(anime).where(inArray(anime.userId, memberIds))

@@ -8,24 +8,25 @@ import { clearTokenVersionCache } from '@/lib/token-version'
 import { MIN_PASSWORD_LENGTH } from '@/lib/registration'
 import { clientIp, rateLimit } from '@/lib/rate-limit'
 import { and, eq, sql } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: NextRequest) {
   // A reset-token kriptográfiailag erős, de a végpont eddig korlátlanul
   // hívható volt — a token-tippelés így legalább mérhető költségbe kerül,
   // és a hibás próbálkozás-özön sem terheli az adatbázist.
   if (!(await rateLimit('reset', clientIp(req.headers), 10, 3600))) {
-    return NextResponse.json({ error: 'Túl sok próbálkozás. Próbáld később.' }, { status: 429 })
+    return apiError('tooManyTriesLater', 429)
   }
   const body = await req.json().catch(() => ({}))
   const raw = String(body.token ?? '')
   const password = String(body.password ?? '')
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return NextResponse.json({ error: 'A jelszó legalább 8 karakter legyen' }, { status: 400 })
+    return apiError('passwordTooShort', 400)
   }
   const [row] = await db.select().from(authTokens)
     .where(and(eq(authTokens.tokenHash, hashToken(raw)), eq(authTokens.kind, 'reset')))
   if (!row || !isTokenUsable(row)) {
-    return NextResponse.json({ error: 'Érvénytelen vagy lejárt link' }, { status: 400 })
+    return apiError('invalidExpiredLink', 400)
   }
 
   // token_version++ → minden korábbi session érvénytelenné válik

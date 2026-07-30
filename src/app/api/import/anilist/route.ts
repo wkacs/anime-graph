@@ -5,6 +5,7 @@ import { mapAnilistStatus } from '@/lib/import'
 import { upsertImported, type ImportRow } from '@/lib/import-upsert'
 import { requireUserId } from '@/lib/session'
 import { rateLimit } from '@/lib/rate-limit'
+import { apiError } from '@/lib/api-error'
 
 export async function POST(req: NextRequest) {
   const userId = await requireUserId()
@@ -12,11 +13,11 @@ export async function POST(req: NextRequest) {
   // Az import külső API-t hív és tömegesen ír — egy elszabadult kliens percek
   // alatt megterhelné az AniList-kvótánkat és az adatbázist.
   if (!(await rateLimit('import', String(userId), 5, 3600))) {
-    return NextResponse.json({ error: 'Túl sok import egymás után. Próbáld egy óra múlva.' }, { status: 429 })
+    return apiError('tooManyImports', 429)
   }
   const body = await req.json().catch(() => null)
   const username = String(body?.username ?? '').trim()
-  if (!username) return NextResponse.json({ error: 'Felhasználónév kötelező' }, { status: 400 })
+  if (!username) return apiError('usernameRequired', 400)
 
   let entries
   try {
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `AniList: ${String(e)}` }, { status: 502 })
   }
   if (!entries.length) {
-    return NextResponse.json({ error: 'Üres vagy privát lista ezen a néven' }, { status: 404 })
+    return apiError('emptyOrPrivateList', 404)
   }
 
   const rows: ImportRow[] = entries.map((e) => {

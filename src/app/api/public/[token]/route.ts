@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { anime, favoriteCharacters, settings, title, users } from '@/db/schema'
 import { toPublicAnime, toPublicPinned } from '@/lib/public-view'
 import { and, eq, inArray } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +14,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ token: str
   const tokenRows = await db.select().from(settings).where(eq(settings.key, 'publicToken'))
   const match = tokenRows.find((r) => r.value === token)
   if (!match) {
-    return NextResponse.json({ error: 'Érvénytelen vagy visszavont link' }, { status: 404 })
+    return apiError('invalidRevokedLink', 404)
   }
 
   const [owner] = await db.select().from(users).where(eq(users.id, match.userId))

@@ -3,6 +3,7 @@ import { and, desc, eq, gte, isNotNull } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { title } from '@/db/schema'
 import { trendingSeasonParams, TRENDING_LIMIT } from '@/lib/trending'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,6 @@ export async function GET() {
     return NextResponse.json({ seasonal, popular, season: s })
   } catch (e) {
     console.error('trending failed:', e)
-    return NextResponse.json({ error: 'A felkapott lista most nem elérhető' }, { status: 502 })
+    return apiError('trendingUnavailable', 502)
   }
 }

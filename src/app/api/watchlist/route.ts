@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { watchlistItems } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { and, desc, eq, sql } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   const anilistId = Number(body?.anilistId)
   const title = String(body?.title ?? '').trim()
   if (!Number.isInteger(anilistId) || anilistId <= 0 || !title) {
-    return NextResponse.json({ error: 'anilistId és title kötelező' }, { status: 400 })
+    return apiError('anilistIdTitleRequired', 400)
   }
   const [row] = await db.insert(watchlistItems)
     .values({
@@ -43,7 +44,7 @@ export async function PATCH(req: NextRequest) {
   const id = Number(body?.id)
   const delta = Number(body?.delta)
   if (!Number.isInteger(id) || ![1, -1].includes(delta)) {
-    return NextResponse.json({ error: 'id és delta (±1) kötelező' }, { status: 400 })
+    return apiError('idDeltaRequired', 400)
   }
   const [row] = await db.update(watchlistItems)
     .set({ watchedEpisodes: sql`greatest(${watchlistItems.watchedEpisodes} + ${delta}, 0)` })
@@ -58,7 +59,7 @@ export async function DELETE(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => null)
   const id = Number(body?.id)
-  if (!Number.isInteger(id)) return NextResponse.json({ error: 'id kötelező' }, { status: 400 })
+  if (!Number.isInteger(id)) return apiError('idRequired', 400)
   const [deleted] = await db.delete(watchlistItems)
     .where(and(eq(watchlistItems.id, id), eq(watchlistItems.userId, userId)))
     .returning({ id: watchlistItems.id })

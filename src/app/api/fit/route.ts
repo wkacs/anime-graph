@@ -4,6 +4,7 @@ import { anime, title } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { buildTasteVector, computeFit, computeDropRisk } from '@/lib/fit-score'
 import { and, eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,13 +14,13 @@ export async function GET(req: NextRequest) {
   const userId = await requireUserId()
   const titleId = Number(new URL(req.url).searchParams.get('titleId'))
   if (!Number.isInteger(titleId) || titleId <= 0) {
-    return NextResponse.json({ error: 'titleId kötelező' }, { status: 400 })
+    return apiError('titleIdRequired', 400)
   }
   if (!userId) return NextResponse.json({ fit: null, authed: false })
 
   const [target] = await db.select({ genres: title.genres, tags: title.tags })
     .from(title).where(and(eq(title.id, titleId), eq(title.isAdult, 0)))
-  if (!target) return NextResponse.json({ error: 'nincs ilyen cím' }, { status: 404 })
+  if (!target) return apiError('noSuchTitle', 404)
 
   const items = await db.select({
     genres: anime.genres, tags: anime.tags, status: anime.status, myScore: anime.myScore,

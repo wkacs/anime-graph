@@ -4,6 +4,7 @@ import { title } from '@/db/schema'
 import { type BrowseFilters } from '@/lib/browse'
 import { browseWhere, browseOrder, resolveSeason } from '@/lib/browse-local'
 import { and, eq, sql } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     const perPage = 30
     if (sp.get('random') === '1') {
       const [pick] = await db.select().from(title).where(where).orderBy(sql`random()`).limit(1)
-      if (!pick) return NextResponse.json({ error: 'Nincs találat ezekkel a szűrőkkel' }, { status: 404 })
+      if (!pick) return apiError('noResultsFilters', 404)
       return NextResponse.json({ media: [pick] })
     }
     const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(title).where(where)
@@ -46,6 +47,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ total, media })
   } catch (e) {
     console.error('browse failed:', e)
-    return NextResponse.json({ error: 'A böngésző most nem elérhető' }, { status: 502 })
+    return apiError('browseUnavailable', 502)
   }
 }

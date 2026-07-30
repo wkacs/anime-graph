@@ -3,6 +3,7 @@ import { db } from '@/db/client'
 import { title } from '@/db/schema'
 import { leaderboardQuery, parseLeaderboardTab, LEADERBOARD_LIMIT } from '@/lib/leaderboard'
 import { and, eq } from 'drizzle-orm'
+import { apiError } from '@/lib/api-error'
 
 // PUBLIKUS route (middleware-whitelisten) — csak katalogus-adatot ad ki, user-adatot nem.
 export async function GET(req: NextRequest) {
@@ -30,6 +31,6 @@ export async function GET(req: NextRequest) {
     )
   } catch (e) {
     console.error('leaderboard failed:', e)
-    return NextResponse.json({ error: 'A toplista most nem elérhető' }, { status: 502 })
+    return apiError('leaderboardUnavailable', 502)
   }
 }
