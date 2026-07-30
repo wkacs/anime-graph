@@ -32,18 +32,19 @@ const notoJp = Noto_Sans_JP({
 });
 
 // Statikus metaadat: a getTranslations() dinamikus API-t hívna, ami az ISR-elt
-// katalógus-oldalakat 500-azná (lásd src/i18n/request.ts).
+// katalógus-oldalakat 500-azná (lásd src/i18n/request.ts). A kanonikus
+// SEO-nyelv angol, ezért a metaadat is az.
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.APP_URL || 'http://localhost:3000'),
-  title: { default: 'Anime Graph — a lista, ami dolgozik neked', template: '%s | Anime Graph' },
-  description: 'Személyes anime- és manga-követő ízlésalapú felfedezéssel, publikus katalógussal és MAL/AniList-importtal.',
+  title: { default: 'Anime Graph — the list that works for you', template: '%s | Anime Graph' },
+  description: 'Personal anime and manga tracker with taste-based discovery, a public catalogue and MAL/AniList import.',
   keywords: ['anime tracker', 'manga tracker', 'anime recommendations', 'AniList import', 'MAL import'],
   openGraph: {
-    type: 'website', siteName: 'Anime Graph', title: 'Anime Graph — a lista, ami dolgozik neked',
-    description: 'Személyes anime- és manga-követő ízlésalapú felfedezéssel.',
+    type: 'website', siteName: 'Anime Graph', title: 'Anime Graph — the list that works for you',
+    description: 'Personal anime and manga tracker with taste-based discovery.',
     images: [{ url: '/opengraph-image' }],
   },
-  twitter: { card: 'summary_large_image', title: 'Anime Graph', description: 'A lista, ami dolgozik neked.', images: ['/opengraph-image'] },
+  twitter: { card: 'summary_large_image', title: 'Anime Graph', description: 'The list that works for you.', images: ['/opengraph-image'] },
 };
 
 export const viewport = {

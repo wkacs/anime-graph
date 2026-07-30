@@ -232,7 +232,7 @@ export default async function CatalogTitlePage({
                     genres={[r.type.toLowerCase().replace('_', ' ')]}
                     href={local ? canonicalPath(local.mediaType, local.slug) : undefined}
                     footer={local ? (
-                      <Link href={canonicalPath(local.mediaType, local.slug)} className="label-mono hover:text-text-1">Megnyitás →</Link>
+                      <Link href={canonicalPath(local.mediaType, local.slug)} className="label-mono hover:text-text-1">Open →</Link>
                     ) : (
                       <a href={`https://anilist.co/anime/${r.anilistId}`} target="_blank" rel="noreferrer" className="label-mono hover:text-text-1">AniList ↗</a>
                     )}

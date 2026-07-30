@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useTranslations } from 'next-intl'
 import { scoreColor } from '@/lib/score-color'
 import type { CompareResult } from '@/lib/compare'
 
@@ -12,6 +13,7 @@ type GroupPick = { anilistId: number; title: string; coverUrl: string | null; sl
 type GroupResult = { members: string[]; picks: GroupPick[] }
 
 export default function VsPage() {
+  const t = useTranslations('vs')
   const [username, setUsername] = useState('')
   const [mode, setMode] = useState<'anilist' | 'internal'>('anilist')
   const [loading, setLoading] = useState(false)
@@ -44,7 +46,7 @@ export default function VsPage() {
     })
     const json = await res.json()
     setLoading(false)
-    if (!res.ok) { setError(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setError(json.error ?? t('genericError')); return }
     setResult(json)
   }
 
@@ -57,7 +59,7 @@ export default function VsPage() {
     })
     const json = await res.json()
     setDuoLoading(false)
-    if (!res.ok) { setDuoError(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setDuoError(json.error ?? t('genericError')); return }
     setDuo(json.picks ?? [])
   }
 
@@ -71,7 +73,7 @@ export default function VsPage() {
     })
     const json = await res.json()
     setGroupLoading(false)
-    if (!res.ok) { setGroupError(json.error ?? 'Hiba történt'); return }
+    if (!res.ok) { setGroupError(json.error ?? t('genericError')); return }
     setGroup(json)
   }
 
@@ -87,17 +89,15 @@ export default function VsPage() {
   return (
     <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">VS — ízlés-összehasonlítás</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="text-sm text-text-2 mt-1">
-          {mode === 'anilist'
-            ? 'Írd be egy barátod AniList-nevét (publikus listával), és megnézzük, mennyire passzoltok.'
-            : 'Írd be egy itteni regisztrált felhasználó nevét, és összevetjük a listáitokat.'}
+          {mode === 'anilist' ? t('introAnilist') : t('introInternal')}
         </p>
       </div>
 
       <div className="glass rounded-3xl p-5 flex flex-wrap items-center gap-2">
         <div className="flex rounded-full border border-white/10 overflow-hidden">
-          {([['anilist', 'AniList user'], ['internal', 'Belső user']] as const).map(([m, label]) => (
+          {([['anilist', t('modeAnilist')], ['internal', t('modeInternal')]] as const).map(([m, label]) => (
             <button
               key={m}
               onClick={() => { setMode(m); setError(''); setResult(null) }}
@@ -113,11 +113,11 @@ export default function VsPage() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') run() }}
-          placeholder={mode === 'anilist' ? 'AniList felhasználónév' : 'Belső felhasználónév'}
+          placeholder={mode === 'anilist' ? t('placeholderAnilist') : t('placeholderInternal')}
           className="field flex-1 min-w-48 rounded-full px-4 py-2.5 text-sm"
         />
         <button onClick={run} disabled={loading || !username.trim()} className="btn-solid px-5 py-2.5 text-sm">
-          {loading ? 'Összevetés…' : 'Összevetés'}
+          {loading ? t('comparing') : t('compareCta')}
         </button>
       </div>
 
@@ -128,24 +128,24 @@ export default function VsPage() {
           <div className="grid grid-cols-3 gap-4">
             <div className="glass rounded-3xl px-5 py-4 text-center">
               <p className="text-3xl font-semibold tabular-nums">{result.overlapPct}%</p>
-              <p className="label-mono mt-1">átfedés</p>
+              <p className="label-mono mt-1">{t('overlap')}</p>
             </div>
             <div className="glass rounded-3xl px-5 py-4 text-center">
               <p className="text-3xl font-semibold tabular-nums">{result.commonCount}</p>
-              <p className="label-mono mt-1">közös anime</p>
+              <p className="label-mono mt-1">{t('commonAnime')}</p>
             </div>
             <div className="glass rounded-3xl px-5 py-4 text-center">
               <p className="text-3xl font-semibold tabular-nums">{result.theirsCount}</p>
-              <p className="label-mono mt-1">{result.username} listája</p>
+              <p className="label-mono mt-1">{t('theirList', { name: result.username })}</p>
             </div>
           </div>
 
           {mode === 'internal' && result.otherUserId != null && (
             <section>
               <div className="flex items-center justify-between mb-2">
-                <p className="label-mono">Mit nézzünk ketten?</p>
+                <p className="label-mono">{t('duoHeading')}</p>
                 <button onClick={runDuo} disabled={duoLoading} className="btn-solid px-4 py-2 text-sm">
-                  {duoLoading ? 'AI gondolkodik…' : duo ? 'Újra' : 'AI-ajánlás közös estére'}
+                  {duoLoading ? t('duoThinking') : duo ? t('duoAgain') : t('duoCta')}
                 </button>
               </div>
               {duoError && <p className="text-sm text-[color:var(--status-dropped)]">{duoError}</p>}
@@ -164,7 +164,7 @@ export default function VsPage() {
                         disabled={added.has(p.anilistId)}
                         className="btn-ghost border border-white/10 px-2.5 py-1 text-xs shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
                       >
-                        {added.has(p.anilistId) ? '✓' : '+ Terv'}
+                        {added.has(p.anilistId) ? '✓' : t('addPlan')}
                       </button>
                     </li>
                   ))}
@@ -175,14 +175,14 @@ export default function VsPage() {
 
           {result.commonFavorites.length > 0 && (
             <section>
-              <p className="label-mono mb-2">Közös kedvencek</p>
+              <p className="label-mono mb-2">{t('commonFavorites')}</p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {result.commonFavorites.map((f) => (
                   <li key={f.anilistId} className="glass rounded-2xl p-3 flex gap-3 items-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {f.coverUrl && <img src={f.coverUrl} alt="" className="w-10 rounded-lg" />}
                     <span className="flex-1 min-w-0 text-sm font-medium truncate">{f.title}</span>
-                    <span className="label-mono shrink-0">te {f.myScore} · ő {f.theirScore}</span>
+                    <span className="label-mono shrink-0">{t('youVsThem', { mine: f.myScore ?? '–', theirs: f.theirScore ?? '–' })}</span>
                   </li>
                 ))}
               </ul>
@@ -191,20 +191,21 @@ export default function VsPage() {
 
           {result.theyRecommend.length > 0 && (
             <section>
-              <p className="label-mono mb-2">{result.username} látta — te még nem</p>
+              <p className="label-mono mb-2">{t('theyRecommend', { name: result.username })}</p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {result.theyRecommend.map((t) => (
-                  <li key={t.anilistId} className="glass rounded-2xl p-3 flex gap-3 items-center">
+                {/* `item`, nem `t`: a fordító hookot árnyékolná */}
+                {result.theyRecommend.map((item) => (
+                  <li key={item.anilistId} className="glass rounded-2xl p-3 flex gap-3 items-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {t.coverUrl && <img src={t.coverUrl} alt="" className="w-10 rounded-lg" />}
-                    <span className="flex-1 min-w-0 text-sm font-medium truncate">{t.title}</span>
-                    {t.score != null && <span className="label-mono shrink-0">ő: {t.score}/10</span>}
+                    {item.coverUrl && <img src={item.coverUrl} alt="" className="w-10 rounded-lg" />}
+                    <span className="flex-1 min-w-0 text-sm font-medium truncate">{item.title}</span>
+                    {item.score != null && <span className="label-mono shrink-0">{t('theirScore', { score: item.score })}</span>}
                     <button
-                      onClick={() => addToPlanned(t.anilistId)}
-                      disabled={added.has(t.anilistId)}
+                      onClick={() => addToPlanned(item.anilistId)}
+                      disabled={added.has(item.anilistId)}
                       className="btn-ghost border border-white/10 px-2.5 py-1 text-xs shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
                     >
-                      {added.has(t.anilistId) ? '✓' : '+ Terv'}
+                      {added.has(item.anilistId) ? '✓' : t('addPlan')}
                     </button>
                   </li>
                 ))}
@@ -214,7 +215,7 @@ export default function VsPage() {
 
           {result.iRecommend.length > 0 && (
             <section>
-              <p className="label-mono mb-2">Te láttad — ajánld neki</p>
+              <p className="label-mono mb-2">{t('iRecommend')}</p>
               <ul className="flex flex-wrap gap-2">
                 {result.iRecommend.map((m) => (
                   <li key={m.anilistId} className="glass rounded-full px-4 py-1.5 text-sm">
@@ -228,37 +229,32 @@ export default function VsPage() {
       )}
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Klub-ajánló</p>
+        <p className="label-mono mb-1">{t('clubHeading')}</p>
         <p className="text-sm text-text-2 mb-2">
-          Mit nézzen a csoport? Add meg a többiek felhasználónevét vesszővel — a közös ízlés-metszetből ajánlunk.
+          {t('clubIntro')}
         </p>
         <details className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-text-2 mb-4">
-          <summary className="cursor-pointer text-text-1 select-none">Hogyan működik a klub-ajánló?</summary>
-          <p className="mt-2 leading-relaxed">
-            Minden tagra kiszámoljuk, mennyire illik a cím az ízléséhez (0–100). A csoport-pontszám
-            60% átlag + 40% minimum — a legalacsonyabb érték súlyozása a leggyengébb láncszemet védi,
-            hogy senkinek ne legyen rossz este. Ha valakinél 35 alá esne az egyezés, a cím kiesik (vétó).
-            Legalább 2 tagnál kell ismert ízlés-adat; a „–” azt jelenti, arról a tagról nincs elég adat.
-          </p>
+          <summary className="cursor-pointer text-text-1 select-none">{t('clubHow')}</summary>
+          <p className="mt-2 leading-relaxed">{t('clubHowText')}</p>
         </details>
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={groupNames}
             onChange={(e) => setGroupNames(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') runGroup() }}
-            placeholder="pl. demo, marci, anna"
+            placeholder={t('clubPlaceholder')}
             className="field flex-1 min-w-[200px] px-4 py-2 text-sm"
           />
           <button onClick={runGroup} disabled={groupLoading} className="btn-solid px-4 py-2 text-sm">
-            {groupLoading ? 'Számolás…' : 'Ajánlj a klubnak'}
+            {groupLoading ? t('clubCalc') : t('clubCta')}
           </button>
         </div>
         {groupError && <p className="text-sm text-[color:var(--status-dropped)] mt-3">{groupError}</p>}
         {group && (
           <>
-            <p className="label-mono mt-5 mb-2">tagok: {group.members.join(' · ')}</p>
+            <p className="label-mono mt-5 mb-2">{t('members', { names: group.members.join(' · ') })}</p>
             {group.picks.length === 0 && (
-              <p className="text-sm text-text-3">Nincs elég közös metszet — bővítsétek a listákat, vagy kevesebb taggal próbáljátok.</p>
+              <p className="text-sm text-text-3">{t('clubEmpty')}</p>
             )}
             <ul className="flex flex-col gap-2">
               {group.picks.map((p) => (
@@ -270,16 +266,16 @@ export default function VsPage() {
                     <div className="flex flex-col gap-1 mt-1.5">
                       {p.perMember.map((m, i) => (
                         <div key={`${group.members[i] ?? i}`} className="flex items-center gap-2">
-                          <span className="label-mono !text-[9px] w-16 shrink-0 truncate">{group.members[i] ?? `${i + 1}. tag`}</span>
+                          <span className="label-mono !text-[9px] w-16 shrink-0 truncate">{group.members[i] ?? t('memberN', { n: i + 1 })}</span>
                           {m == null ? (
-                            <span className="text-[10px] text-text-3">nincs adat</span>
+                            <span className="text-[10px] text-text-3">{t('noData')}</span>
                           ) : (
                             <>
                               <span className="h-1.5 rounded-full bg-white/10 flex-1 max-w-36 overflow-hidden">
                                 <span
                                   className={`block h-full rounded-full ${m < 45 ? 'bg-amber-400/70' : 'bg-white/60'}`}
                                   style={{ width: `${m}%` }}
-                                  title={m < 45 ? 'vétó-közeli egyezés' : undefined}
+                                  title={m < 45 ? t('vetoNear') : undefined}
                                 />
                               </span>
                               <span className={`font-mono text-[10px] shrink-0 ${m < 45 ? 'text-amber-300/90' : 'text-text-2'}`}>{m}%</span>
@@ -300,7 +296,7 @@ export default function VsPage() {
                     disabled={added.has(p.anilistId)}
                     className="btn-ghost border border-white/10 px-2.5 py-1 text-xs shrink-0 disabled:text-[color:var(--status-watching)] disabled:border-transparent"
                   >
-                    {added.has(p.anilistId) ? '✓' : '+ Terv'}
+                    {added.has(p.anilistId) ? '✓' : t('addPlan')}
                   </button>
                 </li>
               ))}

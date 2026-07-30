@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import PushToggle from '@/components/PushToggle'
 import ProfileReveal from '@/components/ProfileReveal'
 import SyncAccounts from '@/components/SyncAccounts'
@@ -12,6 +13,7 @@ import { readMalExport } from '@/lib/mal-export'
 const CONFIG_KEY = 'anime-graph-config'
 
 export default function BeallitasokPage() {
+  const t = useTranslations('settings')
   const [likes, setLikes] = useState('')
   const [dislikes, setDislikes] = useState('')
   const [saved, setSaved] = useState(false)
@@ -87,7 +89,7 @@ export default function BeallitasokPage() {
     setExporting(true)
     try {
       const res = await fetch('/api/account/export')
-      if (!res.ok) throw new Error('Az export most nem sikerült.')
+      if (!res.ok) throw new Error(t('exportFailed'))
       const blob = await res.blob()
       const disposition = res.headers.get('content-disposition') ?? ''
       const filename = disposition.match(/filename="?([^";]+)"?/)?.[1] ?? 'anime-graph-export.json'
@@ -109,7 +111,7 @@ export default function BeallitasokPage() {
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) {
-        setDeleteError(data?.error === 'invalid password' ? 'Hibás jelszó.' : 'A törlés nem sikerült.')
+        setDeleteError(data?.error === 'invalid password' ? t('wrongPassword') : t('deleteFailed'))
         return
       }
       localStorage.clear()
@@ -131,8 +133,8 @@ export default function BeallitasokPage() {
     const json = await res.json()
     setImporting(null)
     setImportResult(res.ok
-      ? `✓ ${json.added} új, ${json.updated} frissítve`
-      : `✕ ${json.error ?? 'Hiba történt'}`)
+      ? t('importOk', { added: json.added, updated: json.updated })
+      : `✕ ${json.error ?? t('genericError')}`)
     if (res.ok && json.added + json.updated > 0) setRevealOpen(true)
   }
 
@@ -144,7 +146,7 @@ export default function BeallitasokPage() {
       xml = await readMalExport(file)
     } catch (e) {
       setImporting(null)
-      setImportResult(`✕ ${e instanceof Error ? e.message : 'A fájl megnyitása nem sikerült'}`)
+      setImportResult(`✕ ${e instanceof Error ? e.message : t('fileOpenFailed')}`)
       return
     }
     const res = await fetch('/api/import/mal', {
@@ -155,23 +157,21 @@ export default function BeallitasokPage() {
     const json = await res.json()
     setImporting(null)
     setImportResult(res.ok
-      ? `✓ ${json.added} új, ${json.updated} frissítve${json.notFound ? `, ${json.notFound} nem található AniList-en` : ''}`
-      : `✕ ${json.error ?? 'Hiba történt'}`)
+      ? `${t('importOk', { added: json.added, updated: json.updated })}${json.notFound ? t('importNotFound', { n: json.notFound }) : ''}`
+      : `✕ ${json.error ?? t('genericError')}`)
     if (res.ok && json.added + json.updated > 0) setRevealOpen(true)
   }
 
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
-      <h1 className="text-xl font-semibold tracking-tight">Beállítások</h1>
+      <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
 
       <EmailPrompt />
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between gap-4">
         <div>
-          <p className="label-mono mb-1">Nyelv / Language</p>
-          <p className="text-sm text-text-2">
-            Az alkalmazás és az AI-válaszok nyelve.
-          </p>
+          <p className="label-mono mb-1">{t('langKicker')}</p>
+          <p className="text-sm text-text-2">{t('langText')}</p>
         </div>
         <LocaleSwitcher />
       </section>
@@ -179,69 +179,61 @@ export default function BeallitasokPage() {
       <ProfileSettings />
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Ízlés-profil</p>
-        <p className="text-sm text-text-2 mb-5">
-          Soronként egy dolog. Ezek minden ajánlásnál bemennek az AI-nak a vélemény-kivonataid mellé.
-        </p>
+        <p className="label-mono mb-1">{t('tasteKicker')}</p>
+        <p className="text-sm text-text-2 mb-5">{t('tasteText')}</p>
         <label className="block mb-4">
-          <span className="text-sm text-text-1 mb-1.5 block">Nagyon szeretem</span>
+          <span className="text-sm text-text-1 mb-1.5 block">{t('likesLabel')}</span>
           <textarea
             value={likes}
             onChange={(e) => setLikes(e.target.value)}
             rows={5}
-            placeholder={'pl.\nokos time-travel sztorik\njó zenéjű openingek\nrövid, feszes évadok'}
+            placeholder={t('likesPlaceholder')}
             className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
           />
         </label>
         <label className="block mb-4">
-          <span className="text-sm text-text-1 mb-1.5 block">Nem szeretem</span>
+          <span className="text-sm text-text-1 mb-1.5 block">{t('dislikesLabel')}</span>
           <textarea
             value={dislikes}
             onChange={(e) => setDislikes(e.target.value)}
             rows={5}
-            placeholder={'pl.\nvéget nem érő filler részek\nfanservice öncélúan\n300+ részes sorozatok'}
+            placeholder={t('dislikesPlaceholder')}
             className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
           />
         </label>
         <div className="flex items-center gap-3">
           <button onClick={saveTaste} disabled={saving} className="btn-solid px-5 py-2 text-sm">
-            {saving ? 'Mentés…' : 'Mentés'}
+            {saving ? t('saving') : t('save')}
           </button>
-          {saved && <span className="label-mono text-[color:var(--status-watching)]">✓ mentve</span>}
+          {saved && <span className="label-mono text-[color:var(--status-watching)]">{t('savedBadge')}</span>}
         </div>
       </section>
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Gráf</p>
-        <p className="text-sm text-text-2 mb-4">
-          A gráf-oldalon beállított hierarchia (szintek, sorrend, élek) elmentése alapértelmezettként
-          — más eszközön is ez töltődik be.
-        </p>
+        <p className="label-mono mb-1">{t('graphKicker')}</p>
+        <p className="text-sm text-text-2 mb-4">{t('graphText')}</p>
         <div className="flex items-center gap-3">
           <button onClick={saveHierarchyDefault} className="btn-ghost border border-white/10 px-5 py-2 text-sm">
-            Jelenlegi elrendezés mentése
+            {t('graphSave')}
           </button>
-          {hierarchySaved && <span className="label-mono text-[color:var(--status-watching)]">✓ mentve</span>}
+          {hierarchySaved && <span className="label-mono text-[color:var(--status-watching)]">{t('savedBadge')}</span>}
         </div>
       </section>
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Értesítések</p>
-        <p className="text-sm text-text-2 mb-3">Push, amikor egy követett animéd új része adásba kerül.</p>
+        <p className="label-mono mb-1">{t('notifKicker')}</p>
+        <p className="text-sm text-text-2 mb-3">{t('notifText')}</p>
         <PushToggle />
       </section>
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Import</p>
-        <p className="text-sm text-text-2 mb-5">
-          Meglévő listád behúzása pontszámokkal és státusszal. Ami már fent van, annak
-          a státusza/pontja frissül.
-        </p>
+        <p className="label-mono mb-1">{t('importKicker')}</p>
+        <p className="text-sm text-text-2 mb-5">{t('importText')}</p>
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <input
             value={anilistUser}
             onChange={(e) => setAnilistUser(e.target.value)}
-            placeholder="AniList felhasználónév"
+            placeholder={t('anilistPlaceholder')}
             className="field px-4 py-2 text-sm w-56"
           />
           <button
@@ -249,12 +241,12 @@ export default function BeallitasokPage() {
             disabled={importing !== null || !anilistUser.trim()}
             className="btn-solid px-4 py-2 text-sm"
           >
-            {importing === 'anilist' ? 'Import…' : 'AniList import'}
+            {importing === 'anilist' ? t('importing') : t('anilistImportCta')}
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className={`btn-ghost border border-white/10 px-4 py-2 text-sm cursor-pointer ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
-            {importing === 'mal' ? 'Import…' : 'MAL export (.xml vagy .xml.gz) feltöltése'}
+            {importing === 'mal' ? t('importing') : t('malUpload')}
             <input
               type="file"
               accept=".xml,.gz,application/xml,text/xml,application/gzip"
@@ -273,18 +265,15 @@ export default function BeallitasokPage() {
       <SyncAccounts />
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Publikus link</p>
-        <p className="text-sm text-text-2 mb-4">
-          Jelszó nélküli, csak-olvasható nézet a gyűjteményedről (borítók, státuszok, pontok).
-          Vélemények és ízlés-adatok nem látszanak.
-        </p>
+        <p className="label-mono mb-1">{t('publicKicker')}</p>
+        <p className="text-sm text-text-2 mb-4">{t('publicText')}</p>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={togglePublicLink} className="btn-ghost border border-white/10 px-4 py-2 text-sm">
-            {publicToken ? 'Link visszavonása' : 'Link létrehozása'}
+            {publicToken ? t('linkRevoke') : t('linkCreate')}
           </button>
           {publicToken && (
             <button onClick={copyPublicLink} className="btn-solid px-4 py-2 text-sm">
-              {copied ? '✓ Másolva' : 'Link másolása'}
+              {copied ? t('copied') : t('copyLink')}
             </button>
           )}
           {publicToken && (
@@ -294,33 +283,29 @@ export default function BeallitasokPage() {
       </section>
 
       <section className="glass rounded-3xl p-6">
-        <p className="label-mono mb-1">Adataid</p>
-        <p className="text-sm text-text-2 mb-4">
-          Letöltheted a saját listádat, beállításaidat, véleményeidet és az ajánlási előzményeidet JSON formátumban.
-        </p>
+        <p className="label-mono mb-1">{t('dataKicker')}</p>
+        <p className="text-sm text-text-2 mb-4">{t('dataText')}</p>
         <button onClick={downloadExport} disabled={exporting} className="btn-ghost border border-white/10 px-4 py-2 text-sm">
-          {exporting ? 'Export készül…' : 'Adatok letöltése'}
+          {exporting ? t('exportBusy') : t('exportCta')}
         </button>
       </section>
 
       <section className="rounded-3xl border border-red-400/25 bg-red-500/5 p-6">
-        <p className="label-mono mb-1 text-red-200">Fiók törlése</p>
-        <p className="text-sm text-text-2 mb-4">
-          Végleg törli a fiókodat és minden személyes adatodat. Ez nem vonható vissza.
-        </p>
+        <p className="label-mono mb-1 text-red-200">{t('deleteKicker')}</p>
+        <p className="text-sm text-text-2 mb-4">{t('deleteText')}</p>
         <div className="grid gap-3 max-w-md">
           <input
             type="password"
             autoComplete="current-password"
             value={deletePassword}
             onChange={(e) => setDeletePassword(e.target.value)}
-            placeholder="Jelenlegi jelszó"
+            placeholder={t('currentPassword')}
             className="field px-4 py-2 text-sm"
           />
           <input
             value={deleteConfirmation}
             onChange={(e) => setDeleteConfirmation(e.target.value)}
-            placeholder="Írd be: DELETE"
+            placeholder={t('typeDelete')}
             className="field px-4 py-2 text-sm"
           />
           <button
@@ -328,7 +313,7 @@ export default function BeallitasokPage() {
             disabled={deleting || !deletePassword || deleteConfirmation !== 'DELETE'}
             className="btn-ghost border border-red-400/35 px-4 py-2 text-sm text-red-200 hover:bg-red-500/10 disabled:opacity-40"
           >
-            {deleting ? 'Fiók törlése…' : 'Fiók végleges törlése'}
+            {deleting ? t('deleting') : t('deleteCta')}
           </button>
           {deleteError && <p className="text-sm text-red-200">{deleteError}</p>}
         </div>
@@ -336,8 +321,8 @@ export default function BeallitasokPage() {
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between">
         <div>
-          <p className="label-mono mb-1">Onboarding</p>
-          <p className="text-sm text-text-2">Első-lépések varázsló és oldal-túrák újraindítása.</p>
+          <p className="label-mono mb-1">{t('onboardingKicker')}</p>
+          <p className="text-sm text-text-2">{t('onboardingText')}</p>
         </div>
         <button
           onClick={() => {
@@ -348,17 +333,17 @@ export default function BeallitasokPage() {
           }}
           className="btn-ghost border border-white/10 px-5 py-2 text-sm"
         >
-          Újraindítás
+          {t('restart')}
         </button>
       </section>
 
       <section className="glass rounded-3xl p-6 flex items-center justify-between">
         <div>
-          <p className="label-mono mb-1">Munkamenet</p>
-          <p className="text-sm text-text-2">Kijelentkezés erről az eszközről.</p>
+          <p className="label-mono mb-1">{t('sessionKicker')}</p>
+          <p className="text-sm text-text-2">{t('sessionText')}</p>
         </div>
         <button onClick={logout} className="btn-ghost border border-white/10 px-5 py-2 text-sm hover:text-[color:var(--status-dropped)]">
-          Kijelentkezés
+          {t('logout')}
         </button>
       </section>
 

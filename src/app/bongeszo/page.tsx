@@ -77,11 +77,13 @@ export default function BrowsePage() {
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    // vendégként nem hívjuk: 401-et zajongana a konzolba, és úgyis üres
+    if (authenticated !== true) return
     fetch('/api/anime')
       .then((r) => (r.ok ? r.json() : { anime: [] }))
       .then((j: { anime: ApiAnime[] }) => setOwnIds(new Map(j.anime.map((a) => [a.anilistId, a.id]))))
       .catch(() => { /* linkek preview-ra esnek */ })
-  }, [])
+  }, [authenticated])
 
   // üres állapot: felkapott címek a lokális katalógusból
   useEffect(() => {
@@ -165,14 +167,14 @@ export default function BrowsePage() {
         genres={[]}
         href={hrefFor(h)}
         badge={fit != null ? (
-          <ScoreBadge score={fit} suffix="%" title="Ennyire illik az ízlésedhez" />
+          <ScoreBadge score={fit} suffix="%" title={tr('fitBadgeTitle')} />
         ) : h.communityScore != null ? (
           <span className="surface-2 rounded-full px-2 py-0.5 font-mono text-[11px] text-text-1">
             {h.communityScore.toFixed(1)}
           </span>
         ) : undefined}
         footer={owned ? (
-          <span className="label-mono text-[color:var(--status-watching)]">✓ listán</span>
+          <span className="label-mono text-[color:var(--status-watching)]">{tr('onList')}</span>
         ) : (
           <span className="flex flex-wrap gap-1">
             {ADD_OPTIONS.map((o) => (
@@ -211,8 +213,8 @@ export default function BrowsePage() {
   return (
     <PageShell className="flex flex-col gap-10">
       <div>
-        <p className="label-mono mb-2">Böngésző</p>
-        <h1 className="display-l text-text-1">Katalógus-keresés</h1>
+        <p className="label-mono mb-2">{tr('eyebrow')}</p>
+        <h1 className="display-l text-text-1">{tr('heading')}</h1>
       </div>
 
       {authenticated === true && <TourSpotlight page="bongeszo" steps={BONGESZO_TOUR} />}
@@ -225,7 +227,7 @@ export default function BrowsePage() {
           ref={searchRef}
           value={search}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Keresés a katalógusban…"
+          placeholder={tr('searchPlaceholder')}
           className="field rounded-full px-4 py-2 w-64"
         />
         <div className="flex rounded-full border border-white/10 overflow-hidden">
@@ -241,7 +243,7 @@ export default function BrowsePage() {
             </button>
           ))}
         </div>
-        {([['current', 'Aktuális szezon'], ['next', 'Következő szezon']] as const).map(([k, label]) => (
+        {([['current', tr('seasonCurrent')], ['next', tr('seasonNext')]] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => {
@@ -259,19 +261,19 @@ export default function BrowsePage() {
         {studioFilter && (
           <Chip
             variant="link"
-            title="Stúdió-szűrő törlése"
+            title={tr('clearStudioTitle')}
             onDismiss={() => { setStudioFilter(null); syncFilterUrl(null, seasonKey) }}
           >
-            Stúdió: {studioFilter}
+            {tr('studioChip', { name: studioFilter })}
           </Chip>
         )}
         {(studioFilter || seasonKey) && (
           <Chip
             variant="link"
-            title="Minden szűrő törlése"
+            title={tr('clearAllTitle')}
             onDismiss={() => { setStudioFilter(null); setSeasonKey(null); syncFilterUrl(null, null) }}
           >
-            Töröl mind
+            {tr('clearAllChip')}
           </Chip>
         )}
       </div>
@@ -282,10 +284,10 @@ export default function BrowsePage() {
         (studioFilter || seasonKey) ? (
           <section>
             <SectionHeader
-              eyebrow="Szűrve"
+              eyebrow={tr('filteredEyebrow')}
               title={[
-                studioFilter ? `Stúdió: ${studioFilter}` : null,
-                seasonKey === 'current' ? 'Aktuális szezon' : seasonKey === 'next' ? 'Következő szezon' : null,
+                studioFilter ? tr('studioChip', { name: studioFilter }) : null,
+                seasonKey === 'current' ? tr('seasonCurrent') : seasonKey === 'next' ? tr('seasonNext') : null,
               ].filter(Boolean).join(' · ')}
             />
             {filtered == null ? (
@@ -294,14 +296,12 @@ export default function BrowsePage() {
               </div>
             ) : filtered.length === 0 ? (
               <EmptyState
-                eyebrow="Szűrő"
-                title={seasonKey === 'next' ? 'Még kevés bejelentett cím' : 'Nincs találat'}
-                text={seasonKey === 'next'
-                  ? 'A következő szezon kínálatát a katalógus-sync fokozatosan bővíti.'
-                  : 'Próbáld más stúdióval vagy szezonnal.'}
+                eyebrow={tr('filterEyebrow')}
+                title={seasonKey === 'next' ? tr('fewAnnounced') : tr('noResults')}
+                text={seasonKey === 'next' ? tr('nextSeasonHint') : tr('tryOtherFilter')}
                 action={
                   <Button onClick={() => { setStudioFilter(null); setSeasonKey(null); syncFilterUrl(null, null) }}>
-                    Szűrők törlése
+                    {tr('clearFilters')}
                   </Button>
                 }
               />
@@ -316,8 +316,8 @@ export default function BrowsePage() {
             {trendingHits.seasonal.length > 0 && (
               <section>
                 <SectionHeader
-                  eyebrow="Felkapott most"
-                  title={trending ? `${SEASON_LABELS[trending.season.season] ?? trending.season.season} ${trending.season.year}` : 'Ebben a szezonban'}
+                  eyebrow={tr('trendingEyebrow')}
+                  title={trending ? `${SEASON_LABELS[trending.season.season] ? tr(`season_${trending.season.season}`) : trending.season.season} ${trending.season.year}` : tr('thisSeason')}
                 />
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
                   {trendingHits.seasonal.map(cardFor)}
@@ -326,7 +326,7 @@ export default function BrowsePage() {
             )}
             {trendingHits.popular.length > 0 && (
               <section>
-                <SectionHeader eyebrow="Katalógus" title="Nálunk népszerű" />
+                <SectionHeader eyebrow={tr('catalogEyebrow')} title={tr('popularHere')} />
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-4 gap-y-8">
                   {trendingHits.popular.map(cardFor)}
                 </div>
@@ -339,9 +339,9 @@ export default function BrowsePage() {
           </div>
         ) : (
           <EmptyState
-            eyebrow="Katalógus"
-            title="Mit keresel?"
-            text="130 ezer anime és manga a saját adatbázisunkból. Írj be egy címet, vagy szűrj szezonra."
+            eyebrow={tr('catalogEyebrow')}
+            title={tr('emptyTitle')}
+            text={tr('emptyText')}
           />
         )
       ) : loading ? (
@@ -355,12 +355,12 @@ export default function BrowsePage() {
           </div>
           {hits.length === 0 && (
             <EmptyState
-              eyebrow="Keresés"
-              title="Nincs találat"
-              text={`A „${search.trim()}” kifejezésre nincs cím a katalógusban. Próbáld a romaji címmel, vagy váltsd át ${type === 'ANIME' ? 'mangára' : 'animére'}.`}
+              eyebrow={tr('searchEyebrow')}
+              title={tr('noResults')}
+              text={tr('noSearchText', { query: search.trim() })}
               action={
                 <Button onClick={() => setKind(type === 'ANIME' ? 'MANGA' : 'ANIME')}>
-                  Váltás {type === 'ANIME' ? 'mangára' : 'animére'}
+                  {type === 'ANIME' ? tr('switchToManga') : tr('switchToAnime')}
                 </Button>
               }
             />
@@ -368,13 +368,13 @@ export default function BrowsePage() {
           {hits.length > 0 && (
             <div className="flex items-center justify-center gap-4 text-sm">
               <Button size="md" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page <= 0}>
-                ← Előző
+                {tr('prev')}
               </Button>
               <span className="font-mono text-xs text-text-2 tabular-nums">
-                {page + 1}. oldal · {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + hits.length}
+                {tr('pageInfo', { page: page + 1, from: page * PAGE_SIZE + 1, to: page * PAGE_SIZE + hits.length })}
               </span>
               <Button size="md" onClick={() => setPage((p) => p + 1)} disabled={hits.length < PAGE_SIZE}>
-                Következő →
+                {tr('next')}
               </Button>
             </div>
           )}

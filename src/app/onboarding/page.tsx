@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import PushToggle from '@/components/PushToggle'
 import type { TasteProfile } from '@/lib/profile'
@@ -23,7 +24,7 @@ async function fetchSeedPool(): Promise<SeedTitle[]> {
     if (!res.ok) throw new Error(String(res.status))
     const j = await res.json() as { data?: { Page?: { media?: { id: number; title: { romaji: string }; coverImage: { large: string | null } }[] } } }
     const media = j.data?.Page?.media ?? []
-    if (!media.length) throw new Error('üres')
+    if (!media.length) throw new Error('empty')
     return media.map((m) => ({ anilistId: m.id, titleRomaji: m.title.romaji, coverUrl: m.coverImage.large }))
   } catch {
     const res = await fetch('/api/browse?sort=SCORE_DESC')
@@ -36,6 +37,7 @@ async function fetchSeedPool(): Promise<SeedTitle[]> {
 // (3) push → (4) indulás (?tour=1 → News-túra). Minden lépés kihagyható,
 // az 1.-nél megerősítéssel (enélkül üres az ajánló/gráf).
 export default function OnboardingPage() {
+  const t = useTranslations('onboarding')
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [tab, setTab] = useState<'import' | 'seed'>('import')
@@ -82,7 +84,7 @@ export default function OnboardingPage() {
       setHasList(true)
       setStep(2)
     } else {
-      setImportResult(res.ok ? 'Üres lista jött vissza — próbáld a másik fület' : `✕ ${json.error ?? 'Hiba történt'}`)
+      setImportResult(res.ok ? t('emptyImport') : `✕ ${json.error ?? t('genericError')}`)
     }
   }
 
@@ -94,7 +96,7 @@ export default function OnboardingPage() {
       xml = await readMalExport(file)
     } catch (e) {
       setImporting(null)
-      setImportResult(`✕ ${e instanceof Error ? e.message : 'A fájl megnyitása nem sikerült'}`)
+      setImportResult(`✕ ${e instanceof Error ? e.message : t('fileOpenFailed')}`)
       return
     }
     const res = await fetch('/api/import/mal', {
@@ -106,7 +108,7 @@ export default function OnboardingPage() {
       setHasList(true)
       setStep(2)
     } else {
-      setImportResult(res.ok ? 'Üres lista jött vissza — próbáld a másik fület' : `✕ ${json.error ?? 'Hiba történt'}`)
+      setImportResult(res.ok ? t('emptyImport') : `✕ ${json.error ?? t('genericError')}`)
     }
   }
 
@@ -131,12 +133,12 @@ export default function OnboardingPage() {
     router.push('/?tour=1')
   }
 
-  const stepLabel = ['Listád', 'Profilod', 'Értesítések', 'Indulás'][step - 1]
+  const stepLabel = [t('step1'), t('step2'), t('step3'), t('step4')][step - 1]
 
   return (
     <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
       <div>
-        <p className="label-mono mb-1">Első lépések · {step}/4 — {stepLabel}</p>
+        <p className="label-mono mb-1">{t('kicker', { step, label: stepLabel })}</p>
         <div className="flex gap-1.5">
           {[1, 2, 3, 4].map((s) => (
             <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-white/70' : 'bg-white/10'}`} />
@@ -147,13 +149,11 @@ export default function OnboardingPage() {
       {step === 1 && (
         <section className="glass rounded-3xl p-6 flex flex-col gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight mb-1">Hozd át az anime-életed</h1>
-            <p className="text-sm text-text-2">
-              30 másodperc, és az AI megmondja, ki vagy animenézőként — ajánlásokkal.
-            </p>
+            <h1 className="text-xl font-semibold tracking-tight mb-1">{t('s1Title')}</h1>
+            <p className="text-sm text-text-2">{t('s1Text')}</p>
           </div>
           <div className="flex gap-2">
-            {([['import', 'Van listám (MAL/AniList)'], ['seed', 'Nincs listám']] as const).map(([k, label]) => (
+            {([['import', t('tabImport')], ['seed', t('tabSeed')]] as const).map(([k, label]) => (
               <button
                 key={k}
                 onClick={() => setTab(k)}
@@ -173,15 +173,15 @@ export default function OnboardingPage() {
                   value={anilistUser}
                   onChange={(e) => setAnilistUser(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') importAnilist() }}
-                  placeholder="AniList felhasználónév"
+                  placeholder={t('anilistPlaceholder')}
                   className="field px-4 py-2 text-sm w-56"
                 />
                 <button onClick={importAnilist} disabled={importing !== null || !anilistUser.trim()} className="btn-solid px-4 py-2 text-sm">
-                  {importing === 'anilist' ? 'Import…' : 'Importálás'}
+                  {importing === 'anilist' ? t('importing') : t('importCta')}
                 </button>
               </div>
               <label className={`btn-ghost border border-white/10 px-4 py-2 text-sm cursor-pointer self-start ${importing ? 'opacity-40 pointer-events-none' : ''}`}>
-                {importing === 'mal' ? 'Import…' : 'Vagy MAL-export (.xml vagy .xml.gz) feltöltése'}
+                {importing === 'mal' ? t('importing') : t('malUpload')}
                 <input
                   type="file" accept=".xml,.gz,application/xml,text/xml,application/gzip" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) importMal(f); e.target.value = '' }}
@@ -191,9 +191,7 @@ export default function OnboardingPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              <p className="text-sm text-text-2">
-                Jelöld meg, amiket láttad és szeretted — legalább {SEED_MIN}-öt. Ebből indul az ízlés-modell.
-              </p>
+              <p className="text-sm text-text-2">{t('seedIntro', { min: SEED_MIN })}</p>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {seeds.map((s) => {
                   const on = picked.has(s.anilistId)
@@ -217,24 +215,24 @@ export default function OnboardingPage() {
                 disabled={picked.size < SEED_MIN || importing !== null}
                 className="btn-solid px-5 py-2 text-sm self-start disabled:opacity-40"
               >
-                {importing === 'seed' ? 'Mentés…' : `Tovább (${picked.size}/${SEED_MIN})`}
+                {importing === 'seed' ? t('saving') : t('seedNext', { picked: picked.size, min: SEED_MIN })}
               </button>
             </div>
           )}
 
           <button onClick={() => setSkipConfirm(true)} className="text-xs text-text-3 hover:text-text-1 self-start">
-            Kihagyom
+            {t('skip')}
           </button>
         </section>
       )}
 
       {step === 2 && (
         <section className="glass rounded-3xl p-6">
-          <p className="label-mono mb-1">Az AI elolvasta a listád</p>
-          <h1 className="text-xl font-semibold tracking-tight mb-4">Ki vagy te animenézőként?</h1>
-          {profileState === 'busy' && <p className="text-sm text-text-2 animate-pulse py-4">Olvassuk az ízlésed…</p>}
+          <p className="label-mono mb-1">{t('s2Kicker')}</p>
+          <h1 className="text-xl font-semibold tracking-tight mb-4">{t('s2Title')}</h1>
+          {profileState === 'busy' && <p className="text-sm text-text-2 animate-pulse py-4">{t('s2Busy')}</p>}
           {profileState === 'error' && (
-            <p className="text-sm text-text-3 py-4">Most nem sikerült a portré — a Stats oldalon bármikor újrapróbálhatod.</p>
+            <p className="text-sm text-text-3 py-4">{t('s2Error')}</p>
           )}
           {profile && (
             <>
@@ -246,56 +244,47 @@ export default function OnboardingPage() {
               </div>
             </>
           )}
-          <button onClick={() => setStep(3)} className="btn-solid px-5 py-2 text-sm mt-4">Tovább →</button>
+          <button onClick={() => setStep(3)} className="btn-solid px-5 py-2 text-sm mt-4">{t('next')}</button>
         </section>
       )}
 
       {step === 3 && (
         <section className="glass rounded-3xl p-6">
-          <p className="label-mono mb-1">Értesítések</p>
-          <h1 className="text-xl font-semibold tracking-tight mb-2">Szólunk, ha jön az új rész</h1>
-          <p className="text-sm text-text-2 mb-4">
-            Push a követett animéid új részeiről, évfordulókról és az új szezonról. Bármikor kikapcsolható.
-          </p>
+          <p className="label-mono mb-1">{t('s3Kicker')}</p>
+          <h1 className="text-xl font-semibold tracking-tight mb-2">{t('s3Title')}</h1>
+          <p className="text-sm text-text-2 mb-4">{t('s3Text')}</p>
           <PushToggle />
           <div className="mt-5">
-            <button onClick={() => setStep(4)} className="btn-solid px-5 py-2 text-sm">Tovább →</button>
+            <button onClick={() => setStep(4)} className="btn-solid px-5 py-2 text-sm">{t('next')}</button>
           </div>
         </section>
       )}
 
       {step === 4 && (
         <section className="glass rounded-3xl p-6">
-          <p className="label-mono mb-1">Kész ✓</p>
-          <h1 className="text-xl font-semibold tracking-tight mb-2">Indulhat</h1>
-          <p className="text-sm text-text-2 mb-5">
-            A főoldalon egy rövid túra megmutatja a lényeget — a többi oldal az első látogatáskor mutatkozik be.
-          </p>
-          <button onClick={finishWizard} className="btn-solid px-6 py-2.5 text-sm">Irány az app →</button>
+          <p className="label-mono mb-1">{t('s4Kicker')}</p>
+          <h1 className="text-xl font-semibold tracking-tight mb-2">{t('s4Title')}</h1>
+          <p className="text-sm text-text-2 mb-5">{t('s4Text')}</p>
+          <button onClick={finishWizard} className="btn-solid px-6 py-2.5 text-sm">{t('s4Cta')}</button>
         </section>
       )}
 
       {step === 1 && (
-        <p className="text-xs text-text-3">
-          A szezon-naptár és a katalógus lista nélkül is működik — de az ajánló és a gráf a listádból él.
-        </p>
+        <p className="text-xs text-text-3">{t('s1Note')}</p>
       )}
 
       {skipConfirm && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSkipConfirm(false)}>
           <div className="glass-strong rounded-3xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <p className="label-mono mb-1">Biztos kihagyod?</p>
-            <p className="text-sm text-text-2 mb-5">
-              Lista nélkül az ajánló és a gráf üres marad. A szezon-naptár enélkül is működik,
-              és a Beállításokból bármikor importálhatsz később.
-            </p>
+            <p className="label-mono mb-1">{t('skipConfirmTitle')}</p>
+            <p className="text-sm text-text-2 mb-5">{t('skipConfirmText')}</p>
             <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setSkipConfirm(false)} className="btn-solid px-4 py-2 text-sm">Visszamegyek</button>
+              <button onClick={() => setSkipConfirm(false)} className="btn-solid px-4 py-2 text-sm">{t('skipBack')}</button>
               <button
                 onClick={() => { setSkipConfirm(false); setStep(3) }}
                 className="btn-ghost px-4 py-2 text-sm text-text-3"
               >
-                Kihagyom így is
+                {t('skipAnyway')}
               </button>
             </div>
           </div>
