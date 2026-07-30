@@ -22,6 +22,14 @@ describe('isPublicPath', () => {
     expect(isPublicPath('/api/health')).toBe(true)
   })
 
+  it('a vendeg-bongeszo trending-racsa es az OG-kep publikus', () => {
+    // A /browse ures allapota a /api/trending-bol el (a route anonim-safe,
+    // tisztan lokalis query); az /opengraph-image-et a crawler keri sutik nelkul —
+    // login-redirect eseten kep helyett HTML-t kapna a megosztas-kartya.
+    expect(isPublicPath('/api/trending')).toBe(true)
+    expect(isPublicPath('/opengraph-image')).toBe(true)
+  })
+
   it('a sajat adat vedve marad', () => {
     expect(isPublicPath('/graf')).toBe(false)
     expect(isPublicPath('/lista')).toBe(false)

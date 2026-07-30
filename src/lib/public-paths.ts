@@ -13,8 +13,10 @@ export const PUBLIC_PATHS = [
   // A jogi tajekoztatokra a lablec MINDEN publikus oldalrol es a regisztracios
   // urlap is linkel. Auth mogott a link holt, es elfogadhatatlan feltetelt kerne.
   '/aszf', '/adatvedelem',
-  '/api/search', '/api/browse', '/api/characters/', '/api/themes/', '/api/links/',
+  '/api/search', '/api/browse', '/api/trending', '/api/characters/', '/api/themes/', '/api/links/',
   '/api/leaderboard', '/api/reviews', '/api/health',
+  // Az OG-kepet a crawler suti nelkul keri: login-redirect eseten HTML jonne kep helyett.
+  '/opengraph-image',
   '/api/anime/owned', '/api/fit',
   '/sitemap.xml', '/sitemaps/', '/robots.txt',
   '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/sw.js',

@@ -270,10 +270,13 @@ export type CharacterEntry = {
   vaImage: string | null
 }
 
+// FIGYELEM: a characters-mezőnek nincs role_in argumentuma (HTTP 400-at ad rá
+// az AniList) — a szerep-szűrés ezért a válaszon történik. A ROLE-sort miatt a
+// MAIN/SUPPORTING áll elöl, így a 12-es lapon ritkán marad BACKGROUND.
 const CHARACTERS_QUERY = `
 query ($id: Int!) {
   Media(id: $id) {
-    characters(role_in: [MAIN, SUPPORTING], perPage: 12, sort: [ROLE, RELEVANCE]) {
+    characters(perPage: 12, sort: [ROLE, RELEVANCE]) {
       edges {
         role
         node { id name { full } image { medium } }
@@ -286,7 +289,9 @@ query ($id: Int!) {
 export async function fetchCharacters(anilistId: number): Promise<CharacterEntry[]> {
   type R = { Media: { characters: { edges: { role: string; node: { id: number; name: { full: string }; image: { medium: string | null } | null }; voiceActors: { id: number; name: { full: string }; image: { medium: string | null } | null }[] }[] } } }
   const data = await anilistFetch<R>(CHARACTERS_QUERY, { id: anilistId })
-  return data.Media.characters.edges.map((e) => ({
+  return data.Media.characters.edges
+    .filter((e) => e.role === 'MAIN' || e.role === 'SUPPORTING')
+    .map((e) => ({
     charId: e.node.id,
     name: e.node.name.full,
     image: e.node.image?.medium ?? null,
