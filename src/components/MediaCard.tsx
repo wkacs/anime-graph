@@ -1,6 +1,9 @@
+'use client'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import { cardHover, springFluid } from '@/lib/motion'
 import { stripHtml, clampText } from '@/lib/description'
 
 type StreamLink = { site: string; url: string }
@@ -17,7 +20,9 @@ type Props = {
   variant?: 'poster' | 'row'
 }
 
-// Filmplakat-ritmus: a poszter MAGA a kartya, nincs uveg-keret korulotte.
+// Liquid glass kártya: vékony üvegkeret a poszter körül (.glass-lite —
+// rácsokban él, ezért NINCS backdrop-filter), mögötte a poszter saját
+// fénye dereng (idle-ben is), hoverre framer-spring emelés + erősebb halo.
 // A leiras csak hoverre csuszik be — korabban mindig ott allt 3 sorban es
 // telezsufolta a racsot.
 export default function MediaCard({
@@ -41,24 +46,27 @@ export default function MediaCard({
       </>
     )
     return (
-      <div className="group relative flex items-center gap-3 rounded-[var(--r-md)] px-2 py-2 hover:bg-white/4 transition-colors">
+      <motion.div
+        whileHover={{ x: 6, transition: springFluid }}
+        className="group relative flex items-center gap-3 rounded-[var(--r-md)] px-2 py-2 glass-lite"
+      >
         {href ? (
           <Link href={href} className="flex items-center gap-3 min-w-0 flex-1">{inner}</Link>
         ) : inner}
         {footer && <div className="shrink-0">{footer}</div>}
-      </div>
+      </motion.div>
     )
   }
 
   const cover = (
-    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[var(--r-md)] bg-white/5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
+    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[calc(var(--r-md)-2px)] bg-white/5">
       {coverUrl && (
         <Image
           src={coverUrl}
           alt={title}
           fill
           sizes="220px"
-          className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+          className="object-cover transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] group-hover:scale-[1.04]"
         />
       )}
       {/* labazat a badge olvashatosagahoz */}
@@ -77,14 +85,20 @@ export default function MediaCard({
     </div>
   )
 
+  const framedCover = (
+    <div className="glass-lite rounded-[var(--r-md)] p-1">
+      {cover}
+    </div>
+  )
+
   return (
-    <div className="group relative flex flex-col gap-2">
-      {/* a poszter sajat szine izzik a kartya alatt hoverre */}
+    <motion.div whileHover={cardHover} className="group relative flex flex-col gap-2">
+      {/* a poszter sajat szine izzik a kartya alatt — idle-ben derengve, hoverre erosebben */}
       {coverUrl && (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={coverUrl} alt="" aria-hidden className="poster-glow opacity-0 group-hover:opacity-60" />
+        <img src={coverUrl} alt="" aria-hidden className="poster-glow opacity-25 group-hover:opacity-60" />
       )}
-      {href ? <Link href={href}>{cover}</Link> : cover}
+      {href ? <Link href={href}>{framedCover}</Link> : framedCover}
       <div className="min-w-0">
         {href ? (
           <Link
@@ -115,6 +129,6 @@ export default function MediaCard({
         )}
       </div>
       {footer && <div className="mt-auto pt-1">{footer}</div>}
-    </div>
+    </motion.div>
   )
 }
