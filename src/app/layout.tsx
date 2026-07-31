@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, Bricolage_Grotesque, Geist_Mono, Noto_Sans_JP } from "next/font/google";
+import { Inter, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
 import MobileTabBar from "@/components/MobileTabBar";
@@ -7,18 +7,12 @@ import SiteFooter from "@/components/SiteFooter";
 import { siteUrl } from "@/lib/seo";
 import "./globals.css";
 
-const instrument = Instrument_Sans({
-  variable: "--font-instrument",
-  subsets: ["latin"],
-});
-
-// Display-vágás: film-főcím logika, nem irodalmi serif. A wdth tengelyt a
-// .display-* osztályok hangolják, az opsz-t a böngésző (font-optical-sizing).
+// Egyetlen sans-család: Inter. A display-fokozatok súllyal (700-800) és
+// szoros trackinggel különülnek el, nem külön fonttal.
 // latin-ext explicit: a magyar ő/ű a display-fokozaton is a webfontból jöjjön.
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin", "latin-ext"],
-  axes: ["opsz", "wdth"],
 });
 
 const geistMono = Geist_Mono({
@@ -62,7 +56,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${instrument.variable} ${bricolage.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
         <IntlProvider>
           <TopNav />

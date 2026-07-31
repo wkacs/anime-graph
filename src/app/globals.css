@@ -69,9 +69,9 @@
   --color-text-1: var(--text-1);
   --color-text-2: var(--text-2);
   --color-text-3: var(--text-3);
-  --font-sans: var(--font-instrument), var(--font-noto-jp), sans-serif;
+  --font-sans: var(--font-inter), var(--font-noto-jp), sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
-  --font-display: var(--font-bricolage), "Arial Narrow", sans-serif;
+  --font-display: var(--font-inter), sans-serif;
   --font-jp: var(--font-noto-jp), sans-serif;
 }
 
@@ -81,7 +81,7 @@ html {
 
 body {
   color: var(--text-1);
-  font-family: var(--font-instrument), var(--font-noto-jp), Arial, sans-serif;
+  font-family: var(--font-inter), var(--font-noto-jp), Arial, sans-serif;
   /* ambient fény + vignetta a szélekre — a vignetta a 3. réteg */
   background:
     radial-gradient(1200px 800px at 50% -10%, rgba(255, 255, 255, 0.045), transparent 60%),
@@ -106,19 +106,17 @@ body::after {
 
 /* ── tipográfiai fokozatok ───────────────────────────────── */
 
-/* A display-arc szoros, súlyos grotesque: film-főcím, nem magazin-serif.
-   A wdth tengely a fokozattal nyílik (xl a legszűkebb), így a nagy címek
-   sűrű foltot adnak, a kisebbek olvashatóak maradnak.
+/* A display-arc az Inter súlyos vágása szoros trackinggel: a fokozatok
+   súllyal különülnek el, nem külön fonttal (Internek nincs wdth tengelye).
    line-height >= 1: a magyar tele van leszálló szárral (gy, ny, j, p) —
    a korábbi 0,95 levágta őket. A padding-bottom a tartalék. */
 
 .display-xl {
   /* NEM var(--font-display): az @theme inline változói nem élnek futásidejű
      custom property-ként, a szabály némán a body-fontra esne vissza. */
-  font-family: var(--font-bricolage), "Arial Narrow", sans-serif;
+  font-family: var(--font-inter), sans-serif;
   font-size: var(--fs-display-xl);
-  font-weight: 700;
-  font-variation-settings: "wdth" 86;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -0.03em;
   padding-bottom: 0.06em;
@@ -127,10 +125,9 @@ body::after {
 .display-l {
   /* NEM var(--font-display): az @theme inline változói nem élnek futásidejű
      custom property-ként, a szabály némán a body-fontra esne vissza. */
-  font-family: var(--font-bricolage), "Arial Narrow", sans-serif;
+  font-family: var(--font-inter), sans-serif;
   font-size: var(--fs-display-l);
   font-weight: 700;
-  font-variation-settings: "wdth" 92;
   line-height: 1.04;
   letter-spacing: -0.025em;
   padding-bottom: 0.05em;
@@ -139,7 +136,7 @@ body::after {
 .h2 {
   /* NEM var(--font-display): az @theme inline változói nem élnek futásidejű
      custom property-ként, a szabály némán a body-fontra esne vissza. */
-  font-family: var(--font-bricolage), "Arial Narrow", sans-serif;
+  font-family: var(--font-inter), sans-serif;
   font-size: var(--fs-h2);
   font-weight: 600;
   line-height: 1.16;
