@@ -1,6 +1,8 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
+import { motion } from 'framer-motion'
+import { fadeUp } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import Countdown from '@/components/Countdown'
 import PosterAmbient from '@/components/ui/PosterAmbient'
@@ -54,7 +56,12 @@ export default function HeroToday({ mine, season, fit, digest, onBump, onPlan, p
       : `/anime/${pick.item.animeId}`
 
   return (
-    <section className="relative overflow-hidden rounded-[var(--r-xl)] hairline">
+    <motion.section
+      variants={fadeUp}
+      initial="hidden"
+      animate="show"
+      className="glass-2 relative overflow-hidden rounded-[var(--r-xl)]"
+    >
       <PosterAmbient src={cover} intensity="hero" />
       <div className="absolute inset-0 bg-gradient-to-r from-[#09090b]/92 via-[#09090b]/70 to-transparent pointer-events-none" />
 
@@ -114,6 +121,6 @@ export default function HeroToday({ mine, season, fit, digest, onBump, onPlan, p
           )}
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }

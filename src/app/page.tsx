@@ -9,6 +9,7 @@ import TourSpotlight from '@/components/TourSpotlight'
 import PageShell from '@/components/ui/PageShell'
 import EmptyState from '@/components/ui/EmptyState'
 import PosterAmbient from '@/components/ui/PosterAmbient'
+import { Reveal, RevealGroup, RevealItem } from '@/components/ui/Reveal'
 import { pickLandingCovers, type LandingCover } from '@/lib/landing'
 import HeroToday from '@/components/home/HeroToday'
 import FollowedRow from '@/components/home/FollowedRow'
@@ -209,7 +210,7 @@ export default function NewsPage() {
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 pb-16 pt-28 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:pb-20 md:pt-36">
             <div className="relative z-10 max-w-xl">
               <p className="label-mono mb-6">{landing('kicker')}</p>
-              <h1 className="display-xl max-w-3xl text-balance text-text-1">{landing('title')}</h1>
+              <h1 className="display-xl max-w-3xl text-balance text-silver">{landing('title')}</h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-text-2">
                 {landing('body')}
               </p>
@@ -258,18 +259,18 @@ export default function NewsPage() {
           </div>
 
           <div className="mx-auto max-w-7xl px-4 pb-16">
-            <div className="grid grid-cols-3 gap-4 border-t border-white/8 pt-8">
+            <RevealGroup className="grid grid-cols-3 gap-4 border-t border-white/8 pt-8">
               {[
                 [landing('stat1Value'), landing('stat1Label')],
                 [landing('stat2Value'), landing('stat2Label')],
                 [landing('stat3Value'), landing('stat3Label')],
               ].map(([value, label]) => (
-                <div key={label} className="min-w-0">
+                <RevealItem key={label} className="min-w-0">
                   <p className="display-l text-text-1">{value}</p>
                   <p className="label-mono mt-1">{label}</p>
-                </div>
+                </RevealItem>
               ))}
-            </div>
+            </RevealGroup>
           </div>
         </section>
 
@@ -283,23 +284,25 @@ export default function NewsPage() {
               <Link href="/browse" className="text-sm text-text-2 underline decoration-white/20 underline-offset-4 hover:text-text-1">{landing('catalogLink')}</Link>
             </div>
             {teaser.length > 0 ? (
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <RevealGroup className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {teaser.map((item) => (
-                  <Link key={item.anilistId} href={`/${item.mediaType === 'MANGA' ? 'manga' : 'anime'}/${item.slug}`} className="group min-w-0 rounded-2xl p-1 transition-colors hover:bg-white/[.055]">
-                    <div className="surface-1 relative aspect-[2/3] overflow-hidden rounded-[var(--r-sm)]">
-                      {item.coverUrl && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                      )}
-                    </div>
-                    <p className="mt-2 truncate text-sm font-medium text-text-1">{item.titleRomaji}</p>
-                    <p className="label-mono mt-0.5">
-                      {item.format ?? item.mediaType}
-                      {item.year ? ` · ${item.year}` : ''}
-                    </p>
-                  </Link>
+                  <RevealItem key={item.anilistId} className="min-w-0">
+                    <Link href={`/${item.mediaType === 'MANGA' ? 'manga' : 'anime'}/${item.slug}`} className="group block min-w-0 rounded-2xl p-1 transition-colors hover:bg-white/[.055]">
+                      <div className="glass-lite relative aspect-[2/3] overflow-hidden rounded-[var(--r-sm)]">
+                        {item.coverUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.coverUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                        )}
+                      </div>
+                      <p className="mt-2 truncate text-sm font-medium text-text-1">{item.titleRomaji}</p>
+                      <p className="label-mono mt-0.5">
+                        {item.format ?? item.mediaType}
+                        {item.year ? ` · ${item.year}` : ''}
+                      </p>
+                    </Link>
+                  </RevealItem>
                 ))}
-              </div>
+              </RevealGroup>
             ) : (
               <p className="mt-6 text-sm text-text-2">{landing('catalogFallback')}</p>
             )}
@@ -307,19 +310,21 @@ export default function NewsPage() {
         </section>
 
         <section className="mx-auto max-w-7xl px-4 py-20">
-          <div className="grid gap-4 md:grid-cols-3">
+          <RevealGroup className="grid gap-4 md:grid-cols-3" delay={0.1}>
             {[
               [landing('feature1Title'), landing('feature1Text')],
               [landing('feature2Title'), landing('feature2Text')],
               [landing('feature3Title'), landing('feature3Text')],
             ].map(([title, text], index) => (
-              <article key={title} className="surface-1 rounded-[var(--r-lg)] p-6">
-                <p className="label-mono">0{index + 1}</p>
-                <h2 className="h2 mt-4 text-text-1">{title}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-text-2">{text}</p>
-              </article>
+              <RevealItem key={title}>
+                <article className="glass-2 h-full rounded-[var(--r-lg)] p-6">
+                  <p className="label-mono">0{index + 1}</p>
+                  <h2 className="h2 mt-4 text-text-1">{title}</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-text-2">{text}</p>
+                </article>
+              </RevealItem>
             ))}
-          </div>
+          </RevealGroup>
           <div className="surface-2 relative mt-12 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-[var(--r-xl)] p-7">
             {teaser[0]?.coverUrl && <PosterAmbient src={teaser[0].coverUrl} intensity="card" />}
             <div className="relative">
@@ -369,7 +374,7 @@ export default function NewsPage() {
       />
 
       {data && <FollowedRow mine={data.mine} excludeAnimeId={heroAnimeId} onBump={bumpProgress} />}
-      {data && <WeekCalendar mine={data.mine} />}
+      {data && <Reveal><WeekCalendar mine={data.mine} /></Reveal>}
 
       {data && (
         <SeasonGrid
@@ -387,21 +392,25 @@ export default function NewsPage() {
         />
       )}
 
-      <NextSeason
-        upcoming={upcoming}
-        upcomingSeason={upcomingSeason}
-        all={nextList}
-        allFit={nextFit}
-        onPlan={addToPlanned}
-        planned={added}
-      />
+      <Reveal>
+        <NextSeason
+          upcoming={upcoming}
+          upcomingSeason={upcomingSeason}
+          all={nextList}
+          allFit={nextFit}
+          onPlan={addToPlanned}
+          planned={added}
+        />
+      </Reveal>
 
-      <SocialFeed
-        feed={feed}
-        watchlist={watchlist}
-        onWatchBump={watchBump}
-        onWatchRemove={watchRemove}
-      />
+      <Reveal>
+        <SocialFeed
+          feed={feed}
+          watchlist={watchlist}
+          onWatchBump={watchBump}
+          onWatchRemove={watchRemove}
+        />
+      </Reveal>
     </PageShell>
   )
 }
