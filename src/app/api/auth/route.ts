@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { users } from '@/db/schema'
 import { createSession, SESSION_DAYS } from '@/lib/auth'
+import { sessionSecret } from '@/lib/env'
 import { verifyPassword } from '@/lib/password'
 import { clientIp, rateLimit, clearRateLimit } from '@/lib/rate-limit'
 import { eq } from 'drizzle-orm'
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     return apiError('badCredentials', 401)
   }
   await clearRateLimit('login', ip)
-  const token = await createSession(process.env.SESSION_SECRET!, user.id, user.tokenVersion)
+  const token = await createSession(sessionSecret(), user.id, user.tokenVersion)
   return sessionResponse(token)
 }
 

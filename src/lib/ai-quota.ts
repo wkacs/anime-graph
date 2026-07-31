@@ -45,8 +45,18 @@ export async function consumeAiQuota(userId: number, endpoint: string): Promise<
     throw new Error('Túl sok kérés egymás után. Várj egy percet.')
   }
 
-  const [u] = await db.select({ tier: users.tier }).from(users).where(eq(users.id, userId))
-  const tier: Tier = u?.tier === 'paid' ? 'paid' : 'free'
+  const [u] = await db.select({
+    tier: users.tier,
+    email: users.email,
+    emailVerifiedAt: users.emailVerifiedAt,
+  }).from(users).where(eq(users.id, userId))
+  if (!u) throw new Error('A felhasználói fiók nem található.')
+  // A nyílt regisztráció előtti, e-mail nélküli legacy fiókokat nem zárjuk ki.
+  // Új fiók viszont csak megerősített címmel fogyaszthat közös AI-költséget.
+  if (u.email && !u.emailVerifiedAt) {
+    throw new Error('Az AI-funkciókhoz előbb erősítsd meg az e-mail-címedet.')
+  }
+  const tier: Tier = u.tier === 'paid' ? 'paid' : 'free'
   const envCap = Number(process.env.AI_DAILY_LIMIT ?? 0)
   const userLimit = envCap > 0
     ? Math.min(envCap, resolveLimit(endpoint, tier))

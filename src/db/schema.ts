@@ -25,7 +25,12 @@ export const users = pgTable('users', {
   locale: text('locale').notNull().default('en'), // en | hu
   bio: text('bio'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-})
+}, (t) => [
+  // A migrációban már létező case-insensitive index deklaratív tükre.
+  uniqueIndex('users_email_unique')
+    .on(sql`lower(${t.email})`)
+    .where(sql`${t.email} is not null`),
+])
 
 // E-mail-megerősítés és jelszó-visszaállítás tokenjei. A nyers token CSAK a
 // linkbe kerül; itt kizárólag a sha256-hash-e él, hogy egy adatbázis-szivárgás

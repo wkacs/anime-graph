@@ -4,6 +4,7 @@ import IntlProvider from "@/components/IntlProvider";
 import TopNav from "@/components/TopNav";
 import MobileTabBar from "@/components/MobileTabBar";
 import SiteFooter from "@/components/SiteFooter";
+import { siteUrl } from "@/lib/seo";
 import "./globals.css";
 
 const instrument = Instrument_Sans({
@@ -35,7 +36,7 @@ const notoJp = Noto_Sans_JP({
 // katalógus-oldalakat 500-azná (lásd src/i18n/request.ts). A kanonikus
 // SEO-nyelv angol, ezért a metaadat is az.
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.APP_URL || 'http://localhost:3000'),
+  metadataBase: new URL(siteUrl()),
   title: { default: 'Anime Graph — the list that works for you', template: '%s | Anime Graph' },
   description: 'Personal anime and manga tracker with taste-based discovery, a public catalogue and MAL/AniList import.',
   keywords: ['anime tracker', 'manga tracker', 'anime recommendations', 'AniList import', 'MAL import'],

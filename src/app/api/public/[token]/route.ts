@@ -42,7 +42,13 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ token: str
     pinnedCharIds.length
       ? db.select({ charId: favoriteCharacters.charId, name: favoriteCharacters.name, image: favoriteCharacters.image })
           .from(favoriteCharacters)
-          .where(and(eq(favoriteCharacters.userId, match.userId), inArray(favoriteCharacters.charId, pinnedCharIds)))
+          .innerJoin(anime, eq(anime.id, favoriteCharacters.animeId))
+          .innerJoin(title, eq(title.id, anime.titleId))
+          .where(and(
+            eq(favoriteCharacters.userId, match.userId),
+            inArray(favoriteCharacters.charId, pinnedCharIds),
+            eq(title.isAdult, 0),
+          ))
       : Promise.resolve([]),
   ])
   const byTitle = new Map(pinnedTitleRows.map((t) => [t.id, t]))

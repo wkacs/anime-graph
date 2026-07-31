@@ -241,6 +241,7 @@
     "usernameTaken": "Ez a felhasználónév foglalt",
     "invalidExpiredLink": "Érvénytelen vagy lejárt link",
     "passwordTooShort": "A jelszó legalább 8 karakter legyen",
+    "invalidPasswordLength": "A jelszó 8–128 karakter hosszú lehet",
     "registrationClosed": "A regisztráció jelenleg zárva",
     "invalidStatus": "Érvénytelen státusz",
     "missingResetData": "Hiányzó visszaállítási adat",
@@ -301,10 +302,10 @@
     "seo": "Személyes anime- és manga-követő ízlésalapú felfedezéssel."
   },
   "community": {
-    "eyebrow": "Közösségi vélemények",
-    "heading": "Mit néznek és mit gondolnak mások",
-    "description": "A nyilvános profilok véleményei. A saját profilod láthatóságát a Beállításokban szabályozod.",
-    "empty": "Még nincs nyilvános vélemény."
+    "eyebrow": "Közösségi értékelések",
+    "heading": "Mit néznek és hogyan pontoznak mások",
+    "description": "Csak az explicit nyilvános profilok pontszámai látszanak. Az írott vélemények privátak maradnak.",
+    "empty": "Még nincs nyilvános értékelés."
   },
   "notifications": {
     "eyebrow": "Saját újdonságok",

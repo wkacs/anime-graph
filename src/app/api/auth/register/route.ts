@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { users, authTokens } from '@/db/schema'
+import { users } from '@/db/schema'
 import { createSession, SESSION_DAYS } from '@/lib/auth'
+import { emailDeliveryConfigured, sessionSecret } from '@/lib/env'
 import { hashPassword } from '@/lib/password'
 import { clientIp, rateLimit } from '@/lib/rate-limit'
 import { registrationMode, validateRegistration } from '@/lib/registration'
-import { newToken, hashToken, tokenExpiry } from '@/lib/auth-token'
 import { sendEmail, verifyEmailTemplate } from '@/lib/email'
+import {
+  discardAuthToken, issueAuthToken,
+} from '@/lib/auth-token-store'
 import { eq, sql } from 'drizzle-orm'
 import { apiError } from '@/lib/api-error'
 import { serverT } from '@/lib/server-i18n'
@@ -19,7 +22,7 @@ export async function POST(req: NextRequest) {
   // Éles rendszerben nem hozunk létre olyan új fiókot, amelyhez nem tudunk
   // megerősítő- és jelszó-visszaállító e-mailt kézbesíteni. Fejlesztésben a
   // no-op küldő marad, hogy a helyi munka ne igényeljen külső szolgáltatást.
-  if (process.env.NODE_ENV === 'production' && (!process.env.RESEND_API_KEY || !process.env.FROM_EMAIL)) {
+  if (process.env.NODE_ENV === 'production' && !emailDeliveryConfigured()) {
     return apiError('registrationEmailUnset', 503)
   }
   const body = await req.json().catch(() => ({}))
@@ -83,18 +86,26 @@ export async function POST(req: NextRequest) {
     .returning()
 
   // megerősítő token: nyersen csak a linkbe kerül, adatbázisba a hash megy
-  const raw = newToken()
-  await db.insert(authTokens).values({
-    userId: user.id,
-    kind: 'verify',
-    tokenHash: hashToken(raw),
-    expiresAt: tokenExpiry('verify'),
+  const issued = await issueAuthToken(user.id, 'verify')
+  const mail = verifyEmailTemplate(issued.raw, locale)
+  const delivery = await sendEmail(valid.email, mail.subject, mail.html, {
+    text: mail.text,
+    idempotencyKey: `verify-${user.id}-${issued.tokenHash.slice(0, 24)}`,
+    tag: 'email-verification',
   })
-  const mail = verifyEmailTemplate(raw, locale)
-  await sendEmail(valid.email, mail.subject, mail.html)
+  if (!delivery.sent && (process.env.NODE_ENV === 'production' || emailDeliveryConfigured())) {
+    // Sikertelen kézbesítés után ne maradjon beléphető, de megerősíthetetlen fiók.
+    await db.delete(users).where(eq(users.id, user.id))
+    return apiError('verifyEmailUnavailable', 503)
+  }
+  if (!delivery.sent) {
+    // Helyi fejlesztés külső levélküldő nélkül is használható; productionben ez az ág tiltott.
+    await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, user.id))
+    await discardAuthToken(issued.id)
+  }
 
   // a fiók azonnal használható, a megerősítés párhuzamosan fut
-  const token = await createSession(process.env.SESSION_SECRET!, user.id, user.tokenVersion)
+  const token = await createSession(sessionSecret(), user.id, user.tokenVersion)
   const res = NextResponse.json({ ok: true, username: user.username })
   res.cookies.set('session', token, {
     httpOnly: true,

@@ -5,6 +5,7 @@
 
 import { db } from '@/db/client'
 import { syncAccounts, title } from '@/db/schema'
+import { decryptOAuthToken, encryptOAuthToken } from './oauth-token-crypto'
 import { and, eq } from 'drizzle-orm'
 
 export type ListChange = {
@@ -59,8 +60,10 @@ export function buildAniListMutation(change: ListChange): { query: string; varia
 
 async function freshMalToken(account: typeof syncAccounts.$inferSelect): Promise<string | null> {
   const soon = Date.now() + 60_000
-  if (!account.expiresAt || account.expiresAt.getTime() > soon) return account.accessToken
+  const accessToken = decryptOAuthToken(account.accessToken)
+  if (!account.expiresAt || account.expiresAt.getTime() > soon) return accessToken
   if (!account.refreshToken || !process.env.MAL_CLIENT_ID) return null
+  const refreshToken = decryptOAuthToken(account.refreshToken)
   const res = await fetch('https://myanimelist.net/v1/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -68,14 +71,15 @@ async function freshMalToken(account: typeof syncAccounts.$inferSelect): Promise
       client_id: process.env.MAL_CLIENT_ID,
       client_secret: process.env.MAL_CLIENT_SECRET ?? '',
       grant_type: 'refresh_token',
-      refresh_token: account.refreshToken,
+      refresh_token: refreshToken,
     }),
+    signal: AbortSignal.timeout(10_000),
   })
   if (!res.ok) return null
   const j = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
   await db.update(syncAccounts).set({
-    accessToken: j.access_token,
-    refreshToken: j.refresh_token,
+    accessToken: encryptOAuthToken(j.access_token),
+    refreshToken: encryptOAuthToken(j.refresh_token),
     expiresAt: new Date(Date.now() + j.expires_in * 1000),
   }).where(eq(syncAccounts.id, account.id))
   return j.access_token
@@ -91,6 +95,7 @@ async function pushMal(account: typeof syncAccounts.$inferSelect, change: ListCh
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams(body),
+    signal: AbortSignal.timeout(10_000),
   })
   if (!res.ok) console.error(`sync-back MAL ${change.malId}: HTTP ${res.status}`)
 }
@@ -98,10 +103,12 @@ async function pushMal(account: typeof syncAccounts.$inferSelect, change: ListCh
 async function pushAniList(account: typeof syncAccounts.$inferSelect, change: ListChange) {
   const mutation = buildAniListMutation(change)
   if (!mutation) return
+  const accessToken = decryptOAuthToken(account.accessToken)
   const res = await fetch('https://graphql.anilist.co', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${account.accessToken}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(mutation),
+    signal: AbortSignal.timeout(10_000),
   })
   if (!res.ok) console.error(`sync-back AniList ${change.anilistId}: HTTP ${res.status}`)
 }

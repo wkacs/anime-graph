@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSession, verifySession, SESSION_DAYS, SESSION_RENEW_AFTER_MS } from '@/lib/auth'
+import { sessionSecret } from '@/lib/env'
 import { isPublicPath } from '@/lib/public-paths'
 import { internalRoute, legacyRedirect } from '@/lib/route-migration'
 
@@ -16,7 +17,7 @@ export async function middleware(req: NextRequest) {
   }
   if (isPublicPath(pathname)) return response()
   const claims = await verifySession(
-    process.env.SESSION_SECRET!,
+    sessionSecret(),
     req.cookies.get('session')?.value,
   )
   if (claims) {
@@ -27,7 +28,7 @@ export async function middleware(req: NextRequest) {
     // régi token nem tud "örökre" megújulni: a requireUserId elutasítja.
     if (claims.expiresAt - Date.now() < SESSION_RENEW_AFTER_MS) {
       const fresh = await createSession(
-        process.env.SESSION_SECRET!, claims.userId, claims.tokenVersion, SESSION_DAYS,
+        sessionSecret(), claims.userId, claims.tokenVersion, SESSION_DAYS,
       )
       res.cookies.set('session', fresh, {
         httpOnly: true,

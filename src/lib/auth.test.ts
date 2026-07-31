@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { createSession, verifySession, SESSION_DAYS, SESSION_RENEW_AFTER_MS } from './auth'
+import {
+  constantTimeEqual, createSession, verifySession, SESSION_DAYS, SESSION_RENEW_AFTER_MS,
+} from './auth'
 import { hashPassword, verifyPassword } from './password'
 
 describe('session', () => {
@@ -20,6 +22,7 @@ describe('session', () => {
     expect(await verifySession('secret', token.replace('42', '43'))).toBeNull()
     expect(await verifySession('secret', undefined)).toBeNull()
     expect(await verifySession('secret', 'garbage')).toBeNull()
+    expect(await verifySession('', token)).toBeNull()
   })
 
   it('a regi, 3-reszes token-formatum nem ervenyes', async () => {
@@ -33,6 +36,12 @@ describe('session', () => {
 
   it('a megujitasi kuszob a felezopont', () => {
     expect(SESSION_RENEW_AFTER_MS).toBe((SESSION_DAYS / 2) * 86400_000)
+  })
+
+  it('azonos hosszu alairasokat konstans ideju osszehasonlitoval ellenoriz', () => {
+    expect(constantTimeEqual('abcdef', 'abcdef')).toBe(true)
+    expect(constantTimeEqual('abcdef', 'abcdeg')).toBe(false)
+    expect(constantTimeEqual('short', 'longer')).toBe(false)
   })
 })
 

@@ -1,10 +1,12 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { cache } from 'react'
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { users, settings, title as titleTable, favoriteCharacters } from '@/db/schema'
+import { anime, users, settings, title as titleTable, favoriteCharacters } from '@/db/schema'
 import { toPublicPinned } from '@/lib/public-view'
-import { profileVisibility } from '@/lib/profile-visibility'
+import { canViewProfile, profileVisibility } from '@/lib/profile-visibility'
+import { requireUserId } from '@/lib/session'
 import PinnedShowcase from '@/components/PinnedShowcase'
 import Avatar from '@/components/Avatar'
 
@@ -14,7 +16,7 @@ export const dynamic = 'force-dynamic'
 
 // A pinnedTitles kulcs title.id-kat tárol, a pinnedChars favorite_characters.char_id-kat
 // (lásd src/app/api/pins/route.ts) — ugyanazt a két listát olvassuk ki itt is.
-async function load(username: string) {
+const load = cache(async (username: string) => {
   const [user] = await db.select().from(users)
     .where(eq(users.username, username.toLowerCase()))
   if (!user) return null
@@ -34,7 +36,14 @@ async function load(username: string) {
     : []
   const chars = charIds.length
     ? await db.select({ name: favoriteCharacters.name, image: favoriteCharacters.image })
-        .from(favoriteCharacters).where(inArray(favoriteCharacters.charId, charIds))
+        .from(favoriteCharacters)
+        .innerJoin(anime, eq(anime.id, favoriteCharacters.animeId))
+        .innerJoin(titleTable, eq(titleTable.id, anime.titleId))
+        .where(and(
+          eq(favoriteCharacters.userId, user.id),
+          inArray(favoriteCharacters.charId, charIds),
+          eq(titleTable.isAdult, 0),
+        ))
     : []
 
   return {
@@ -42,7 +51,7 @@ async function load(username: string) {
     visibility: profileVisibility(map.profileVisibility),
     pinned: toPublicPinned(titles, chars),
   }
-}
+})
 
 // A profil-oldalak szándékosan nincsenek indexelve ebben a körben: üres
 // profilokból tízezret indexeltetni ártana, nem használna.
@@ -63,9 +72,9 @@ export async function generateMetadata(
 
 export default async function Page({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params
-  const data = await load(username)
+  const [data, viewerId] = await Promise.all([load(username), requireUserId()])
   // Privát profil 404-et ad, nem 403-at: a 403 elárulná, hogy a felhasználónév létezik.
-  if (!data || data.visibility !== 'public') notFound()
+  if (!data || !canViewProfile(viewerId, data.user.id, data.visibility)) notFound()
 
   return (
     <main className="min-h-screen pb-24 md:pb-16">

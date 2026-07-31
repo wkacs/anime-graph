@@ -1,7 +1,7 @@
 export type ProfileVisibility = 'public' | 'private'
 
 export function profileVisibility(value: unknown): ProfileVisibility {
-  return value === 'private' ? 'private' : 'public'
+  return value === 'public' ? 'public' : 'private'
 }
 
 // A tulajdonos sajat adatait mindig eleri; mindenki mas csak publikus profilhoz

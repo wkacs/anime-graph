@@ -10,10 +10,19 @@ import type { TitleRow } from './catalog-page'
 // pedig legyen mindig a prod-domain (preview-deployokon is).
 export function siteUrl(): string {
   const prodHost = process.env.VERCEL_PROJECT_PRODUCTION_URL
-  const raw = process.env.APP_URL
+  const raw = process.env.APP_URL?.trim()
     || (prodHost ? `https://${prodHost}` : '')
-    || 'http://localhost:3000'
-  return raw.replace(/\/$/, '')
+  if (!raw) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('APP_URL vagy VERCEL_PROJECT_PRODUCTION_URL kötelező production buildhez')
+    }
+    return 'http://localhost:3000'
+  }
+  const url = new URL(raw)
+  if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+    throw new Error('A production APP_URL csak https:// URL lehet')
+  }
+  return url.origin
 }
 
 export function metaDescription(t: Pick<TitleRow, 'description' | 'titleRomaji' | 'mediaType' | 'year' | 'genres'>): string {

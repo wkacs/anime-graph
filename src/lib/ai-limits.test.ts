@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import {
-  GLOBAL_QUOTA_USER_ID, globalDailyLimit, quotaVerdict, resolveLimit,
+  GLOBAL_QUOTA_USER_ID, globalDailyLimit, parseGlobalDailyLimit, quotaVerdict, resolveLimit,
 } from './ai-limits'
 
 describe('resolveLimit', () => {
@@ -45,6 +45,12 @@ describe('globalDailyLimit', () => {
   it('tortszamot lefele kerekit', () => {
     process.env.AI_GLOBAL_DAILY_LIMIT = '99.7'
     expect(globalDailyLimit()).toBe(99)
+  })
+
+  it('production strict modban a hianyzo vagy hibas plafon konfiguracios hiba', () => {
+    expect(() => parseGlobalDailyLimit(undefined, true)).toThrow('AI_GLOBAL_DAILY_LIMIT')
+    expect(() => parseGlobalDailyLimit('sok', true)).toThrow('AI_GLOBAL_DAILY_LIMIT')
+    expect(parseGlobalDailyLimit('120', true)).toBe(120)
   })
 })
 

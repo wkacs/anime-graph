@@ -241,6 +241,7 @@
     "usernameTaken": "This username is taken",
     "invalidExpiredLink": "Invalid or expired link",
     "passwordTooShort": "The password must be at least 8 characters",
+    "invalidPasswordLength": "The password must be between 8 and 128 characters",
     "registrationClosed": "Registration is currently closed",
     "invalidStatus": "Invalid status",
     "missingResetData": "Missing reset data",
@@ -301,10 +302,10 @@
     "seo": "Personal anime and manga tracker with taste-based discovery."
   },
   "community": {
-    "eyebrow": "Community reviews",
-    "heading": "What people are watching and thinking",
-    "description": "Reviews from profiles that are publicly visible. You control yours in Settings.",
-    "empty": "No public reviews yet."
+    "eyebrow": "Community ratings",
+    "heading": "What people are watching and rating",
+    "description": "Ratings from profiles that are explicitly public. Written reviews remain private.",
+    "empty": "No public ratings yet."
   },
   "notifications": {
     "eyebrow": "Your updates",

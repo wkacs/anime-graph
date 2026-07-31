@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, settings } from '@/db/schema'
+import { anime, settings, title } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { buildTasteVector } from '@/lib/fit-score'
 import { compatScore } from '@/lib/compat'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
@@ -24,8 +24,12 @@ export async function GET(req: NextRequest) {
 
   const select = { genres: anime.genres, tags: anime.tags, status: anime.status, myScore: anime.myScore }
   const [mine, theirs] = await Promise.all([
-    db.select(select).from(anime).where(eq(anime.userId, viewerId)),
-    db.select(select).from(anime).where(eq(anime.userId, match.userId)),
+    db.select(select).from(anime)
+      .innerJoin(title, eq(title.id, anime.titleId))
+      .where(and(eq(anime.userId, viewerId), eq(title.isAdult, 0))),
+    db.select(select).from(anime)
+      .innerJoin(title, eq(title.id, anime.titleId))
+      .where(and(eq(anime.userId, match.userId), eq(title.isAdult, 0))),
   ])
   const compat = compatScore(buildTasteVector(mine), buildTasteVector(theirs))
   return NextResponse.json({ compat, authed: true })

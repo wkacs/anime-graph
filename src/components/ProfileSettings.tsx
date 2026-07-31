@@ -11,7 +11,7 @@ const MAX_BIO = 500
 export default function ProfileSettings() {
   const [username, setUsername] = useState('')
   const [bio, setBio] = useState('')
-  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
+  const [visibility, setVisibility] = useState<'public' | 'private'>('private')
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const t = useTranslations('profileSettings')
@@ -23,7 +23,7 @@ export default function ProfileSettings() {
         if (!j) return
         setUsername(j.username ?? '')
         setBio(j.bio ?? '')
-        setVisibility(j.profileVisibility === 'private' ? 'private' : 'public')
+        setVisibility(j.profileVisibility === 'public' ? 'public' : 'private')
       })
       .catch(() => {})
   }, [])
@@ -53,7 +53,7 @@ export default function ProfileSettings() {
         <div className="min-w-0">
           <p className="text-sm font-medium">{username}</p>
           <Link
-            href={`/u/${username}`}
+            href={`/u/${encodeURIComponent(username)}`}
             className="text-xs text-text-3 hover:text-text-2 underline underline-offset-4 decoration-white/20"
           >
             /u/{username}
@@ -84,6 +84,7 @@ export default function ProfileSettings() {
               key={v}
               type="button"
               disabled={busy}
+              aria-pressed={visibility === v}
               onClick={() => { setVisibility(v); save({ profileVisibility: v }) }}
               className={`rounded-full px-3 py-1 transition-colors ${
                 visibility === v ? 'bg-white/12 text-text-1' : 'text-text-3 hover:text-text-2'

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { settings, tasteMemory, users, authTokens } from '@/db/schema'
+import { settings, tasteMemory, users } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
 import { validateRegistration } from '@/lib/registration'
-import { newToken, hashToken, tokenExpiry } from '@/lib/auth-token'
 import { sendEmail, verifyEmailTemplate } from '@/lib/email'
+import {
+  discardAuthToken, invalidateOtherAuthTokens, issueAuthToken,
+} from '@/lib/auth-token-store'
+import { emailDeliveryConfigured } from '@/lib/env'
+import { rateLimit } from '@/lib/rate-limit'
 import { INPUT_LIMITS, exceedsTextLimit } from '@/lib/input-limits'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 import { apiError } from '@/lib/api-error'
@@ -37,7 +41,7 @@ export async function GET() {
     locale: user?.locale ?? 'en',
     username: user?.username ?? null,
     bio: user?.bio ?? '',
-    profileVisibility: map.profileVisibility ?? 'public',
+    profileVisibility: map.profileVisibility ?? 'private',
   })
 }
 
@@ -78,16 +82,43 @@ export async function PUT(req: NextRequest) {
     if (dup && dup.id !== userId) {
       return apiError('emailTaken', 409)
     }
-    const [user] = await db.update(users)
-      .set({ email: valid.email, emailVerifiedAt: null })
-      .where(eq(users.id, userId))
-      .returning()
-    const raw = newToken()
-    await db.insert(authTokens).values({
-      userId, kind: 'verify', tokenHash: hashToken(raw), expiresAt: tokenExpiry('verify'),
-    })
-    const mail = verifyEmailTemplate(raw, user.locale)
-    await sendEmail(valid.email, mail.subject, mail.html)
+    const [before] = await db.select().from(users).where(eq(users.id, userId))
+    if (!before) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    if (before.email?.toLowerCase() !== valid.email || !before.emailVerifiedAt) {
+      if (!(await rateLimit('email-change', String(userId), 3, 3600))) {
+        return apiError('tooManyTries', 429)
+      }
+      const [user] = await db.update(users)
+        .set({ email: valid.email, emailVerifiedAt: null })
+        .where(eq(users.id, userId))
+        .returning()
+      const issued = await issueAuthToken(userId, 'verify')
+      const mail = verifyEmailTemplate(issued.raw, user.locale)
+      const delivery = await sendEmail(valid.email, mail.subject, mail.html, {
+        text: mail.text,
+        idempotencyKey: `verify-${userId}-${issued.tokenHash.slice(0, 24)}`,
+        tag: 'email-verification',
+      })
+      if (!delivery.sent && (process.env.NODE_ENV === 'production' || emailDeliveryConfigured())) {
+        await Promise.all([
+          db.update(users).set({
+            email: before.email,
+            emailVerifiedAt: before.emailVerifiedAt,
+          }).where(eq(users.id, userId)),
+          discardAuthToken(issued.id),
+        ])
+        return apiError('verifyEmailUnavailable', 503)
+      }
+      if (delivery.sent) {
+        await invalidateOtherAuthTokens(userId, 'verify', issued.id)
+      } else {
+        // Külső szolgáltató nélküli helyi fejlesztésben ne legyen teljesíthetetlen verify-kapu.
+        await Promise.all([
+          db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, userId)),
+          discardAuthToken(issued.id),
+        ])
+      }
+    }
   }
 
   // onboarding-wizard állapot (szerveroldali → több eszközön is tudott)

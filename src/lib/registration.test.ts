@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { registrationMode, validateRegistration } from './registration'
+import { registrationMode, validPasswordLength, validateRegistration } from './registration'
 
 describe('registrationMode', () => {
   const saved = process.env.REGISTRATION_MODE
@@ -38,6 +38,10 @@ describe('validateRegistration', () => {
   })
   it('8 karakteres jelszo mar jo', () => {
     expect(validateRegistration({ ...ok, password: '12345678' }).ok).toBe(true)
+  })
+  it('128 karakter a maximum', () => {
+    expect(validPasswordLength('x'.repeat(128))).toBe(true)
+    expect(validPasswordLength('x'.repeat(129))).toBe(false)
   })
   it('rossz username-minta', () => {
     expect(validateRegistration({ ...ok, username: 'ab' })).toEqual({ ok: false, field: 'username' })

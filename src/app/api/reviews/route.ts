@@ -1,46 +1,49 @@
 import { NextResponse } from 'next/server'
-import { desc, eq, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm'
 import { db } from '@/db/client'
 import { anime, opinions, settings, title, users } from '@/db/schema'
+import { canViewProfile } from '@/lib/profile-visibility'
 
 export const dynamic = 'force-dynamic'
 
-// Nyilvános vélemény-feed. A profil privacy az egyetlen közzétételi kapcsoló:
-// private felhasználó sorai itt és a publikus profilján sem jelenhetnek meg.
+// Nyilvános értékelés-feed. A nyers véleményszöveg szándékosan nem része a
+// selectnek/válasznak; csak explicit public profil pontszáma jelenhet meg.
 export async function GET() {
   const rows = await db.select({
     id: opinions.id,
-    rawText: opinions.rawText,
     updatedAt: opinions.updatedAt,
     username: users.username,
     userId: users.id,
     titleRomaji: anime.titleRomaji,
     coverUrl: anime.coverUrl,
     mediaType: anime.mediaType,
+    score: anime.myScore,
     slug: title.slug,
   }).from(opinions)
     .innerJoin(anime, eq(opinions.animeId, anime.id))
     .innerJoin(users, eq(anime.userId, users.id))
     .innerJoin(title, eq(anime.titleId, title.id))
+    .where(and(eq(title.isAdult, 0), isNotNull(anime.myScore)))
     .orderBy(desc(opinions.updatedAt))
-    .limit(100)
+    .limit(200)
 
   const userIds = [...new Set(rows.map((row) => row.userId))]
   const privacy = userIds.length
     ? await db.select({ userId: settings.userId, value: settings.value }).from(settings)
-      .where(inArray(settings.userId, userIds))
+      .where(and(
+        inArray(settings.userId, userIds),
+        eq(settings.key, 'profileVisibility'),
+      ))
     : []
-  const privateUsers = new Set(
-    privacy.filter((row) => row.value === 'private').map((row) => row.userId),
-  )
+  const visibilityByUser = new Map(privacy.map((row) => [row.userId, row.value]))
 
   return NextResponse.json({
     items: rows
-      .filter((row) => !privateUsers.has(row.userId))
+      .filter((row) => canViewProfile(null, row.userId, visibilityByUser.get(row.userId)))
       .slice(0, 30)
       .map((row) => ({
         id: row.id,
-        text: row.rawText,
+        score: row.score,
         updatedAt: row.updatedAt,
         username: row.username,
         title: row.titleRomaji,

@@ -20,7 +20,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ provider: s
     return apiError('envUnset', 501, { envVar: `${provider.toUpperCase()}_CLIENT_ID` })
   }
   const res = NextResponse.redirect(url)
-  const cookieOpts = { httpOnly: true, sameSite: 'lax' as const, maxAge: 600, path: '/' }
+  const cookieOpts = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 600,
+    path: '/',
+  }
   res.cookies.set(`sync_state_${provider}`, state, cookieOpts)
   res.cookies.set(`sync_verifier_${provider}`, verifier, cookieOpts)
   return res

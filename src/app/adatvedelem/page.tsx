@@ -42,15 +42,34 @@ export default function AdatvedelemPage() {
       <P>
         <strong className="text-text-1">Technikai adatok:</strong> munkamenet-süti a bejelentkezéshez,
         nyelvválasztás sütije, továbbá az IP-címed a visszaélés elleni védelemhez (kérésszám-korlátozás). Az
-        IP-cím rövid, automatikusan lejáró rekordban él, és nem kötjük hozzá a fiókodhoz.
+        IP-címet nem tároljuk nyers formában: titkos kulccsal képzett, vissza nem fejthető HMAC-azonosítóként,
+        rövid, automatikusan lejáró rekordban él, és nem kötjük hozzá a fiókodhoz.
       </P>
       <P>
         <strong className="text-text-1">Értesítések:</strong> ha engedélyezed a böngésző-értesítéseket, a
         feliratkozás technikai azonosítóját tároljuk. Bármikor visszavonhatod.
       </P>
       <P>
+        <strong className="text-text-1">Kapcsolt listafiókok:</strong> ha bekapcsolod a kétirányú MAL/AniList
+        szinkront, a szolgáltató hozzáférési tokenjét AES-256-GCM titkosítással tároljuk. A kapcsolatot bármikor
+        megszüntetheted a beállításokban.
+      </P>
+      <P>
         Az e-mail-megerősítés és a jelszó-visszaállítás linkjeiből csak a token sha256-lenyomatát tároljuk, így
         egy esetleges adatbázis-szivárgás önmagában nem tesz lehetővé fiók-átvételt.
+      </P>
+
+      <H>Mi válik láthatóvá mások számára</H>
+      <P>
+        Az új profil alapértelmezetten privát. Ha kifejezetten publikusra állítod, a felhasználóneved,
+        bemutatkozásod, nem felnőttként jelölt kitűzött címeid és karaktereid, valamint egyes listaeseményeid és
+        számszerű értékeléseid megjelenhetnek a közösségi felületeken. A szöveges véleményed és az abból képzett
+        ízlésprofilod ettől nem válik nyilvánossá.
+      </P>
+      <P>
+        Külön, visszavonható megosztási linket is létrehozhatsz a listádhoz. Aki ismeri ezt a linket, jelszó nélkül
+        láthatja a linkhez tartozó, felnőtt tartalomtól szűrt listanézetet és statisztikát. A linket bármikor
+        visszavonhatod a beállításokban.
       </P>
 
       <H>Miért kezeljük, és milyen jogalapon</H>

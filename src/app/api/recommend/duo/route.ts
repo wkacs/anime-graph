@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, recommendations, tasteMemory, users } from '@/db/schema'
+import { anime, recommendations, settings, tasteMemory, title, users } from '@/db/schema'
 import { fetchRecommendationsFor, type RecCandidate } from '@/lib/anilist'
 import { aiCacheKind } from '@/lib/ai-cache-key'
 import { userLocale } from '@/lib/user-locale'
@@ -8,7 +8,8 @@ import { consumeAiQuota } from '@/lib/ai-quota'
 import { buildDuoCandidates, buildDuoMessages, parseDuoPicks } from '@/lib/duo'
 import { glmChat } from '@/lib/glm'
 import { requireUserId } from '@/lib/session'
-import { desc, eq } from 'drizzle-orm'
+import { canViewProfile } from '@/lib/profile-visibility'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { apiError } from '@/lib/api-error'
 
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,11 @@ export async function POST(req: NextRequest) {
   }
   const [other] = await db.select().from(users).where(eq(users.id, otherUserId))
   if (!other) return NextResponse.json({ error: 'Nincs ilyen user' }, { status: 404 })
+  const [visibility] = await db.select({ value: settings.value }).from(settings)
+    .where(and(eq(settings.userId, other.id), eq(settings.key, 'profileVisibility')))
+  if (!canViewProfile(userId, other.id, visibility?.value)) {
+    return NextResponse.json({ error: 'Nincs ilyen user' }, { status: 404 })
+  }
 
   const locale = await userLocale(userId)
   const kind = aiCacheKind(`duo:${Math.min(userId, otherUserId)}:${Math.max(userId, otherUserId)}`, locale)
@@ -38,11 +44,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ...(cached.result as object), cached: true, otherUsername: other.username })
   }
 
-  const [mine, theirs, myFactRows, theirFactRows] = await Promise.all([
+  const nonAdultTitleIds = db.select({ id: title.id }).from(title).where(eq(title.isAdult, 0))
+  const [mine, theirs, myFactRows] = await Promise.all([
     db.select().from(anime).where(eq(anime.userId, userId)),
-    db.select().from(anime).where(eq(anime.userId, otherUserId)),
+    db.select().from(anime).where(and(
+      eq(anime.userId, otherUserId),
+      inArray(anime.titleId, nonAdultTitleIds),
+    )),
     db.select().from(tasteMemory).where(eq(tasteMemory.userId, userId)).orderBy(desc(tasteMemory.createdAt)).limit(30),
-    db.select().from(tasteMemory).where(eq(tasteMemory.userId, otherUserId)).orderBy(desc(tasteMemory.createdAt)).limit(30),
   ])
   const watchedStatuses = new Set(['watching', 'completed', 'dropped'])
   const excludeIds = new Set([
@@ -66,7 +75,9 @@ export async function POST(req: NextRequest) {
   const messages = buildDuoMessages(
     candidates,
     myFactRows.map((f) => f.text),
-    theirFactRows.map((f) => f.text),
+    // A másik fél nyers véleményből kinyert ízlésmemóriája nem publikus adat.
+    // A közös ajánló az explicit publikus listájából és pontjaiból dolgozik.
+    [],
     'a kérdező', other.username,
     locale,
   )

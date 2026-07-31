@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { parseSentryDsn, sanitizeReport } from './monitor'
+import {
+  parseSentryDsn, redactSensitive, sanitizeReport, sanitizeReportUrl,
+} from './monitor'
 
 describe('parseSentryDsn', () => {
   it('a DSN-ből store-URL és auth-fejléc lesz', () => {
@@ -12,6 +14,7 @@ describe('parseSentryDsn', () => {
     expect(parseSentryDsn('nem-url')).toBeNull()
     expect(parseSentryDsn('https://host.io/nem-szam')).toBeNull()
     expect(parseSentryDsn('https://host.io/123')).toBeNull() // nincs kulcs
+    expect(parseSentryDsn('http://key@host.io/123')).toBeNull()
   })
 })
 
@@ -34,5 +37,21 @@ describe('sanitizeReport', () => {
   it('nem-string stack/url kimarad', () => {
     const r = sanitizeReport({ message: 'hiba', stack: 42, url: {} })
     expect(r).toEqual({ message: 'hiba', stack: undefined, url: undefined })
+  })
+
+  it('URL-bol query, hash es belepesi adat nem kerul a riportba', () => {
+    expect(sanitizeReportUrl('https://user:pass@example.com/login?reset=SECRET#x'))
+      .toBe('https://example.com/login')
+    expect(sanitizeReportUrl('/login?reset=SECRET')).toBe('/login')
+    expect(sanitizeReportUrl('javascript:alert(1)')).toBeUndefined()
+  })
+
+  it('gyakori tokenmintakat maszkol az uzenetben es stackben', () => {
+    expect(redactSensitive('GET /login?reset=VERYSECRET&x=1'))
+      .toBe('GET /login?reset=[redacted]&x=1')
+    expect(redactSensitive('Authorization: Bearer abcdefghijklmnopqrstuvwxyz'))
+      .not.toContain('abcdefghijklmnopqrstuvwxyz')
+    expect(redactSensitive('re_1234567890abcdefghijklmnop'))
+      .toBe('[redacted-api-key]')
   })
 })

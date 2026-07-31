@@ -44,7 +44,10 @@ export async function fetchThemes(anilistId: number): Promise<AnimeTheme[]> {
       'filter[external_id]': String(anilistId),
       include: 'animethemes.animethemeentries.videos,animethemes.song.artists',
     }).toString()
-  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  const res = await fetch(url, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(10_000),
+  })
   if (!res.ok) throw new Error(`animethemes HTTP ${res.status}`)
   return parseThemes(await res.json())
 }

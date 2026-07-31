@@ -16,12 +16,10 @@ type Common = { userId: number; username: string; animeId: number; anilistId: nu
 
 export type FeedInput = {
   added: (Common & { status: string })[]
-  opinions: (Common & { text: string })[]
+  opinions: Common[]
   episodes: (Common & { episode: number })[]
   favChars: (Common & { charName: string })[]
 }
-
-const excerpt = (t: string) => (t.length > 120 ? `${t.slice(0, 120)}…` : t)
 
 export function buildFeed(input: FeedInput, excludeUserId: number, limit = 30): FeedItem[] {
   const items: FeedItem[] = []
@@ -29,7 +27,7 @@ export function buildFeed(input: FeedInput, excludeUserId: number, limit = 30): 
     items.push({ kind: 'added', userId: a.userId, username: a.username, animeId: a.animeId, anilistId: a.anilistId, title: a.title, detail: null, count: 1, mediaType: a.mediaType, status: a.status, at: a.at })
   }
   for (const o of input.opinions) {
-    items.push({ kind: 'opinion', userId: o.userId, username: o.username, animeId: o.animeId, anilistId: o.anilistId, title: o.title, detail: excerpt(o.text), count: 1, mediaType: o.mediaType, status: null, at: o.at })
+    items.push({ kind: 'opinion', userId: o.userId, username: o.username, animeId: o.animeId, anilistId: o.anilistId, title: o.title, detail: null, count: 1, mediaType: o.mediaType, status: null, at: o.at })
   }
   // epizódok: (user, anime, nap) szerint összevonva, a nap utolsó epizódja a detail
   const byDay = new Map<string, { rows: (Common & { episode: number })[]; latest: string }>()

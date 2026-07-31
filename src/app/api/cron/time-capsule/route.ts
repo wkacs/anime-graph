@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
+import { and, eq, inArray, isNotNull } from 'drizzle-orm'
 import { db } from '@/db/client'
-import { anime, apiCache, pushSubscriptions, title } from '@/db/schema'
+import { anime, pushSubscriptions, title } from '@/db/schema'
 import { anniversaryYears, buildCapsulePayload } from '@/lib/time-capsule'
-import { seasonStartInfo, buildSeasonPayload } from '@/lib/season-push'
+import { buildSeasonPayload, seasonStartInfo } from '@/lib/season-push'
 import { authorizeCron } from '@/lib/cron-auth'
-import { eq, inArray, isNotNull, and } from 'drizzle-orm'
+import { sendPushOnce, type PushDeliveryResult } from '@/lib/push-delivery'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
-// Napi push-cron (Vercel Hobby max 2 cron → egy route, két feladat):
-// 1) Időkapszula (D8): „N éve ma fejezted be" az évfordulós címekről (dedup: napi 1 futás).
-// 2) Szezonváltás: az új szezon első napjaiban egyszeri „nézd meg, mik valók neked"
-//    (dedup: api_cache kulcs userenként+szezononként).
 export async function GET(req: NextRequest) {
   const auth = authorizeCron(process.env.CRON_SECRET, req.headers.get('authorization'))
   if (auth === 'misconfigured') return NextResponse.json({ error: 'cron_not_configured' }, { status: 500 })
@@ -27,64 +25,101 @@ export async function GET(req: NextRequest) {
   )
 
   const rows = await db.select({
-    userId: anime.userId, titleRomaji: anime.titleRomaji, watchedAt: anime.watchedAt,
-    mediaType: anime.mediaType, slug: title.slug,
+    userId: anime.userId,
+    titleRomaji: anime.titleRomaji,
+    watchedAt: anime.watchedAt,
+    mediaType: anime.mediaType,
+    slug: title.slug,
   }).from(anime)
     .innerJoin(title, eq(title.id, anime.titleId))
-    .where(and(eq(anime.status, 'completed'), isNotNull(anime.watchedAt)))
+    .where(and(
+      eq(anime.status, 'completed'),
+      isNotNull(anime.watchedAt),
+      eq(title.isAdult, 0),
+    ))
 
   const now = new Date()
   const anniversaries = rows
-    .map((r) => ({ ...r, years: anniversaryYears(r.watchedAt!, now) }))
-    .filter((r): r is typeof r & { years: number } => r.years != null)
+    .map((row) => ({ ...row, years: anniversaryYears(row.watchedAt!, now) }))
+    .filter((row): row is typeof row & { years: number } => row.years != null)
 
   const subs = await db.select().from(pushSubscriptions)
   const subsByUser = new Map<number, typeof subs>()
-  for (const s of subs) {
-    const list = subsByUser.get(s.userId) ?? []
-    list.push(s)
-    subsByUser.set(s.userId, list)
+  for (const subscription of subs) {
+    const list = subsByUser.get(subscription.userId) ?? []
+    list.push(subscription)
+    subsByUser.set(subscription.userId, list)
   }
 
   let sent = 0
-  const dead: string[] = []
-  for (const a of anniversaries) {
-    const path = a.slug ? (a.mediaType === 'MANGA' ? `/manga/${a.slug}` : `/anime/${a.slug}`) : null
-    const payload = JSON.stringify(buildCapsulePayload(a.titleRomaji, a.years, path))
-    for (const s of subsByUser.get(a.userId) ?? []) {
-      try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
-        sent++
-      } catch (e) {
-        const status = (e as { statusCode?: number }).statusCode
-        if (status === 404 || status === 410) dead.push(s.endpoint)
-      }
+  let seasonSent = 0
+  let failed = 0
+  let pending = 0
+  const dead = new Set<string>()
+
+  const recordResult = (
+    result: PushDeliveryResult,
+    endpoint: string,
+    season: boolean,
+  ) => {
+    if (result.state === 'sent') {
+      if (season) seasonSent++
+      else sent++
+    }
+    if (result.state === 'dead') dead.add(endpoint)
+    if (result.state === 'failed') {
+      failed++
+      console.error('Időkapszula push kézbesítési hiba:', { status: result.statusCode })
+    }
+    if (result.state === 'pending') pending++
+  }
+
+  for (const anniversary of anniversaries) {
+    const path = anniversary.mediaType === 'MANGA'
+      ? `/manga/${anniversary.slug}`
+      : `/anime/${anniversary.slug}`
+    const payload = JSON.stringify(buildCapsulePayload(
+      anniversary.titleRomaji,
+      anniversary.years,
+      path,
+    ))
+    for (const subscription of subsByUser.get(anniversary.userId) ?? []) {
+      const result = await sendPushOnce({
+        eventKey: `anniversary:${anniversary.userId}:${anniversary.slug}:${anniversary.years}`,
+        subscription,
+        payload,
+        ttlDays: 400,
+      })
+      recordResult(result, subscription.endpoint, false)
     }
   }
-  // 2) szezonváltás-push az ablakban, userenként+szezononként egyszer
-  let seasonSent = 0
+
   const seasonInfo = seasonStartInfo(now)
   if (seasonInfo) {
     const payload = JSON.stringify(buildSeasonPayload(seasonInfo.year, seasonInfo.season))
-    for (const [uid, userSubs] of subsByUser) {
-      const dedupKey = `season-push:${seasonInfo.year}-${seasonInfo.season}:${uid}`
-      const inserted = await db.insert(apiCache)
-        .values({ key: dedupKey, value: { sent: true }, expiresAt: new Date(now.getTime() + 30 * 86400_000) })
-        .onConflictDoNothing()
-        .returning({ key: apiCache.key })
-      if (!inserted.length) continue
-      for (const s of userSubs) {
-        try {
-          await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
-          seasonSent++
-        } catch (e) {
-          const status = (e as { statusCode?: number }).statusCode
-          if (status === 404 || status === 410) dead.push(s.endpoint)
-        }
+    for (const [userId, userSubs] of subsByUser) {
+      for (const subscription of userSubs) {
+        const result = await sendPushOnce({
+          eventKey: `season:${seasonInfo.year}:${seasonInfo.season}:${userId}`,
+          subscription,
+          payload,
+          ttlDays: 180,
+        })
+        recordResult(result, subscription.endpoint, true)
       }
     }
   }
 
-  if (dead.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.endpoint, [...new Set(dead)]))
-  return NextResponse.json({ sent, anniversaries: anniversaries.length, seasonSent, removedSubs: dead.length })
+  if (dead.size) {
+    await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.endpoint, [...dead]))
+  }
+  const status = failed > 0 ? 502 : pending > 0 ? 503 : 200
+  return NextResponse.json({
+    sent,
+    anniversaries: anniversaries.length,
+    seasonSent,
+    failed,
+    pending,
+    removedSubs: dead.size,
+  }, { status })
 }

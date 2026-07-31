@@ -32,14 +32,13 @@ describe('buildFeed', () => {
     expect(items[1].detail).toBe('EP 4') // legutolsó epizód a napon
   })
 
-  it('vélemény-kivonatot vág 120 karakterre', () => {
-    const long = 'x'.repeat(200)
+  it('a vélemény esemény nem szivárogtatja ki a nyers szöveget', () => {
     const items = buildFeed({
       ...base,
-      opinions: [{ userId: 2, username: 'o', animeId: 11, anilistId: 101, title: 'B', mediaType: 'ANIME', text: long, at: '2026-07-12T10:00:00Z' }],
+      opinions: [{ userId: 2, username: 'o', animeId: 11, anilistId: 101, title: 'B', mediaType: 'ANIME', at: '2026-07-12T10:00:00Z' }],
     }, 1)
     expect(items[0].kind).toBe('opinion')
-    expect(items[0].detail!.length).toBeLessThanOrEqual(121) // 120 + ellipszis
+    expect(items[0].detail).toBeNull()
   })
 
   it('limitál', () => {

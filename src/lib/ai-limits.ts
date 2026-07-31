@@ -19,11 +19,23 @@ export const GLOBAL_QUOTA_USER_ID = 0
 /**
  * Napi ÖSSZ-keret minden felhasználóra együtt. A fejenkénti kvóta fölött ül:
  * enélkül a számla lineárisan nő a regisztrálók számával, közös AI-kulcson.
- * Hiányzó vagy értelmetlen env = nincs plafon (a mai viselkedés marad).
+ * Fejlesztésben a hiányzó érték megtartja a korábbi korlátlan viselkedést.
+ * Productionben viszont fail-closed: a hiányzó/hibás költségplafon konfigurációs hiba.
  */
+export function parseGlobalDailyLimit(value: string | undefined, strict = false): number {
+  const raw = Number(value ?? 0)
+  if (Number.isFinite(raw) && raw > 0) return Math.floor(raw)
+  if (strict) {
+    throw new Error('AI_GLOBAL_DAILY_LIMIT productionben pozitív egész szám kell legyen')
+  }
+  return 0
+}
+
 export function globalDailyLimit(): number {
-  const raw = Number(process.env.AI_GLOBAL_DAILY_LIMIT ?? 0)
-  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0
+  return parseGlobalDailyLimit(
+    process.env.AI_GLOBAL_DAILY_LIMIT,
+    process.env.NODE_ENV === 'production',
+  )
 }
 
 export type QuotaVerdict = { allowed: true } | { allowed: false; reason: 'user' | 'global' }

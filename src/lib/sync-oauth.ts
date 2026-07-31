@@ -9,7 +9,7 @@ export function isProvider(p: string): p is Provider {
 }
 
 export function appUrl(fallbackOrigin: string): string {
-  return process.env.APP_URL ?? fallbackOrigin
+  return (process.env.APP_URL ?? fallbackOrigin).replace(/\/+$/, '')
 }
 
 export function redirectUri(origin: string, provider: Provider): string {
@@ -38,6 +38,7 @@ export function authorizeUrl(provider: Provider, origin: string, state: string, 
     client_id: process.env.ANILIST_CLIENT_ID,
     redirect_uri: redirectUri(origin, 'anilist'),
     response_type: 'code',
+    state,
   })
   return `https://anilist.co/api/v2/oauth/authorize?${q}`
 }
@@ -61,6 +62,7 @@ export async function exchangeCode(provider: Provider, origin: string, code: str
         code_verifier: verifier,
         redirect_uri: redirectUri(origin, 'mal'),
       }),
+      signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) return null
     const j = await res.json() as { access_token: string; refresh_token: string; expires_in: number }
@@ -80,6 +82,7 @@ export async function exchangeCode(provider: Provider, origin: string, code: str
       redirect_uri: redirectUri(origin, 'anilist'),
       code,
     }),
+    signal: AbortSignal.timeout(15_000),
   })
   if (!res.ok) return null
   const j = await res.json() as { access_token: string }
@@ -91,6 +94,7 @@ export async function fetchExternalUsername(provider: Provider, accessToken: str
     if (provider === 'mal') {
       const res = await fetch('https://api.myanimelist.net/v2/users/@me', {
         headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(10_000),
       })
       if (!res.ok) return null
       return ((await res.json()) as { name?: string }).name ?? null
@@ -99,6 +103,7 @@ export async function fetchExternalUsername(provider: Provider, accessToken: str
       method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: '{Viewer{name}}' }),
+      signal: AbortSignal.timeout(10_000),
     })
     if (!res.ok) return null
     return ((await res.json()) as { data?: { Viewer?: { name?: string } } }).data?.Viewer?.name ?? null

@@ -1,9 +1,11 @@
 // Egyszerű fix-ablakos rate-limit az api_cache táblán (nincs külön infra).
-// Best-effort: párhuzamos kérések versenyhelyzete legfeljebb +1-2 kérést enged át —
-// brute-force ellen bőven elég, a Neon round-trip önmagában is lassít.
+// Az IP/e-mail azonosító HMAC-ként kerül a kulcsba: adatbázis-hozzáférésből nem
+// olvasható vissza. Az atomi upsert miatt párhuzamos kérés sem lépi túl a keretet.
 
+import { createHmac } from 'node:crypto'
 import { db } from '@/db/client'
 import { apiCache } from '@/db/schema'
+import { sessionSecret } from './env'
 import { eq, sql } from 'drizzle-orm'
 
 export function clientIp(headers: Headers): string {
@@ -11,9 +13,16 @@ export function clientIp(headers: Headers): string {
   return (fwd ? fwd.split(',')[0].trim() : null) || headers.get('x-real-ip') || 'local'
 }
 
+export function rateLimitKey(scope: string, id: string, secret = sessionSecret()): string {
+  const digest = createHmac('sha256', secret)
+    .update(`${scope}\0${id}`)
+    .digest('hex')
+  return `rl:${scope}:${digest}`
+}
+
 /** true = mehet; false = limit fölött (429-et adj) */
 export async function rateLimit(scope: string, id: string, limit: number, windowSec: number): Promise<boolean> {
-  const key = `rl:${scope}:${id}`
+  const key = rateLimitKey(scope, id)
   const now = new Date()
   try {
     const [row] = await db.insert(apiCache)
@@ -41,5 +50,5 @@ export async function rateLimit(scope: string, id: string, limit: number, window
 
 // takarítás nem kell: az api_cache kulcsok felülíródnak, a lejárt ablak újraindul
 export async function clearRateLimit(scope: string, id: string): Promise<void> {
-  await db.delete(apiCache).where(eq(apiCache.key, `rl:${scope}:${id}`))
+  await db.delete(apiCache).where(eq(apiCache.key, rateLimitKey(scope, id)))
 }

@@ -5,20 +5,27 @@
 // kitöltéshez nem kell kódot módosítani — a Vercel env beállítása elég.
 // Szándékosan nincsenek kitalált cégadatok fallbackként — egy kitalált
 // székhely vagy adószám a tájékoztatót hamis okirattá tenné.
-function operatorField(value: string | undefined, todo: string): string {
+function operatorField(value: string | undefined, fieldName: string): string {
   const v = value?.trim()
-  return v ? v : todo
+  if (!v && process.env.NODE_ENV === 'production') {
+    throw new Error(`Hiányzó production üzemeltetői adat: ${fieldName}`)
+  }
+  return v ? v : `Nincs beállítva (${fieldName})`
+}
+
+function optionalOperatorField(value: string | undefined): string {
+  return value?.trim() ?? ''
 }
 
 export const OPERATOR = {
-  name: operatorField(process.env.NEXT_PUBLIC_OPERATOR_NAME, 'TODO: üzemeltető neve (magánszemély vagy cég)'),
-  address: operatorField(process.env.NEXT_PUBLIC_OPERATOR_ADDRESS, 'TODO: székhely / levelezési cím'),
-  registration: operatorField(process.env.NEXT_PUBLIC_OPERATOR_REGISTRATION, 'TODO: cégjegyzékszám vagy nyilvántartási szám (ha van)'),
-  email: operatorField(process.env.NEXT_PUBLIC_OPERATOR_EMAIL, 'TODO: kapcsolattartó e-mail-cím'),
+  name: operatorField(process.env.NEXT_PUBLIC_OPERATOR_NAME, 'üzemeltető neve'),
+  address: operatorField(process.env.NEXT_PUBLIC_OPERATOR_ADDRESS, 'székhely / levelezési cím'),
+  registration: optionalOperatorField(process.env.NEXT_PUBLIC_OPERATOR_REGISTRATION),
+  email: operatorField(process.env.NEXT_PUBLIC_OPERATOR_EMAIL, 'kapcsolattartó e-mail-cím'),
 } as const
 
 /** A tájékoztatók utolsó tartalmi módosítása. Kézzel léptetendő. */
-export const LEGAL_UPDATED = '2026-07-27'
+export const LEGAL_UPDATED = '2026-07-31'
 
 export const SERVICE_NAME = 'Anime Graph'
 
@@ -27,6 +34,7 @@ export const PROCESSORS: { name: string; purpose: string; location: string }[] =
   { name: 'Vercel Inc.', purpose: 'a szolgáltatás üzemeltetése (tárhely)', location: 'EU / USA' },
   { name: 'Neon Inc.', purpose: 'adatbázis-szolgáltatás', location: 'EU / USA' },
   { name: 'Resend', purpose: 'rendszer-levelek kézbesítése (megerősítés, jelszó-visszaállítás)', location: 'USA' },
+  { name: 'Sentry (ha be van állítva)', purpose: 'technikai hibariportok fogadása', location: 'EU / USA' },
   {
     name: 'Zhipu AI (open.bigmodel.cn)',
     purpose: 'a véleményeid és ízlés-adataid feldolgozása AI-modellel',

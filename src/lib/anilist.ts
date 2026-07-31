@@ -34,16 +34,23 @@ export type SearchResult = {
   description: string | null
 }
 
-export async function anilistFetch<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+export async function anilistFetch<T>(
+  query: string,
+  variables: Record<string, unknown>,
+  options: { attempts?: number; timeoutMs?: number } = {},
+): Promise<T> {
   // Importoknál több kérés fut egymás után. Egy rövid AniList 429 ezért nem
   // nullázza le az egész folyamatot: a Retry-After szerint még kétszer próbálunk.
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const attempts = options.attempts ?? 3
+  const timeoutMs = options.timeoutMs ?? 15_000
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query, variables }),
+      signal: AbortSignal.timeout(timeoutMs),
     })
-    if (res.status === 429 && attempt < 2) {
+    if (res.status === 429 && attempt < attempts - 1) {
       const retryAfter = Number(res.headers.get('retry-after'))
       const delayMs = Math.min(5000, Math.max(500, Number.isFinite(retryAfter) ? retryAfter * 1000 : 1000))
       await new Promise((resolve) => setTimeout(resolve, delayMs))

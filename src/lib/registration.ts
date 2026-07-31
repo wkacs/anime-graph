@@ -1,3 +1,5 @@
+import { INPUT_LIMITS } from './input-limits'
+
 export type RegistrationMode = 'open' | 'invite' | 'closed'
 
 // Ismeretlen érték esetén a biztonságos irány a zárva — egy elgépelt env
@@ -12,6 +14,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const USERNAME_RE = /^[a-z0-9_-]{3,24}$/
 export const MIN_PASSWORD_LENGTH = 8
 
+export function validPasswordLength(password: string): boolean {
+  return password.length >= MIN_PASSWORD_LENGTH && password.length <= INPUT_LIMITS.password
+}
+
 export type RegistrationInput = { email: string; username: string; password: string }
 export type RegistrationResult =
   | { ok: true; email: string; username: string }
@@ -22,9 +28,8 @@ export function validateRegistration(input: RegistrationInput): RegistrationResu
   const username = input.username.trim().toLowerCase()
   if (!EMAIL_RE.test(email)) return { ok: false, field: 'email' }
   if (!USERNAME_RE.test(username)) return { ok: false, field: 'username' }
-  if (input.password.length < MIN_PASSWORD_LENGTH || input.password.length > INPUT_LIMITS.password) {
+  if (!validPasswordLength(input.password)) {
     return { ok: false, field: 'password' }
   }
   return { ok: true, email, username }
 }
-import { INPUT_LIMITS } from './input-limits'

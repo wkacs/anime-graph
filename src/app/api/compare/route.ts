@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { anime, settings, users } from '@/db/schema'
+import { anime, settings, title, users } from '@/db/schema'
 import { fetchUserList } from '@/lib/anilist'
 import { compareLists, type TheirEntry } from '@/lib/compare'
 import { requireUserId } from '@/lib/session'
@@ -37,8 +37,18 @@ export async function POST(req: NextRequest) {
     if (!canViewProfile(userId, other.id, visibility?.value)) {
       return apiError('noSuchUser', 404)
     }
-    const otherRows = await db.select().from(anime)
-      .where(and(eq(anime.userId, other.id), eq(anime.mediaType, 'ANIME')))
+    const otherRows = await db.select({
+      anilistId: anime.anilistId,
+      titleRomaji: anime.titleRomaji,
+      coverUrl: anime.coverUrl,
+      myScore: anime.myScore,
+    }).from(anime)
+      .innerJoin(title, eq(title.id, anime.titleId))
+      .where(and(
+        eq(anime.userId, other.id),
+        eq(anime.mediaType, 'ANIME'),
+        eq(title.isAdult, 0),
+      ))
     if (!otherRows.length) {
       return apiError('otherUserEmptyList', 404)
     }

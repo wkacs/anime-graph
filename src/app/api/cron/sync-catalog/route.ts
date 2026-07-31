@@ -16,7 +16,8 @@ export const maxDuration = 60
 // sync (scripts/sync-catalog.mjs) órákig tart — az kézi/egyszeri eszköz marad,
 // ez a napi karbantartó.
 const PAGE_CAP = 15 // 15 lap × 50 cím típusonként — egy átlagos nap bőven belefér
-const TIME_BUDGET_MS = 40_000 // a maxDuration alatt maradunk, a maradék holnap jön
+const TOTAL_BUDGET_MS = 42_000 // a maxDuration alatt maradunk, a maradék holnap jön
+const TYPE_BUDGET_MS = 18_000 // egyik típus sem éheztetheti ki tartósan a másikat
 const WATERMARK_TTL_SEC = 365 * 86_400 // a vízjel nem járhat le futások között
 
 type SyncMedia = AnilistMedia & { updatedAt: number }
@@ -59,6 +60,7 @@ export async function GET(req: NextRequest) {
   const result: Record<string, { synced: number; pages: number; capped: boolean }> = {}
 
   for (const type of ['ANIME', 'MANGA'] as const) {
+    const typeStart = Date.now()
     const cacheKey = `catalog-sync:${type}`
     const stored = await getCached<{ watermark: number }>(cacheKey)
     const watermark = stored?.watermark ?? defaultWatermark(nowSec)
@@ -68,8 +70,18 @@ export async function GET(req: NextRequest) {
     let capped = false
 
     for (let page = 1; page <= PAGE_CAP; page++) {
-      if (Date.now() - start > TIME_BUDGET_MS) { capped = true; break }
-      const data = await anilistFetch<SyncPage>(SYNC_QUERY, { page, type })
+      if (
+        Date.now() - start > TOTAL_BUDGET_MS
+        || Date.now() - typeStart > TYPE_BUDGET_MS
+      ) {
+        capped = true
+        break
+      }
+      const data = await anilistFetch<SyncPage>(
+        SYNC_QUERY,
+        { page, type },
+        { attempts: 2, timeoutMs: 8_000 },
+      )
       const media = data.Page.media
       pages++
       const { fresh, morePages } = sliceNewMedia(media, watermark)

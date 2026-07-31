@@ -1,5 +1,14 @@
 const enc = new TextEncoder()
 
+export function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let mismatch = 0
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return mismatch === 0
+}
+
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey(
     'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
@@ -17,6 +26,7 @@ export const SESSION_RENEW_AFTER_MS = (SESSION_DAYS / 2) * 86400_000
 export async function createSession(
   secret: string, userId: number, tokenVersion: number, days = SESSION_DAYS,
 ): Promise<string> {
+  if (!secret) throw new Error('A session aláírókulcsa nem lehet üres')
   const exp = Date.now() + days * 86400_000
   const payload = `${userId}.${tokenVersion}.${exp}`
   return `${payload}.${await hmacHex(secret, payload)}`
@@ -27,11 +37,12 @@ export type SessionClaims = { userId: number; tokenVersion: number; expiresAt: n
 export async function verifySession(
   secret: string, token: string | undefined,
 ): Promise<SessionClaims | null> {
-  if (!token) return null
+  if (!secret || !token) return null
   const parts = token.split('.')
   if (parts.length !== 4) return null
   const [uid, ver, exp, sig] = parts
-  if ((await hmacHex(secret, `${uid}.${ver}.${exp}`)) !== sig) return null
+  const expected = await hmacHex(secret, `${uid}.${ver}.${exp}`)
+  if (!/^[0-9a-f]{64}$/.test(sig) || !constantTimeEqual(expected, sig)) return null
   if (!/^\d+$/.test(exp) || Number(exp) < Date.now()) return null
   const userId = Number(uid)
   const tokenVersion = Number(ver)

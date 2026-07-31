@@ -3,9 +3,18 @@ on:
   schedule:
     - cron: '17 4 * * 1'   # hétfő 04:17 UTC, hetente
   workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-maintenance
+  cancel-in-progress: false
+
 jobs:
   sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

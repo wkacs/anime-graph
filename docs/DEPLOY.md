@@ -1,100 +1,138 @@
-# Élesítés-runbook (Vercel + Neon + GitHub cron)
+# Production élesítési runbook
 
-Állapot 2026-07-23: master==origin, prod build zöld, DDL-migrációk (ai-tier, catalog-cache) lefutottak a Neonon, adat-lánc (offline-db import → backfill → recs → recompute) folyamatban.
+Ez a projekt kézi Vercel Dashboard-beállítást feltételez. A runbook nem igényel
+és nem használ Vercel CLI-t.
 
-## 0/a. Gate-A migráció (2026-07-26)
+## 1. Adatbázis
 
-A nyílt regisztráció sémája: `DATABASE_URL="<prod>" node scripts/migrate-gate-a.mjs`
-(idempotens, additív; a futó régi kód nem törik tőle). Ez adja a `users` új oszlopait
-(`email`, `email_verified_at`, `token_version`, `locale`, `bio`), az `auth_tokens`
-táblát és a `taste_memory.lang` mezőt.
+Készíts mentést vagy Neon branchet, majd azon ellenőrizd az idempotens migrációkat:
 
-🔴 A deploy után **mindenki egyszer kilép**: a session-token formátuma
-`uid.exp.hmac`-ról `uid.ver.exp.hmac`-ra váltott, a régi sütik érvénytelenek.
+```powershell
+$env:DATABASE_URL = 'postgres://...'
+node scripts/migrate-gate-a.mjs
+node scripts/migrate-taste-signal.mjs
+node scripts/migrate-watchlist-ownership.mjs
+node scripts/migrate-adult-content.mjs
+# A régi, nyers rate-limit azonosítók miatt az első új deploy előtt egyszer:
+node scripts/migrate-rate-limit-privacy.mjs
+node scripts/verify-catalog-split.mjs
+```
 
-## 0/b. Ízlés-jel migráció (2026-07-26)
+Ezután szükség szerint futtasd a katalógus-adatláncot:
 
-`DATABASE_URL="<prod>" node scripts/migrate-taste-signal.mjs` — a `taste_signal` tábla
-(additív, idempotens). Utána egyszer: `node scripts/backfill-taste-signals.mjs`.
+```powershell
+node scripts/import-offline-db.mjs
+node scripts/backfill-descriptions.mjs --only-missing
+node scripts/sync-title-recs.mjs
+node scripts/recompute-scores.mjs
+```
 
-A backfill AI nélkül dolgozik, és a jelenlegi adaton **nulla jelet talált** (a tények
-magyar prózában vannak, az AniList tagnevei angolul). A valódi jelek az új vélemények
-`extract`-jéből jönnek — a lokális rangsor addig is a viselkedési vektorral működik.
+Csak sikeres ellenőrzés után ismételd meg a production adatbázison.
 
-## 0/c. Watchlist-tulajdon migráció (P0)
+## 2. Resend és DNS
 
-A watchlist többé nem globális: a meglévő sorok az eredeti hozzáadó személyes
-listájába kerülnek. A scriptet előbb Neon branchen, majd productionön futtasd,
-**még az alkalmazáskód deployja előtt**:
+1. Adj hozzá külön küldő aldomaint a Resendben, például `mail.example.com`.
+2. Másold be a Resend által adott SPF és DKIM rekordokat a DNS-kezelőbe.
+3. Állíts be DMARC rekordot a domain szabályaihoz illően.
+4. Hozz létre csak küldésre jogosult API-kulcsot.
+5. A `FROM_EMAIL` legyen például `Anime Graph <hello@mail.example.com>`.
+6. Ellenőrizd a domain „verified” állapotát, majd küldj tesztlevelet.
 
-`DATABASE_URL="<prod>" node scripts/migrate-watchlist-ownership.mjs`
+Az auth-leveleknél érdemes kikapcsolni a click/open trackinget.
 
-A migráció idempotens. Megőrzi a meglévő sorokat, a globális címazonosságot
-`(user_id, anilist_id)` párosra cseréli, és kötelezővé teszi a tulajdont.
+## 3. Vercel Dashboard környezeti változók
 
-## 0/d. Adult-tartalom migráció (P1)
+Kötelező production értékek:
 
-`DATABASE_URL="<prod>" node scripts/migrate-adult-content.mjs` — felveszi az
-AniList `isAdult` jelét a katalógusba, és azonnal elrejti a meglévő `Hentai`
-taggel jelölt címeket. Ezután a teljes katalógus-szinkront futtasd le, hogy
-minden korhatáros cím a hivatalos AniList jelölést kapja:
+| Változó | Követelmény |
+|---|---|
+| `DATABASE_URL` | production Neon connection string |
+| `GLM_API_KEY` | elsődleges AI-kulcs |
+| `SESSION_SECRET` | legalább 32 karakter, csak productionre |
+| `REGISTRATION_MODE` | induláskor ajánlott `invite` |
+| `INVITE_CODE` | `invite` módban kötelező |
+| `AI_GLOBAL_DAILY_LIMIT` | pozitív egész napi összplafon |
+| `RESEND_API_KEY` | küldésre korlátozott production kulcs |
+| `FROM_EMAIL` | ellenőrzött küldő domain |
+| `CRON_SECRET` | legalább 32 karakter, random |
+| `APP_URL` | stabil `https://` origin |
+| `NEXT_PUBLIC_OPERATOR_NAME` | valós üzemeltető |
+| `NEXT_PUBLIC_OPERATOR_ADDRESS` | valós cím |
+| `NEXT_PUBLIC_OPERATOR_EMAIL` | kapcsolati cím |
 
-`DATABASE_URL="<prod>" node scripts/sync-catalog.mjs --type=ANIME`
+Funkciófüggő értékek: `NOTIFY_EMAIL`, VAPID kulcsok, MAL/AniList OAuth adatok,
+`OAUTH_TOKEN_ENCRYPTION_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `SENTRY_DSN`.
 
-majd ugyanez `--type=MANGA` opcióval. A szinkron végéig ne nyisd meg a
-regisztrációt nyilvánosan.
+Ha MAL vagy AniList kétirányú OAuth-szinkront kapcsolsz be, a kliensazonosítót
+és titkot mindig párban add meg, majd készíts stabil, 32 bájtos titkosítókulcsot:
 
-## 0. Előfeltétel — DB-adatlánc kész
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+```
 
-A deploy előtt fusson végig: `import-offline-db.mjs` → `backfill-descriptions.mjs --only-missing` → `sync-title-recs.mjs` → `recompute-scores.mjs`, majd app-smoke. Amíg nincs kész, a recommend/browse kevés jelöltet ad (502 „nincs elég katalógus-adat", nem crash).
+Az eredményt csak `OAUTH_TOKEN_ENCRYPTION_KEY` secretként tárold. Meglévő
+`sync_accounts` soroknál ugyanazzal a kulccsal egyszer futtasd:
 
-## 1. Vercel-projekt (kézzel, webes UI — a gépen a CLI a CÉGES fiókkal van belépve, azt NE használd!)
+```powershell
+node scripts/migrate-oauth-token-encryption.mjs
+```
 
-1. vercel.com → **wkacs személyes fiók** → Add New Project → Import a `wkacs/anime-graph` GitHub-repóból.
-2. Framework: Next.js (auto). Build-parancs default.
-3. Environment Variables (Production):
+A kulcs elvesztése a kapcsolt tokeneket használhatatlanná teszi; rotáció előtt
+előbb vissza kell fejteni és az új kulccsal újratitkosítani őket.
 
-| Változó | Kötelező | Érték/megjegyzés |
-|---|---|---|
-| `DATABASE_URL` | ✅ | Neon connection string (ugyanaz, ami .env.local-ban) |
-| `GLM_API_KEY` | ✅ | open.bigmodel.cn kulcs |
-| `SESSION_SECRET` | ✅ | ÚJ hosszú random string prodra (ne a dev-értéket) |
-| `REGISTRATION_MODE` | ✅ | `open` \| `invite` \| `closed`. Nyílt regisztrációhoz `open`. Ismeretlen érték = `closed` |
-| `INVITE_CODE` | – | csak `REGISTRATION_MODE=invite` esetén kell |
-| `FROM_EMAIL` | ✅ | a rendszer-levelek feladója (megerősítés, jelszó-reset) |
-| `CRON_SECRET` | ✅ | random string; enélkül a cron endpointok fail-closed módban HTTP 500-at adnak. A Vercel- és GH-cron is ezt küldi |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | push-hoz | .env.local-ban generálva van |
-| `VAPID_PRIVATE_KEY` | push-hoz | .env.local-ból |
-| `VAPID_SUBJECT` | push-hoz | `mailto:...` |
-| `AI_DAILY_LIMIT` | – | opcionális, default 20 (tier-limitek az `ai-limits.ts`-ben) |
-| `OPENROUTER_API_KEY` | – | GLM-429 failover |
-| `RESEND_API_KEY`, `FROM_EMAIL` | ✅ | regisztrációs megerősítés és jelszó-reset. A `FROM_EMAIL` domainjét előbb a Resendben verifikálni kell; hiány esetén productionben a regisztráció fail-closed. |
-| `NOTIFY_EMAIL` | – | napi admin-digest címzettje |
-| `APP_URL` | ✅ | a prod URL (pl. `https://anime-graph.vercel.app`). **Enélkül a sitemap/robots/canonical/JSON-LD localhost-URL-eket ad ki** (a kód a `VERCEL_PROJECT_PRODUCTION_URL`-re esik vissza, de az OAuth-callbackek ettől még ezt olvassák) |
-| `MAL_CLIENT_ID`, `MAL_CLIENT_SECRET` | – | kétirányú MAL-szinkron (myanimelist.net/apiconfig, redirect: `<APP_URL>/api/sync/mal/callback`) |
-| `ANILIST_CLIENT_ID`, `ANILIST_CLIENT_SECRET` | – | kétirányú AniList-szinkron (anilist.co/settings/developer, redirect: `<APP_URL>/api/sync/anilist/callback`) |
+A production build automatikusan futtatja a környezeti validátort. Ugyanez
+kézzel is ellenőrizhető olyan shellben, ahol az éles env már be van töltve:
 
-4. Deploy. A `vercel.json` cron (06:00 UTC napi e-mail) automatikusan él.
+```powershell
+$env:VALIDATE_PRODUCTION_ENV = '1'
+node scripts/validate-production-env.mjs
+```
 
-## 2. GitHub repo-secretek (Actions-cronokhoz)
+## 4. GitHub Actions secretek
 
-`Settings → Secrets and variables → Actions`:
+- `APP_URL`
+- `CRON_SECRET` – ugyanaz, mint a Vercel production érték
+- `DATABASE_URL` – csak a katalógus-karbantartó workflow-khoz
 
-- `CRON_SECRET` — ugyanaz, mint a Vercel env
-- `APP_URL` — a prod URL (pl. `https://anime-graph.vercel.app`) → `airing-cron.yml` (óránkénti push)
-- `DATABASE_URL` — a Neon string → `catalog.yml` (nightly sync+recompute) és `offline-db-sync.yml` (heti)
+A katalógus és a heti offline sync közös concurrency groupban fut, ezért nem
+írják egyszerre ugyanazokat a táblákat.
 
-## 3. Deploy utáni teendők (egyszeri)
+A `catalog-full-sync` workflow kézi karbantartásra való; ne adj hozzá napi
+ütemezést, mert a Vercel `sync-catalog` cron végzi az inkrementális frissítést.
 
-1. **kacs → paid tier** (különben 5 recommend/nap limit): `UPDATE users SET tier='paid' WHERE id=1;`
-2. `demo` teszt-user törlése, ha nem kell: `DELETE FROM users WHERE id=2 AND username='demo';` (+ user_title sorai kaszkád/kézzel)
-3. Smoke élesben: login (kacs) → News betölt → Lista (271 cím) → add-flow (keresés→hozzáadás) → Recommend me → vibe → publikus `/p/[token]` → push-engedély (HTTPS-en már működik).
-4. Regisztráció-teszt az új INVITE_CODE-dal (majd a kód megosztása csak meghívottaknak).
+## 5. Deploy előtti ellenőrzés
 
-## Gotchák
+```powershell
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm audit --omit=dev --audit-level=high
+npm run build
+```
 
-- Neon HTTP-cache: `fetchOptions: { cache: 'no-store' }` már a kódban.
-- A scriptek `process.env.DATABASE_URL`-t olvasnak (NEM .env.local-t) — GH-cronban a secret adja.
-- `next build`+`next dev` közös `.next` → lokális buildnél dev-server le.
-- Web-push localhoston nem megy, prod HTTPS-en igen.
-- Uptime monitorhoz a publikus `GET /api/health` endpointot használd. A 200 a Neon adatbázist is ellenőrzi; a 503 hibát jelez.
+Ellenőrizd, hogy nincs gitben `.env*`, API-kulcs vagy connection string.
+
+## 6. Production smoke
+
+1. `/api/health` 200.
+2. Regisztráció → verify levél → link egyszer működik, másodszor érvénytelen.
+3. Forgot/reset → új jelszó; a korábbi sessionök megszűnnek.
+4. Nem megerősített fiók AI-hívása elutasított.
+5. Új profil 404-et ad publikus URL-en, amíg explicit publicra nem állítják.
+6. Privát user nem látható feedben, review-ban, compare/duo/group funkcióban.
+7. Felnőtt cím nem jelenik meg publikus/közösségi felületen.
+8. MAL/AniList import, listaírás és ajánló működik.
+9. Push engedély és egy tesztkézbesítés működik HTTPS-en.
+10. A három Vercel cron következő futása és az óránkénti GitHub cron zöld.
+
+Az első publikus napokban maradjon `REGISTRATION_MODE=invite`. Nyílt módra csak
+a kézbesítés, költségplafon, logfigyelés és visszaállítási folyamat igazolt
+működése után válts.
+
+## 7. Visszaállítás
+
+Hibás deploynál állítsd vissza az előző stabil deploymentet a Vercel
+Dashboardon, és szükség esetén válts `REGISTRATION_MODE=closed` módra. Ne
+futtass destruktív adatbázis-visszaállítást ellenőrzött mentés és pontos
+incidenshatókör nélkül.

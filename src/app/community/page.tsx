@@ -7,7 +7,7 @@ import PageShell from '@/components/ui/PageShell'
 import Skeleton from '@/components/ui/Skeleton'
 
 type Review = {
-  id: number; text: string; updatedAt: string; username: string; title: string
+  id: number; score: number | null; updatedAt: string; username: string; title: string
   coverUrl: string | null; href: string
 }
 
@@ -47,7 +47,9 @@ export default function CommunityPage() {
                     <Link href={review.href} className="font-medium text-text-1 hover:underline">{review.title}</Link>
                     <Link href={`/u/${encodeURIComponent(review.username)}`} className="text-xs text-text-2 hover:text-text-1">@{review.username}</Link>
                   </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-text-2">{review.text}</p>
+                  {review.score != null && (
+                    <p className="mt-2 text-sm leading-relaxed text-text-2">★ {review.score}/10</p>
+                  )}
                 </div>
               </div>
             </li>

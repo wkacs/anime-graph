@@ -42,7 +42,9 @@ export async function POST(req: NextRequest) {
   if (memberIds.length < 2) return apiError('needOtherMembers', 400)
 
   const select = { userId: anime.userId, anilistId: anime.anilistId, genres: anime.genres, tags: anime.tags, status: anime.status, myScore: anime.myScore }
-  const allItems = await db.select(select).from(anime).where(inArray(anime.userId, memberIds))
+  const allItems = await db.select(select).from(anime)
+    .innerJoin(title, eq(title.id, anime.titleId))
+    .where(and(inArray(anime.userId, memberIds), eq(title.isAdult, 0)))
   const vectors = memberIds.map((id) => buildTasteVector(allItems.filter((r) => r.userId === id)))
   const ownedAnilist = new Set(allItems.map((r) => r.anilistId))
 
