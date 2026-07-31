@@ -1,6 +1,8 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { tweenFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import Graph3D from '@/components/Graph3D'
 import HierarchyPanel from '@/components/HierarchyPanel'
@@ -223,7 +225,14 @@ export default function GrafPage() {
       className="relative h-[100dvh] w-screen overflow-hidden"
       onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
     >
-      <div data-tour="graph" className="absolute inset-0">
+      {/* fade+scale belepes a canvas KOROL — a Graph3D belso kameraja nem valtozik */}
+      <motion.div
+        data-tour="graph"
+        className="absolute inset-0"
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={tweenFluid}
+      >
         <Graph3D
           data={graph}
           onAnimeClick={openAnime}
@@ -234,7 +243,7 @@ export default function GrafPage() {
           fitKey={fitKey}
           focusNodeId={focusNodeId}
         />
-      </div>
+      </motion.div>
 
       {/* Kereső és „Ajánlj nekem" EGY sorban osztozik. Külön fixed elemként
           390px-en egymásra csúsztak (x 234–336 átfedés). Desktopon a

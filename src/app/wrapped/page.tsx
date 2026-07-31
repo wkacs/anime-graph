@@ -17,7 +17,7 @@ function Slide({ children }: { children: React.ReactNode }) {
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.5 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
         className="glass rounded-3xl px-8 py-10 max-w-lg w-full text-center"
       >
         {children}
