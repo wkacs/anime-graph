@@ -2,6 +2,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { springFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import { MOBILE_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
 import { useAuthStatus } from '@/lib/use-auth-status'
@@ -70,11 +72,17 @@ export default function MobileTabBar() {
               }`}
             >
               <span className={`block truncate ${active ? 'font-medium' : ''}`}>{t(tab.key)}</span>
-              <span
-                className={`mx-auto mt-1 block h-0.5 w-5 rounded-full transition-opacity ${
-                  active ? 'bg-white/70 opacity-100' : 'opacity-0'
-                }`}
-              />
+              {/* EGY közös, layoutId-s jelölő: tab-váltásnál folyékonyan átúszik */}
+              <span className="relative mx-auto mt-1 block h-0.5 w-5">
+                {active && (
+                  <motion.span
+                    layoutId="tab-active"
+                    transition={springFluid}
+                    className="absolute inset-0 rounded-full bg-white/70"
+                    aria-hidden
+                  />
+                )}
+              </span>
             </Link>
           )
         })}

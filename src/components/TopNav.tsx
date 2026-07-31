@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { useScroll, useMotionValueEvent } from 'framer-motion'
+import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
+import { springFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import LocaleSwitcher from './LocaleSwitcher'
 import { PRIMARY_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
@@ -57,9 +58,11 @@ export default function TopNav() {
 
   if (hidden) return null
 
+  // Az aktív háttér nem statikus osztály, hanem EGY közös, layoutId-s
+  // motion-pill, ami tab-váltásnál folyékonyan átúszik (liquid glass spec).
   const tabClass = (active: boolean) =>
     `relative px-3 py-1.5 rounded-full text-sm transition-colors ${
-      active ? 'bg-white/10 text-text-1' : 'text-text-2 hover:text-text-1 hover:bg-white/5'
+      active ? 'text-text-1' : 'text-text-2 hover:text-text-1 hover:bg-white/5'
     }`
 
   return (
@@ -92,18 +95,31 @@ export default function TopNav() {
       <div className="h-4 w-px bg-white/10 shrink-0" />
 
       <ul className="flex items-center gap-0.5">
-        {(guest ? GUEST_TABS : PRIMARY_TABS).map((tab) => (
-          <li key={tab.href}>
-            <Link href={tab.href} className={tabClass(isTabActive(tab.href, pathname))}>
-              {t(tab.key)}
-              {tab.pendingBadge && pendingCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/15 px-1.5 min-w-[18px] h-[18px] text-[10px] font-mono text-text-1 align-middle">
-                  {pendingCount > 99 ? '99+' : pendingCount}
+        {(guest ? GUEST_TABS : PRIMARY_TABS).map((tab) => {
+          const active = isTabActive(tab.href, pathname)
+          return (
+            <li key={tab.href}>
+              <Link href={tab.href} className={tabClass(active)}>
+                {active && (
+                  <motion.span
+                    layoutId="nav-active"
+                    transition={springFluid}
+                    className="absolute inset-0 rounded-full bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]"
+                    aria-hidden
+                  />
+                )}
+                <span className="relative z-[1]">
+                  {t(tab.key)}
+                  {tab.pendingBadge && pendingCount > 0 && (
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/15 px-1.5 min-w-[18px] h-[18px] text-[10px] font-mono text-text-1 align-middle">
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
                 </span>
-              )}
-            </Link>
-          </li>
-        ))}
+              </Link>
+            </li>
+          )
+        })}
         {!guest && <li ref={moreRef} className="relative">
           <button
             onClick={() => setMoreOpen((o) => !o)}
