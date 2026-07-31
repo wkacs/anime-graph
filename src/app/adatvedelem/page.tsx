@@ -23,7 +23,8 @@ export default function AdatvedelemPage() {
 
       <H>Ki kezeli az adataidat</H>
       <P>
-        A szolgáltatás neve {SERVICE_NAME}. Az adatkezelő: {OPERATOR.name}, székhely: {OPERATOR.address}
+        A szolgáltatás neve {SERVICE_NAME}. Az adatkezelő: {OPERATOR.name}
+        {OPERATOR.address ? `, székhely: ${OPERATOR.address}` : ''}
         {OPERATOR.registration ? `, nyilvántartási szám: ${OPERATOR.registration}` : ''}. Adatvédelmi
         kérdésekben elérhető: {OPERATOR.email}.
       </P>

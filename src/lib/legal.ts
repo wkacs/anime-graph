@@ -19,7 +19,9 @@ function optionalOperatorField(value: string | undefined): string {
 
 export const OPERATOR = {
   name: operatorField(process.env.NEXT_PUBLIC_OPERATOR_NAME, 'üzemeltető neve'),
-  address: operatorField(process.env.NEXT_PUBLIC_OPERATOR_ADDRESS, 'székhely / levelezési cím'),
+  /* Opcionális (user-döntés 2026-07-31): cím nélkül a tájékoztató egyszerűen
+     nem állít székhelyet — az ügyvédes körben derül ki, kötelező-e megadni. */
+  address: optionalOperatorField(process.env.NEXT_PUBLIC_OPERATOR_ADDRESS),
   registration: optionalOperatorField(process.env.NEXT_PUBLIC_OPERATOR_REGISTRATION),
   email: operatorField(process.env.NEXT_PUBLIC_OPERATOR_EMAIL, 'kapcsolattartó e-mail-cím'),
 } as const

@@ -24,7 +24,8 @@ export default function AszfPage() {
 
       <H>Ki a szolgáltató</H>
       <P>
-        A {SERVICE_NAME} szolgáltatást {OPERATOR.name} üzemelteti (székhely: {OPERATOR.address}). Kapcsolat:{' '}
+        A {SERVICE_NAME} szolgáltatást {OPERATOR.name} üzemelteti
+        {OPERATOR.address ? ` (székhely: ${OPERATOR.address})` : ''}. Kapcsolat:{' '}
         {OPERATOR.email}. A regisztrációval elfogadod az alábbi feltételeket.
       </P>
 
