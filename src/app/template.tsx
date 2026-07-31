@@ -1,5 +1,6 @@
 'use client'
 import { motion } from 'framer-motion'
+import { fluidEase } from '@/lib/motion'
 
 // opacity-only page fade: a transform here would turn the page into a
 // containing block, which breaks every position:fixed overlay inside
@@ -9,7 +10,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.25, ease: 'easeOut' }}
+      transition={{ duration: 0.3, ease: fluidEase }}
     >
       {children}
     </motion.div>
