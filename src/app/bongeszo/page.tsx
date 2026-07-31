@@ -1,6 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { motion } from 'framer-motion'
+import { reveal } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import { useFitScores } from '@/lib/use-fit-scores'
@@ -160,8 +162,8 @@ export default function BrowsePage() {
     const owned = ownIds.has(h.anilistId) || added.has(h.titleId)
     const fit = fitScores[h.anilistId]
     return (
+      <motion.div key={h.titleId} {...reveal(0)}>
       <MediaCard
-        key={h.titleId}
         title={h.titleRomaji}
         coverUrl={h.coverUrl}
         genres={[]}
@@ -190,6 +192,7 @@ export default function BrowsePage() {
           </span>
         )}
       />
+      </motion.div>
     )
   }
 

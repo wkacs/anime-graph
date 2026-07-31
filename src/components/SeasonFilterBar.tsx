@@ -1,5 +1,7 @@
 'use client'
 import { useId, useState } from 'react'
+import { motion } from 'framer-motion'
+import { springFluid, tapScale } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import {
   FORMAT_KEYS,
@@ -24,19 +26,34 @@ function toggle(list: string[], value: string): string[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({ active, onClick, children, indicatorId }: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+  /** single-select csoportban a közös layoutId — az aktív pill átúszik */
+  indicatorId?: string
+}) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors ${
+      whileTap={tapScale}
+      className={`relative rounded-full border px-3 py-1.5 text-[13px] whitespace-nowrap transition-colors ${
         active
-          ? 'border-transparent bg-white/15 text-text-1'
+          ? `border-transparent text-text-1 ${indicatorId ? '' : 'bg-white/15'}`
           : 'border-white/10 text-text-2 hover:border-white/25 hover:text-text-1'
       }`}
     >
-      {children}
-    </button>
+      {active && indicatorId && (
+        <motion.span
+          layoutId={indicatorId}
+          transition={springFluid}
+          className="absolute inset-0 rounded-full bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+          aria-hidden
+        />
+      )}
+      <span className="relative z-[1]">{children}</span>
+    </motion.button>
   )
 }
 
@@ -113,7 +130,7 @@ export default function SeasonFilterBar({ view, onChange, facets, shown, total, 
           <div className="flex flex-col gap-3.5 border-t border-white/8 px-4 py-3.5">
               <Group label={t('sort')}>
                 {SORT_KEYS.map((s) => (
-                  <Chip key={s} active={view.sort === s} onClick={() => onChange({ ...view, sort: s })}>
+                  <Chip key={s} active={view.sort === s} indicatorId="season-sort-active" onClick={() => onChange({ ...view, sort: s })}>
                     {t(`sort_${s}`)}
                     {s === 'taste' && !scored && ' ·'}
                   </Chip>
