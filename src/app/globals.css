@@ -170,6 +170,68 @@ body::after {
   letter-spacing: -0.015em;
 }
 
+/* ── ambient fény-réteg (GlowField) ──────────────────────── */
+/* A tartalom mögött úszó, életlen fényfoltok — az üveg ezt szűri át.
+   pointer-events:none: a 3D-gráf interakcióját sem fogja el. */
+
+.glow-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(70px);
+}
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+.glow-orb-1 {
+  width: 520px;
+  height: 520px;
+  left: -6%;
+  top: 4%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 65%);
+  animation: glow-d1 26s ease-in-out infinite alternate;
+}
+.glow-orb-2 {
+  width: 460px;
+  height: 460px;
+  right: -4%;
+  top: 22%;
+  background: radial-gradient(circle, rgba(198, 204, 216, 0.09), transparent 65%);
+  animation: glow-d2 32s ease-in-out infinite alternate;
+}
+.glow-orb-3 {
+  width: 420px;
+  height: 420px;
+  left: 32%;
+  bottom: -10%;
+  background: radial-gradient(circle, rgba(158, 163, 175, 0.08), transparent 65%);
+  animation: glow-d1 38s ease-in-out infinite alternate-reverse;
+}
+.glow-orb-4 {
+  width: 300px;
+  height: 300px;
+  left: 55%;
+  top: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.07), transparent 65%);
+  animation: glow-d2 24s ease-in-out infinite alternate-reverse;
+}
+@keyframes glow-d1 {
+  to { transform: translate(80px, 50px) scale(1.15); }
+}
+@keyframes glow-d2 {
+  to { transform: translate(-60px, 70px) scale(0.93); }
+}
+@media (max-width: 768px) {
+  .glow-orb-3,
+  .glow-orb-4 { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glow-orb { animation: none; }
+}
+
 /* ── liquid glass felületek ──────────────────────────────── */
 /* Igazi backdrop-blur CSAK budget-en belül: nav, modál, hero, tabok,
    kiemelt panelek (~10-15 elem/viewport). Rácsokba .glass-lite megy. */

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import IntlProvider from "@/components/IntlProvider";
+import GlowField from "@/components/GlowField";
 import TopNav from "@/components/TopNav";
 import MobileTabBar from "@/components/MobileTabBar";
 import SiteFooter from "@/components/SiteFooter";
@@ -58,6 +59,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${geistMono.variable} ${notoJp.variable} antialiased`}
       >
+        <GlowField />
         <IntlProvider>
           <TopNav />
           {children}
