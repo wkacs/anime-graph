@@ -11,12 +11,13 @@
   --text-3: #888891;
 
   /* ── felület-skála ────────────────────────────────────── */
-  --surface-1-bg: rgba(255, 255, 255, 0.03);
-  --surface-1-border: rgba(255, 255, 255, 0.07);
-  --surface-2-bg: rgba(255, 255, 255, 0.055);
+  /* a liquid glass skálára kötve: a 13 nem átírt oldal is együtt mozdul */
+  --surface-1-bg: rgba(255, 255, 255, 0.035);
+  --surface-1-border: rgba(255, 255, 255, 0.08);
+  --surface-2-bg: rgba(255, 255, 255, 0.05);
   --surface-2-border: rgba(255, 255, 255, 0.1);
   --surface-2-highlight: rgba(255, 255, 255, 0.16);
-  --surface-3-bg: rgba(255, 255, 255, 0.095);
+  --surface-3-bg: rgba(255, 255, 255, 0.08);
   --surface-3-border: rgba(255, 255, 255, 0.14);
   --surface-3-highlight: rgba(255, 255, 255, 0.22);
 
@@ -63,6 +64,32 @@
 
   /* ── mozgás ───────────────────────────────────────────── */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* fluid liquid-glass görbe: lassú, folyékony, sosem pattog.
+     Ugyanez a görbe él a lib/motion.ts framer-tokenjeiben is. */
+  --fluid: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-micro: 300ms;
+  --dur-enter: 500ms;
+  --dur-exit: 350ms;
+
+  /* ── liquid glass skála ───────────────────────────────── */
+  --glass-1-bg: rgba(255, 255, 255, 0.035);
+  --glass-2-bg: rgba(255, 255, 255, 0.05);
+  --glass-3-bg: rgba(255, 255, 255, 0.08);
+  --glass-br: rgba(255, 255, 255, 0.1);
+  --glass-hl: rgba(255, 255, 255, 0.14);
+  --glass-blur-1: 16px;
+  --glass-blur-2: 24px;
+  --glass-blur-3: 32px;
+}
+
+/* mobilon a blur feleződik: GPU-budget (spec, perf-védőkorlátok) */
+@media (max-width: 768px) {
+  :root {
+    --glass-blur-1: 8px;
+    --glass-blur-2: 12px;
+    --glass-blur-3: 16px;
+  }
 }
 
 @theme inline {
@@ -143,6 +170,118 @@ body::after {
   letter-spacing: -0.015em;
 }
 
+/* ── liquid glass felületek ──────────────────────────────── */
+/* Igazi backdrop-blur CSAK budget-en belül: nav, modál, hero, tabok,
+   kiemelt panelek (~10-15 elem/viewport). Rácsokba .glass-lite megy. */
+
+.glass-1,
+.glass-2,
+.glass-3 {
+  position: relative;
+  border: 1px solid var(--glass-br);
+  box-shadow:
+    0 16px 40px -16px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition:
+    transform var(--dur-enter) var(--fluid),
+    box-shadow var(--dur-enter) var(--fluid),
+    border-color var(--dur-micro) ease,
+    background var(--dur-micro) ease;
+}
+.glass-1 {
+  background: var(--glass-1-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur-1)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur-1)) saturate(170%);
+}
+.glass-2 {
+  background: var(--glass-2-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur-2)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur-2)) saturate(170%);
+}
+.glass-3 {
+  background: var(--glass-3-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur-3)) saturate(170%);
+  backdrop-filter: blur(var(--glass-blur-3)) saturate(170%);
+}
+
+/* pszeudo-üveg: rácsokba, hosszú listákba — backdrop-filter nélkül
+   sötét háttéren vizuálisan közel azonos, GPU-n nagyságrenddel olcsóbb */
+.glass-lite {
+  position: relative;
+  background: var(--glass-1-bg);
+  border: 1px solid var(--glass-br);
+  box-shadow:
+    0 12px 30px -14px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition:
+    transform var(--dur-enter) var(--fluid),
+    box-shadow var(--dur-enter) var(--fluid),
+    border-color var(--dur-micro) ease,
+    background var(--dur-micro) ease;
+}
+
+/* kurzorkövető spekuláris fény — a SpecularTracker írja a --mx/--my-t */
+.glass-1::before,
+.glass-2::before,
+.glass-3::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    340px circle at var(--mx, 50%) var(--my, -30%),
+    rgba(255, 255, 255, 0.09),
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity var(--dur-enter) ease;
+}
+.glass-1:hover::before,
+.glass-2:hover::before,
+.glass-3:hover::before {
+  opacity: 1;
+}
+
+/* felső él-csillanás: a fény "megül" az üveg tetején */
+.glass-1::after,
+.glass-2::after,
+.glass-3::after,
+.glass-lite::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 5%,
+    rgba(255, 255, 255, 0.35) 30%,
+    rgba(255, 255, 255, 0.1) 55%,
+    transparent 90%
+  );
+  opacity: 0.55;
+}
+
+/* ezüst gradiens display-címekhez (mint-akcent helyett) */
+.text-silver {
+  background: linear-gradient(100deg, #fafafa, #c9ccd4 45%, #8f939c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-1,
+  .glass-2,
+  .glass-3,
+  .glass-lite {
+    transition-duration: 0.01ms;
+  }
+}
+
 /* ── felület-skála ───────────────────────────────────────── */
 
 .surface-1 {
@@ -152,8 +291,8 @@ body::after {
 
 .surface-2 {
   background: var(--surface-2-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
   border: 1px solid var(--surface-2-border);
   box-shadow:
     inset 0 1px 0 0 var(--surface-2-highlight),
@@ -162,8 +301,8 @@ body::after {
 
 .surface-3 {
   background: var(--surface-3-bg);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
   border: 1px solid var(--surface-3-border);
   box-shadow:
     inset 0 1px 0 0 var(--surface-3-highlight),
@@ -173,8 +312,8 @@ body::after {
 /* KÖTELEZŐ aliasok: 13 nem átírt oldal használja őket. Név és látvány marad. */
 .glass {
   background: var(--surface-2-bg);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
   border: 1px solid var(--surface-2-border);
   box-shadow:
     inset 0 1px 0 0 var(--surface-2-highlight),
@@ -183,8 +322,8 @@ body::after {
 
 .glass-strong {
   background: var(--surface-3-bg);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
   border: 1px solid var(--surface-3-border);
   box-shadow:
     inset 0 1px 0 0 var(--surface-3-highlight),
@@ -318,11 +457,18 @@ body::after {
 .btn-ghost {
   border-radius: 9999px;
   color: var(--text-2);
-  transition: color 150ms var(--ease-out), background 150ms var(--ease-out);
+  background: var(--glass-1-bg);
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    color var(--dur-micro) var(--fluid),
+    background var(--dur-micro) var(--fluid),
+    border-color var(--dur-micro) var(--fluid);
 }
 .btn-ghost:hover {
   color: var(--text-1);
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--glass-2-bg);
+  border-color: var(--glass-br);
 }
 
 .btn-solid {
@@ -330,10 +476,15 @@ body::after {
   background: var(--text-1);
   color: #0c0c0e;
   font-weight: 600;
-  transition: opacity 150ms var(--ease-out), transform 150ms var(--ease-out);
+  box-shadow: 0 8px 24px -12px rgba(250, 250, 250, 0.35);
+  transition:
+    opacity var(--dur-micro) var(--fluid),
+    transform var(--dur-micro) var(--fluid),
+    box-shadow var(--dur-micro) var(--fluid);
 }
 .btn-solid:hover {
-  opacity: 0.88;
+  opacity: 0.92;
+  box-shadow: 0 12px 30px -12px rgba(250, 250, 250, 0.45);
 }
 .btn-solid:disabled {
   opacity: 0.35;
