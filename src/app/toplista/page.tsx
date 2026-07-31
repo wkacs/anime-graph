@@ -1,5 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { reveal } from '@/lib/motion'
+import { Reveal } from '@/components/ui/Reveal'
 import { useTranslations } from 'next-intl'
 import PageShell from '@/components/ui/PageShell'
 import Skeleton from '@/components/ui/Skeleton'
@@ -143,13 +146,13 @@ export default function ToplistaPage() {
 
       {rows != null && rows.length > 0 && (
         <div className="flex flex-col gap-6">
-          <Podium rows={podium} tab={tab} />
+          <Reveal><Podium rows={podium} tab={tab} /></Reveal>
           {restRows.length > 0 && (
             <ol className="flex flex-col">
-              {restRows.map((r) => (
-                <li key={r.id}>
+              {restRows.map((r, i) => (
+                <motion.li key={r.id} {...reveal(i % 10)}>
                   <LeaderboardRow row={r} tab={tab} />
-                </li>
+                </motion.li>
               ))}
             </ol>
           )}

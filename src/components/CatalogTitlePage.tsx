@@ -7,6 +7,7 @@ import { stripHtml } from '@/lib/description'
 import OwnerOverlay from '@/components/OwnerOverlay'
 import FitBadge from '@/components/FitBadge'
 import PosterAmbient from '@/components/ui/PosterAmbient'
+import { Reveal, RevealGroup, RevealItem } from '@/components/ui/Reveal'
 import SectionHeader from '@/components/ui/SectionHeader'
 import Chip from '@/components/ui/Chip'
 import MediaCard from '@/components/MediaCard'
@@ -79,16 +80,19 @@ export default async function CatalogTitlePage({
 
         {/* mobilon nincs felso nav-pill, ezert kevesebb felso levego kell */}
         <div className="relative max-w-5xl mx-auto px-4 pt-16 md:pt-32 pb-8">
+          <RevealGroup delay={0.09}>
           <header className="flex flex-col sm:flex-row gap-7">
             {t.coverUrl && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={t.coverUrl}
-                alt=""
-                className="w-40 sm:w-48 rounded-[var(--r-lg)] shadow-2xl shadow-black/70 self-start shrink-0"
-              />
+              <RevealItem className="self-start shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={t.coverUrl}
+                  alt=""
+                  className="w-40 sm:w-48 rounded-[var(--r-lg)] shadow-2xl shadow-black/70"
+                />
+              </RevealItem>
             )}
-            <div className="flex-1 min-w-0">
+            <RevealItem className="flex-1 min-w-0">
               <h1 className="display-xl text-text-1">{t.titleRomaji}</h1>
               {/* text-2, nem text-3: az eredeti cím valódi tartalom, ráadásul
                   a poszter-ambiens fölött áll, ahol a text-3 nem AA-biztos. */}
@@ -132,8 +136,9 @@ export default async function CatalogTitlePage({
                   className="text-xs text-text-2 hover:text-text-1 underline underline-offset-4 decoration-white/20"
                 >AniList ↗</a>
               </div>
-            </div>
+            </RevealItem>
           </header>
+          </RevealGroup>
         </div>
       </div>
 
@@ -146,13 +151,16 @@ export default async function CatalogTitlePage({
         />
 
         {t.description && (
+          <Reveal>
           <section>
             <SectionHeader title={<T ns="catalog" k="synopsis" />} />
             <p className="text-[15px] text-text-1 leading-[1.75] max-w-[62ch]">{stripHtml(t.description)}</p>
           </section>
+          </Reveal>
         )}
 
         {sourceRel && (
+          <Reveal>
           <section>
             <SectionHeader
               eyebrow={<T ns="catalog" k={t.mediaType === 'MANGA' ? 'adaptationEyebrow' : 'sourceEyebrow'} />}
@@ -185,6 +193,7 @@ export default async function CatalogTitlePage({
               )}
             </div>
           </section>
+          </Reveal>
         )}
 
         <CharacterGrid anilistId={t.anilistId} readOnly />
