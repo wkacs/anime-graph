@@ -17,7 +17,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.42.2",
-    "next": "15.5.22",
+    "next": "16.2.12",
     "next-intl": "^4.13.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
