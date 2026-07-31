@@ -1,4 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react'
+'use client'
+import type { ReactNode } from 'react'
+import { motion, type HTMLMotionProps } from 'framer-motion'
+import { springFluid, tapScale } from '@/lib/motion'
 
 const VARIANTS = {
   solid: 'btn-solid',
@@ -11,7 +14,7 @@ const SIZES = {
   md: 'px-4 py-2 text-sm',
 } as const
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
+type Props = HTMLMotionProps<'button'> & {
   variant?: keyof typeof VARIANTS
   size?: keyof typeof SIZES
   loading?: boolean
@@ -27,13 +30,16 @@ export default function Button({
   children,
   ...rest
 }: Props) {
+  const inactive = disabled || loading
   return (
-    <button
-      disabled={disabled || loading}
+    <motion.button
+      disabled={inactive}
+      whileHover={inactive ? undefined : { scale: 1.03, transition: springFluid }}
+      whileTap={inactive ? undefined : tapScale}
       className={`${VARIANTS[variant]} ${SIZES[size]} whitespace-nowrap transition-colors disabled:opacity-40 ${className}`}
       {...rest}
     >
       {loading ? '…' : children}
-    </button>
+    </motion.button>
   )
 }
