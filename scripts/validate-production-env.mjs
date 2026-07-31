@@ -9,12 +9,11 @@ if (shouldValidate) {
     'SESSION_SECRET',
     'REGISTRATION_MODE',
     'AI_GLOBAL_DAILY_LIMIT',
-    'RESEND_API_KEY',
-    'FROM_EMAIL',
     'CRON_SECRET',
     'APP_URL',
     'NEXT_PUBLIC_OPERATOR_NAME',
-    'NEXT_PUBLIC_OPERATOR_ADDRESS',
+    /* NEXT_PUBLIC_OPERATOR_ADDRESS szándékosan NEM kötelező (user-döntés
+       2026-07-31): a jogi oldalak cím nélkül is korrekt szöveget adnak. */
     'NEXT_PUBLIC_OPERATOR_EMAIL',
   ]
   const errors = []
@@ -22,6 +21,15 @@ if (shouldValidate) {
     const value = process.env[name]?.trim()
     if (!value) errors.push(`${name} nincs beállítva`)
     else if (/TODO|localhost/i.test(value)) errors.push(`${name} nem lehet TODO/localhost érték`)
+  }
+
+  /* Email-kézbesítés: WARNING, nem error (user-döntés 2026-07-31, még nincs
+     Resend/domain). Enélkül a reg-megerősítő és jelszó-reset levél nem megy
+     ki — a domain+Resend beállításakor visszaemelendő a required-listába. */
+  for (const name of ['RESEND_API_KEY', 'FROM_EMAIL']) {
+    if (!process.env[name]?.trim()) {
+      console.warn(`FIGYELEM: ${name} nincs beállítva — email-küldés inaktív.`)
+    }
   }
 
   if ((process.env.SESSION_SECRET?.trim().length ?? 0) < 32) {
