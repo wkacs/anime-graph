@@ -16,7 +16,9 @@
 - Titok nem kerül verziókövetésbe. A prod session-cookie kizárólag `.env.local`-ban él, amely gitignore-olt.
 - A `data/season.json`, `public/covers/`, `public/frames/` és `out/` gitignore-olt: nagy binárisok, a szkriptekből újratermelhetők.
 - Nincs futásidejű import az anime-graph kódbázisából. A design-tokenek kézzel átmásolt értékek.
-- Node 20+ szükséges.
+- Node 22.6+ szükséges a natív TypeScript-futtatáshoz. A fejlesztői gépen
+  Node 26.1 van, ahol a `node script.ts` külön flag nélkül fut, ezért a
+  szkriptek nem használnak `--experimental-strip-types` kapcsolót.
 
 ---
 
@@ -64,10 +66,10 @@ npx playwright install chromium
   "scripts": {
     "studio": "remotion studio src/index.ts",
     "test": "vitest run",
-    "pull": "node --experimental-strip-types scripts/pull-data.ts",
-    "covers": "node --experimental-strip-types scripts/fetch-covers.ts",
-    "capture": "node --experimental-strip-types scripts/capture.ts",
-    "sheet": "node --experimental-strip-types scripts/contact-sheet.ts",
+    "pull": "node scripts/pull-data.ts",
+    "covers": "node scripts/fetch-covers.ts",
+    "capture": "node scripts/capture.ts",
+    "sheet": "node scripts/contact-sheet.ts",
     "render": "remotion render src/index.ts Promo9x16 out/promo-9x16.mp4"
   }
 }
@@ -149,9 +151,10 @@ describe('timing grid', () => {
     expect(DURATION_FRAMES).toBe(840)
   })
 
-  it('minden jelenethatár ütemhatárra esik', () => {
+  it('minden jelenethatár legalább fél-ütem határra esik', () => {
+    // A setup 1,5 ütem hosszú, ezért a rács fél-ütemes, nem egész-ütemes.
     for (const scene of Object.values(SCENES)) {
-      expect(scene.from % framesPerBeat()).toBe(0)
+      expect(scene.from % (framesPerBeat() / 2)).toBe(0)
     }
   })
 
@@ -227,11 +230,9 @@ export const CHECK_FRAMES = [30, 90, 200, 330, 420, 560, 700, 820]
 Run: `npm test`
 Expected: PASS, 5 teszt.
 
-Ha a harmadik teszt bukik: a `setup` 1,5 ütem, azaz 90 frame, ami nem többszöröse a 60-nak. Ez szándékos, a teszt a **jelenet kezdetét** vizsgálja, nem a hosszát, és a `reorder` 150-nél kezdődik. 150 % 60 = 30, tehát a teszt bukni fog. Javítsd a tesztet úgy, hogy fél-ütem határt engedjen:
-
-```ts
-expect(scene.from % (framesPerBeat() / 2)).toBe(0)
-```
+A jelenethatárok: 0, 60, 150, 330, 540, 720. A `setup` 1,5 ütemes hossza miatt
+az utolsó négy határ fél-ütemre esik, ezért vizsgál a teszt `framesPerBeat() / 2`
+maradékot.
 
 - [ ] **Step 7: Commit**
 
