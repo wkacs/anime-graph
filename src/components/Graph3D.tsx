@@ -1,6 +1,7 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useReducedMotion } from 'framer-motion'
 import * as THREE from 'three'
 import SpriteText from 'three-spritetext'
 import type { GraphNode, GraphLink } from '@/lib/graph-builder'
@@ -271,6 +272,27 @@ export default function Graph3D({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
   const introDone = useRef(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const hoveredRef = useRef<any>(null)
+
+  // A ref MEGÉRKEZÉSE eddig setInterval-lel volt kipollozva (120/150/350ms-os
+  // ciklusok), és a kamera-illesztés mögé még egy 450ms-os kemény időzítő is
+  // került — kattintás után ~600ms holt idő telt el, mielőtt bármi mozdult
+  // volna (§1: „minden mesterséges időzítőt auditálj"). Callback-ref: a
+  // példány érkezésének pillanatában billen a kapcsoló.
+  const [ready, setReady] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const attachFg = useCallback((inst: any) => {
+    fgRef.current = inst
+    if (inst) setReady(true)
+  }, [])
+
+  // A gráf a lap egyetlen teljes-viewportos, folyamatosan mozgó felülete —
+  // pontosan az az eset, amit a §14 néven nevez. A CSS-őr ide nem ér el:
+  // ez WebGL + rAF.
+  const reduce = !!useReducedMotion()
+  /** kamerarepülés hossza; csökkentett mozgásnál vágás, nem utazás */
+  const dur = useCallback((ms: number) => (reduce ? 0 : ms), [reduce])
 
   // WASD (+ Q/E fel-le) repülés: a kamera ÉS az orbit-pivot együtt mozog,
   // így az egeres forgatás közben is működik. Gépelés közben inaktív.
@@ -292,25 +314,48 @@ export default function Graph3D({
     let raf = 0
     const forward = new THREE.Vector3()
     const right = new THREE.Vector3()
+    const dir = new THREE.Vector3()
     const delta = new THREE.Vector3()
+    const vel = new THREE.Vector3()
     const UP = new THREE.Vector3(0, 1, 0)
+
+    // A mozgás ÓRÁHOZ kötött és van tehetetlensége. Korábban képkockánként fix
+    // 3,2 egységet lépett: 144Hz-en két és félszer gyorsabb volt, mint 60-on,
+    // induláskor-megálláskor pedig keményen vágott (§4: a felhasználó által
+    // hajtott mozgás sose legyen előírt lépés; §5: a sebesség folytonos).
+    const ACCEL = 600
+    const MAX_SPEED = 320
+    let last = performance.now()
+
     const tick = () => {
       raf = requestAnimationFrame(tick)
-      if (!pressed.size) return
+      const now = performance.now()
+      // háttérbe tett fülnél a dt elszállna és a kamera teleportálna
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      // se gomb, se maradék lendület → nincs mit számolni
+      if (!pressed.size && vel.lengthSq() < 0.01) return
       const fg = fgRef.current
       if (!fg) return
       const camera = fg.camera()
       const controls = fg.controls()
       camera.getWorldDirection(forward)
       right.crossVectors(forward, UP).normalize()
-      delta.set(0, 0, 0)
-      const speed = 3.2
-      if (pressed.has('w')) delta.addScaledVector(forward, speed)
-      if (pressed.has('s')) delta.addScaledVector(forward, -speed)
-      if (pressed.has('d')) delta.addScaledVector(right, speed)
-      if (pressed.has('a')) delta.addScaledVector(right, -speed)
-      if (pressed.has('e')) delta.addScaledVector(UP, speed)
-      if (pressed.has('q')) delta.addScaledVector(UP, -speed)
+      dir.set(0, 0, 0)
+      if (pressed.has('w')) dir.add(forward)
+      if (pressed.has('s')) dir.sub(forward)
+      if (pressed.has('d')) dir.add(right)
+      if (pressed.has('a')) dir.sub(right)
+      if (pressed.has('e')) dir.add(UP)
+      if (pressed.has('q')) dir.sub(UP)
+      if (dir.lengthSq() > 0) {
+        dir.normalize()
+        vel.addScaledVector(dir, ACCEL * dt)
+        vel.clampLength(0, MAX_SPEED)
+      }
+      // exponenciális csillapítás: elengedéskor kigurul, nem áll meg falba
+      vel.multiplyScalar(Math.pow(0.0025, dt))
+      delta.copy(vel).multiplyScalar(dt)
       camera.position.add(delta)
       if (controls?.target) {
         controls.target.add(delta)
@@ -327,64 +372,83 @@ export default function Graph3D({
 
   // ambient starfield + first-load camera dive
   useEffect(() => {
-    if (!data.nodes.length) return
-    const timer = setInterval(() => {
-      const fg = fgRef.current
-      if (!fg) return
-      clearInterval(timer)
-      // zoom a kurzor iránya felé, ne a scéna közepe felé (three r149+ natív)
-      const controls = fg.controls() as { zoomToCursor?: boolean }
-      if (controls) controls.zoomToCursor = true
-      const scene = fg.scene()
-      if (!scene.getObjectByName('starfield')) {
-        const N = 700
-        const positions = new Float32Array(N * 3)
-        for (let i = 0; i < N; i++) {
-          const r = 600 + Math.random() * 900
-          const theta = Math.random() * Math.PI * 2
-          const phi = Math.acos(2 * Math.random() - 1)
-          positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
-          positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
-          positions[i * 3 + 2] = r * Math.cos(phi)
-        }
-        const geo = new THREE.BufferGeometry()
-        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-        const stars = new THREE.Points(geo, new THREE.PointsMaterial({
-          color: 0xffffff, size: 1.5, transparent: true, opacity: 0.32, sizeAttenuation: true,
-        }))
-        stars.name = 'starfield'
-        scene.add(stars)
+    if (!ready || !data.nodes.length) return
+    const fg = fgRef.current
+    if (!fg) return
+    let dive = 0
+    // zoom a kurzor iránya felé, ne a scéna közepe felé (three r149+ natív)
+    const controls = fg.controls() as { zoomToCursor?: boolean }
+    if (controls) controls.zoomToCursor = true
+    const scene = fg.scene()
+    if (!scene.getObjectByName('starfield')) {
+      const N = 700
+      const positions = new Float32Array(N * 3)
+      for (let i = 0; i < N; i++) {
+        const r = 600 + Math.random() * 900
+        const theta = Math.random() * Math.PI * 2
+        const phi = Math.acos(2 * Math.random() - 1)
+        positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+        positions[i * 3 + 2] = r * Math.cos(phi)
       }
-      if (!introDone.current) {
-        introDone.current = true
+      const geo = new THREE.BufferGeometry()
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+      const stars = new THREE.Points(geo, new THREE.PointsMaterial({
+        color: 0xffffff, size: 1.5, transparent: true, opacity: 0.32, sizeAttenuation: true,
+      }))
+      stars.name = 'starfield'
+      scene.add(stars)
+    }
+    if (!introDone.current) {
+      introDone.current = true
+      if (reduce) {
+        // csökkentett mozgás: nincs bezuhanás, azonnal a kész kép
+        fg.zoomToFit(0, 80)
+      } else {
         fg.cameraPosition({ x: 0, y: 40, z: 1150 }, { x: 0, y: 0, z: 0 }, 0)
-        setTimeout(() => fg.zoomToFit(1500, 80), 450)
+        // az időzítő ID-je EL VAN KAPVA: unmountnál eddig elszabadult
+        dive = window.setTimeout(() => fg.zoomToFit(1500, 80), 450)
       }
-    }, 120)
-    return () => clearInterval(timer)
-  }, [data])
+    }
+    return () => window.clearTimeout(dive)
+  }, [ready, data, reduce])
 
   useEffect(() => {
-    if (!flythrough) return
+    if (!ready || !flythrough) return
+    const fg = fgRef.current
+    if (!fg) return
     // the ref only exposes camera methods, so the axis range comes from props
     const xs = data.nodes
       .filter((n) => n.type === 'anime' && n.fx !== undefined)
       .map((n) => n.fx as number)
     if (!xs.length) return
+    if (reduce) {
+      fg.zoomToFit(0, 80)
+      return
+    }
     const minX = Math.min(...xs)
     const maxX = Math.max(...xs)
-    const duration = Math.min(14000, Math.max(4000, xs.length * 700))
-    const timer = setInterval(() => {
-      const fg = fgRef.current
-      if (!fg) return
-      clearInterval(timer)
-      fg.cameraPosition({ x: minX - 30, y: 14, z: 105 }, { x: minX, y: 0, z: 0 }, 0)
-      setTimeout(() => {
-        fg.cameraPosition({ x: maxX + 30, y: 14, z: 105 }, { x: maxX, y: 0, z: 0 }, duration)
-      }, 700)
-    }, 150)
-    return () => clearInterval(timer)
-  }, [flythrough, data])
+
+    // A tempó a TÁVOLSÁGBÓL jön, nem az elemszámból, és a kamera a
+    // távolsággal hátrébb megy. Korábban a táv (N-1)*42 szerint korlátlanul
+    // nőtt, az idő viszont 14000ms-nál meg volt fogva: 500 címnél ~50 egység
+    // per képkocka, 10 egység széles poszterek mellett — minden borító
+    // kevesebb mint egy képkockáig látszott (§11: strobszkóp-hatás).
+    // Így a LÁTÓSZÖGBEN mért haladás marad állandó, könyvtármérettől
+    // függetlenül.
+    const span = Math.max(1, maxX - minX)
+    const z = Math.max(105, span / 24)
+    const ANGULAR = 1.714
+    const duration = Math.max(4000, Math.min(16000, (span / (ANGULAR * z)) * 1000))
+
+    fg.cameraPosition({ x: minX - 30, y: 14, z }, { x: minX, y: 0, z: 0 }, 0)
+    // az ID EL VAN KAPVA: a Timeline 700ms-on belüli kikapcsolása után eddig
+    // is elsült a kameraugrás, mert a takarítás csak az intervallumot vitte
+    const jump = window.setTimeout(() => {
+      fg.cameraPosition({ x: maxX + 30, y: 14, z }, { x: maxX, y: 0, z: 0 }, duration)
+    }, 700)
+    return () => window.clearTimeout(jump)
+  }, [ready, flythrough, data, reduce])
 
   // clone: force-graph mutates node objects (adds x/y/z)
   const graphData = useMemo(() => ({
@@ -437,24 +501,23 @@ export default function Graph3D({
     const dist = 80
     const len = Math.hypot(n.x, n.y, n.z) || 1
     const ratio = 1 + dist / len
+    // 1000ms → 400ms: ez interaktív válasz, nem filmes beállítás, tehát a
+    // 0,3-0,4s-os sávba tartozik
     fgRef.current?.cameraPosition(
       { x: n.x * ratio, y: n.y * ratio, z: n.z * ratio },
       n,
-      1000,
+      dur(400),
     )
-  }, [onAnimeClick, onDimClick, onGhostClick])
+  }, [onAnimeClick, onDimClick, onGhostClick, dur])
 
   useEffect(() => {
-    if (!fitKey) return
-    const timer = setInterval(() => {
-      const fg = fgRef.current
-      if (!fg) return
-      clearInterval(timer)
-      // small delay so the force layout has settled a bit before framing
-      setTimeout(() => fg.zoomToFit(700, 70), 450)
-    }, 150)
-    return () => clearInterval(timer)
-  }, [fitKey])
+    if (!ready || !fitKey) return
+    const fg = fgRef.current
+    if (!fg) return
+    // A 450ms-os kemény várakozás törölve: a 700ms-os illesztés MAGA a
+    // beállási ablak, és folyamatosan újracéloz, mert a layout még ketyeg.
+    fg.zoomToFit(dur(700), 70)
+  }, [ready, fitKey, dur])
 
   // fly to a freshly added node: the lib mutates our cloned graphData in place,
   // so its coordinates show up right here once the layout picked it up.
@@ -482,13 +545,82 @@ export default function Graph3D({
       fg.cameraPosition(
         { x: node.x * ratio, y: node.y * ratio, z: node.z * ratio },
         node,
-        1300,
+        dur(400),
       )
     }, 350)
     return () => clearInterval(timer)
-  }, [focusNodeId, graphData])
+  }, [focusNodeId, graphData, dur])
+
+  // A repülés ENGED a mutatónak. A könyvtár fix idejű tweent futtat a
+  // kamerán, miközben a felhasználó ugyanazt a kamerát orbitálja: eddig a
+  // kettő verekedett, és egy megkezdett út nem volt megfogható félrepülésben
+  // (§3). A kamera saját, ÉLŐ pózára kiadott 0ms-os utasítás a könyvtár
+  // .end()+setCameraPos ágát üti egy tickben — a tween ugrás nélkül meghal.
+  useEffect(() => {
+    if (!ready) return
+    const fg = fgRef.current
+    const controls = fg?.controls?.()
+    if (!controls?.addEventListener) return
+    const stopFlight = () => {
+      const c = fg.cameraPosition()
+      if (!c) return
+      fg.cameraPosition({ x: c.x, y: c.y, z: c.z }, controls.target, 0)
+    }
+    controls.addEventListener('start', stopFlight)
+    return () => controls.removeEventListener('start', stopFlight)
+  }, [ready])
+
+  // Lenyomás-visszajelzés a gráf csomópontjain: a lap aláírás-felülete eddig
+  // CSAK kattintásra reagált (§1/§10: a kiemelés a LENYOMÁSON ül).
+  useEffect(() => {
+    if (!ready) return
+    const dom = fgRef.current?.renderer?.()?.domElement as HTMLElement | undefined
+    if (!dom) return
+    let pressed: THREE.Object3D | null = null
+    const down = () => {
+      const obj = hoveredRef.current?.__threeObj as THREE.Object3D | undefined
+      if (!obj) return
+      pressed = obj
+      obj.scale.setScalar(0.94)
+    }
+    const release = () => {
+      pressed?.scale.setScalar(1)
+      pressed = null
+    }
+    dom.addEventListener('pointerdown', down)
+    window.addEventListener('pointerup', release)
+    window.addEventListener('pointercancel', release)
+    return () => {
+      // a graphData cseréjekor a lib újraépíti a node-objektumokat
+      release()
+      dom.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointerup', release)
+      window.removeEventListener('pointercancel', release)
+    }
+  }, [ready, graphData])
+
+  // A renderelő eddig SOSE állt meg: a cooldownTime csak a d3-fizikát fogja
+  // meg, a lib rAF-ciklusa feltétel nélkül újraütemezi magát, tehát több száz
+  // sprite + 700 pontos csillagmező rajzolódott 60fps-en akkor is, ha a fül
+  // háttérben volt. Középkategóriás telefonon ez folyamatos GPU-terhelés.
+  useEffect(() => {
+    if (!ready) return
+    const onVis = () => {
+      const fg = fgRef.current
+      if (!fg) return
+      if (document.hidden) fg.pauseAnimation?.()
+      else fg.resumeAnimation?.()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      fgRef.current?.resumeAnimation?.()
+    }
+  }, [ready])
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeHover = useCallback((n: any) => {
+    hoveredRef.current = n ?? null
     onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)
     const clickable = n?.type === 'anime' || n?.type === 'ghost'
       || (!!onDimClick && n?.type === 'dim' && !n.timeNode)
@@ -497,12 +629,15 @@ export default function Graph3D({
 
   return (
     <ForceGraph3D
-      fgRef={fgRef}
+      fgRef={attachFg}
       graphData={graphData}
       backgroundColor="rgba(0,0,0,0)"
       nodeThreeObject={nodeThreeObject}
       nodeLabel={nodeLabel}
-      cooldownTime={8000}
+      // csökkentett mozgásnál a layout az ELSŐ képkockára beáll, nem sodródik
+      // 8 másodpercig a teljes viewporton keresztül
+      warmupTicks={reduce ? 300 : 0}
+      cooldownTime={reduce ? 0 : 8000}
       linkColor={linkColor}
       linkOpacity={0.28}
       linkWidth={0}

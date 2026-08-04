@@ -8,7 +8,10 @@ import TonightPicker from '@/components/TonightPicker'
 import TourSpotlight from '@/components/TourSpotlight'
 import PageShell from '@/components/ui/PageShell'
 import EmptyState from '@/components/ui/EmptyState'
+import Skeleton from '@/components/ui/Skeleton'
 import PosterAmbient from '@/components/ui/PosterAmbient'
+import { notify } from '@/components/ui/Toast'
+import { mutate } from '@/lib/mutate'
 import { Reveal, RevealGroup, RevealItem } from '@/components/ui/Reveal'
 import { pickLandingCovers, type LandingCover } from '@/lib/landing'
 import HeroToday from '@/components/home/HeroToday'
@@ -27,10 +30,13 @@ import type {
 
 export default function NewsPage() {
   const [data, setData] = useState<NewsData | null>(null)
-  // A publikus landing az SSR-ben is megjelenik, ezért kereső és első látogató
-  // azonnal valódi tartalmat kap. Bejelentkezve az /api/news sikere után váltunk
-  // a személyes kezdőlapra.
-  const [guest, setGuest] = useState(true)
+  // `null` = MÉG NEM TUDJUK. Korábban `true`-ról indult, ezért a `/` első
+  // festése MINDIG a kijelentkezett marketing-oldal volt — hero-kollázs,
+  // statisztika-blokkok, „regisztrálj" CTA —, és csak KÉT EGYMÁS UTÁNI
+  // körfordulás (/api/auth → /api/news) után váltott. Vagyis a bejárati ajtó
+  // minden látogatáskor rossz választ adott a „hol vagyok?" kérdésre, és a
+  // belépett felhasználónak fiók-létrehozást kínált (§16 wayfinding).
+  const [guest, setGuest] = useState<boolean | null>(null)
   // null = nincs hiba; '' = van hiba, de a szerver nem adott sajat uzenetet
   const [error, setError] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<number>>(new Set())
@@ -97,11 +103,15 @@ export default function NewsPage() {
     }
     // A kapu a /api/auth, nem a /api/news: az mindig 200-at ad, így vendégként
     // egyetlen 4xx sem kerül a konzolba.
+    // A két kérés PÁRHUZAMOSAN indul, nem láncban: a /api/news vendégként
+    // 401-et ad, amit amúgy is kezelünk, cserébe a belépett felhasználó egy
+    // körfordulással hamarabb kapja a saját kezdőlapját.
+    const newsPromise = fetch('/api/news')
     fetch('/api/auth')
       .then((r) => (r.ok ? r.json() : { authenticated: false }))
       .then((j: { authenticated?: boolean }) => {
         if (!j.authenticated) { setGuest(true); loadGuest(); return }
-        return fetch('/api/news').then(async (r) => {
+        return newsPromise.then(async (r) => {
           // Nem `tc(...)`: a forditó nem referencia-stabil, fuggosegkent minden
           // renderben ujrainditana a fetchet. Az alapertelmezes a renderben lep be.
           if (r.status === 401) { setGuest(true); loadGuest(); return }
@@ -148,22 +158,29 @@ export default function NewsPage() {
   const heroAnimeId =
     heroPick && (heroPick.kind === 'airing' || heroPick.kind === 'watching') ? heroPick.item.animeId : undefined
 
+  // Mind a négy művelet a közös mutate+notify úton megy. Korábban `if (res.ok)`
+  // állt else-ág nélkül: elutasításkor (offline, rate-limit, lejárt session) a
+  // felhasználó SEMMIT nem látott — a szám nem mozdult, üzenet nem jött —, amire
+  // a természetes válasz az ismételt nyomkodás (§16: a hiba a négy kötelező
+  // visszajelzés-fajta egyike).
   async function addToPlanned(anilistId: number) {
-    const res = await fetch('/api/anime', {
+    const res = await mutate('/api/anime', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ anilistId }),
     })
-    if (res.ok) setAdded((s) => new Set(s).add(anilistId))
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    setAdded((s) => new Set(s).add(anilistId))
   }
 
   async function bumpProgress(m: MineItem) {
-    const res = await fetch(`/api/anime/${m.animeId}`, {
+    const res = await mutate(`/api/anime/${m.animeId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ progress: m.progress + 1 }),
     })
-    if (res.ok && data) {
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    if (data) {
       setData({
         ...data,
         mine: data.mine.map((x) => (x.animeId === m.animeId ? { ...x, progress: x.progress + 1 } : x)),
@@ -172,19 +189,37 @@ export default function NewsPage() {
   }
 
   async function watchBump(w: WatchItem) {
-    const res = await fetch('/api/watchlist', {
+    const res = await mutate('/api/watchlist', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: w.id, delta: 1 }),
     })
-    if (res.ok) setWatchlist((l) => l.map((x) => (x.id === w.id ? { ...x, watchedEpisodes: x.watchedEpisodes + 1 } : x)))
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    setWatchlist((l) => l.map((x) => (x.id === w.id ? { ...x, watchedEpisodes: x.watchedEpisodes + 1 } : x)))
   }
 
   async function watchRemove(w: WatchItem) {
-    const res = await fetch('/api/watchlist', {
+    const res = await mutate('/api/watchlist', {
       method: 'DELETE', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: w.id }),
     })
-    if (res.ok) setWatchlist((l) => l.filter((x) => x.id !== w.id))
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    setWatchlist((l) => l.filter((x) => x.id !== w.id))
+  }
+
+  // Amíg a session-válasz úton van, SEM a marketing-oldalt, SEM a személyes
+  // kezdőlapot nem festjük ki: a HeroToday saját vázlata tartja a helyet, így
+  // nincs se hamis identitás, se layout-ugrás.
+  if (guest === null) {
+    return (
+      <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
+        <div className="glass-2 rounded-[var(--r-lg)] p-5 flex flex-col gap-3">
+          <Skeleton variant="text" count={2} />
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <Skeleton variant="poster" count={6} />
+        </div>
+      </main>
+    )
   }
 
   if (guest) {

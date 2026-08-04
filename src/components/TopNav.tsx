@@ -2,8 +2,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
-import { springFluid } from '@/lib/motion'
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion'
+import { popMenu, springFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import LocaleSwitcher from './LocaleSwitcher'
 import {
@@ -20,8 +20,11 @@ export default function TopNav() {
   const moreRef = useRef<HTMLLIElement>(null)
   const hidden = isNavHidden(pathname)
   const authenticated = useAuthStatus()
-  // Amíg a session-check fut, a biztonságos vendég-nézetet mutatjuk. Így az
-  // első paint sem indít privát badge-kérést 401-gyel.
+  // Amíg a session-check fut, a nav SEMLEGES: se vendég-, se belépett készlet.
+  // Korábban a vendég-nézetre esett vissza, ezért minden kemény betöltésnél
+  // felvillant a „Belépés" és a szűk vendég-tabsor annak is, aki be van lépve
+  // — a nav tartalma egy pillanatra hazudott (§16.4 kiszámíthatóság).
+  const pending = authenticated === null
   const guest = authenticated !== true
 
   // velemeny-varo darabszam a badge-hez; oldalvaltasnal frissul
@@ -75,10 +78,20 @@ export default function TopNav() {
          (A CSS spec szerint ha az egyik tengely nem `visible`, a másik
          `visible` értéke is `auto`-ra vált — így az overflow-y is vágott.)
          A nav asztalon egy sorban elfér, görgetnie nem kell. */
-      className={`fixed top-4 left-1/2 -translate-x-1/2 z-40 rounded-full pl-4 pr-2 py-1.5 hidden md:flex items-center gap-2 max-w-[95vw] whitespace-nowrap transition-[background,box-shadow] duration-300 ${
-        scrolled ? 'surface-3' : 'surface-2'
-      }`}
+      /* A sűrűsödés NEM background/box-shadow-átmenet: azok festési
+         property-k egy backdrop-filteres pillen, és a blur-sugár amúgy is
+         ugrott (a .surface-2/3 hardkódolja). Most a surface-3 réteg egy
+         külön span, ami csak OPACITY-vel úszik be — compositoron —, és a
+         blur-váltás a fade mögé bújik (§11 + §12 „anyagként érkezz"). */
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-40 rounded-full pl-4 pr-2 py-1.5 hidden md:flex items-center gap-2 max-w-[95vw] whitespace-nowrap surface-2"
     >
+      {/* -z-10: a nav z-40 miatt saját stacking context, ezért a negatív
+          z-indexű gyerek a nav SAJÁT háttere fölé, de a tartalma alá fest */}
+      <span
+        aria-hidden
+        className="surface-3 absolute inset-0 -z-10 rounded-full pointer-events-none"
+        style={{ opacity: scrolled ? 1 : 0, transition: 'opacity 300ms var(--fluid)' }}
+      />
       <Link href="/" className="flex items-center gap-2 mr-1 shrink-0" aria-label="Anime Graph">
         {/* graf-mark: harom pont, ket el — az azonossag a 3D-terkepbol jon */}
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -96,7 +109,15 @@ export default function TopNav() {
 
       <div className="h-4 w-px bg-white/10 shrink-0" />
 
-      <ul className="flex items-center gap-0.5">
+      {/* amíg nem tudjuk, ki nézi: helytartó, nem rossz tabsor */}
+      {pending && (
+        <div aria-hidden className="flex items-center gap-2 py-1.5">
+          <span className="block h-4 w-40 rounded-full bg-white/[0.07]" />
+          <span className="block h-4 w-16 rounded-full bg-white/[0.07]" />
+        </div>
+      )}
+
+      {!pending && <ul className="flex items-center gap-0.5">
         {(guest ? GUEST_TABS : PRIMARY_TABS).map((tab) => {
           const active = isNavTabActive(tab, pathname)
           return (
@@ -113,7 +134,7 @@ export default function TopNav() {
                 <span className="relative z-[1]">
                   {t(tab.key)}
                   {tab.pendingBadge && pendingCount > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/15 px-1.5 min-w-[18px] h-[18px] text-[10px] font-mono text-text-1 align-middle">
+                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/15 px-1.5 min-w-[18px] h-[18px] text-xxs font-mono text-text-1 align-middle">
                       {pendingCount > 99 ? '99+' : pendingCount}
                     </span>
                   )}
@@ -131,30 +152,37 @@ export default function TopNav() {
           >
             {t('more')} <span aria-hidden className="text-[10px] align-middle">▾</span>
           </button>
-          {moreOpen && (
-            <ul
-              role="menu"
-              className="surface-menu absolute right-0 top-[calc(100%+0.5rem)] min-w-40 rounded-[var(--r-md)] p-1.5 flex flex-col gap-0.5"
-            >
-              {MORE_TABS.map((tab) => (
-                <li key={tab.href} role="none">
-                  <Link
-                    role="menuitem"
-                    href={tab.href}
-                    className={`block rounded-[var(--r-sm)] px-3 py-2 text-sm transition-colors ${
-                      isTabActive(tab.href, pathname)
-                        ? 'bg-white/10 text-text-1'
-                        : 'text-text-2 hover:text-text-1 hover:bg-white/5'
-                    }`}
-                  >
-                    {t(tab.key)}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+          <AnimatePresence>
+            {moreOpen && (
+              // A menü a TRIGGERBŐL nő ki és oda is húzódik vissza. Korábban
+              // középről pattant elő, kilépés nélkül: a gomb és a tartalom
+              // közti térbeli kapcsolat nem látszott (§7).
+              <motion.ul
+                {...popMenu}
+                role="menu"
+                style={{ transformOrigin: 'top right' }}
+                className="surface-menu absolute right-0 top-[calc(100%+0.5rem)] min-w-40 rounded-[var(--r-md)] p-1.5 flex flex-col gap-0.5"
+              >
+                {MORE_TABS.map((tab) => (
+                  <li key={tab.href} role="none">
+                    <Link
+                      role="menuitem"
+                      href={tab.href}
+                      className={`block rounded-[var(--r-sm)] px-3 py-2 text-sm transition-colors active:bg-white/15 ${
+                        isTabActive(tab.href, pathname)
+                          ? 'bg-white/10 text-text-1'
+                          : 'text-text-2 hover:text-text-1 hover:bg-white/5'
+                      }`}
+                    >
+                      {t(tab.key)}
+                    </Link>
+                  </li>
+                ))}
+              </motion.ul>
+            )}
+          </AnimatePresence>
         </li>}
-      </ul>
+      </ul>}
 
       <div className="h-4 w-px bg-white/10 shrink-0" />
 
@@ -165,7 +193,7 @@ export default function TopNav() {
         </svg>
       </Link>
       <LocaleSwitcher compact />
-      {!guest && <Link
+      {!pending && !guest && <Link
         href="/settings"
         aria-label={t('settings')}
         className={`btn-ghost p-2 ${isTabActive('/settings', pathname) ? 'bg-white/10 text-text-1' : ''}`}
@@ -175,7 +203,7 @@ export default function TopNav() {
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       </Link>}
-      {guest && (
+      {!pending && guest && (
         <Link href="/login" className="btn-solid px-3 py-1.5 text-sm">
           {t('signIn')}
         </Link>

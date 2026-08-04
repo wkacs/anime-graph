@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { scoreColor } from '@/lib/score-color'
 import type { CompareResult } from '@/lib/compare'
+import PageShell from '@/components/ui/PageShell'
 
 type Result = CompareResult & { username: string; otherUserId?: number | null }
 
@@ -87,9 +88,9 @@ export default function VsPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-3xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
+    <PageShell width="narrow" className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
+        <h1 className="display-m">{t('title')}</h1>
         <p className="text-sm text-text-2 mt-1">
           {mode === 'anilist' ? t('introAnilist') : t('introInternal')}
         </p>
@@ -304,6 +305,6 @@ export default function VsPage() {
           </>
         )}
       </section>
-    </main>
+    </PageShell>
   )
 }

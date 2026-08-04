@@ -1,9 +1,16 @@
 'use client'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import Dialog from '@/components/ui/Dialog'
+import { notify } from '@/components/ui/Toast'
+import { mutate } from '@/lib/mutate'
+import { springModal } from '@/lib/motion'
 import { useStatusLabel } from '@/components/useLabels'
 import { STATUS_KEYS, STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
+
+const UNDO_KEY = 'anime-graph-undo'
 
 const KIND_MARK: Record<string, { glyph: string; cls: string }> = {
   like: { glyph: '▲', cls: 'text-[color:var(--status-watching)]' },
@@ -36,8 +43,18 @@ export default function OwnerOverlay({
   const [sharedAdded, setSharedAdded] = useState(false)
   const [pinnedTitles, setPinnedTitles] = useState<number[] | null>(null)
   const [pinError, setPinError] = useState('')
+  // helyben megjelenő visszavonás: a remove() szándékosan az oldalon tart,
+  // tehát nem támaszkodhatunk egy későbbi /lista-navigációra
+  const [undoOpen, setUndoOpen] = useState(false)
+  const [rewatchAsk, setRewatchAsk] = useState(false)
+  const undoTimer = useRef(0)
   const t = useTranslations('owner')
+  const tc = useTranslations('common')
   const statusLabel = useStatusLabel()
+  const finishHeadingId = useId()
+  const rewatchHeadingId = useId()
+
+  useEffect(() => () => window.clearTimeout(undoTimer.current), [])
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/anime/owned?titleId=${titleId}`)
@@ -83,9 +100,16 @@ export default function OwnerOverlay({
 
   async function patch(body: Record<string, unknown>) {
     if (id == null) return
-    await fetch(`/api/anime/${id}`, {
+    // A select/number vezérlők eddig SEMMIT nem nyugtáztak: sikernél sem,
+    // hibánál sem. A §16 négy visszajelzés-fajtájából itt kettő hiányzott.
+    const res = await mutate(`/api/anime/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     })
+    if (!res.ok) {
+      notify(res.error ?? tc('error'))
+      return
+    }
+    notify(t('saved'), 'info')
     // frissen befejezett anime pont/vélemény nélkül → egy lépéses értékelő
     if (body.status === 'completed' && a && (a.myScore == null || !opinion.trim())) {
       setFinishScore(a.myScore)
@@ -131,15 +155,45 @@ export default function OwnerOverlay({
   }
 
   async function deleteFact(factId: number) {
-    await fetch(`/api/taste/${factId}`, { method: 'DELETE' })
+    const res = await mutate(`/api/taste/${factId}`, { method: 'DELETE' })
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    notify(t('factRemoved'), 'info')
     load()
   }
 
   async function remove() {
     if (id == null || !a || !confirm(t('confirmRemove', { title: a.titleRomaji }))) return
-    await fetch(`/api/anime/${id}`, { method: 'DELETE' })
+    // A visszavonás-lánc VÉGIG ki volt építve — a DELETE `{ bundle }`-t ad
+    // vissza, az /api/anime/restore fogadja, a /lista rendereli a toastot —
+    // de a sessionStorage-kulcsot SOHA SEMMI nem írta. Vagyis élesben egy
+    // cím + a véleménye + az összes kinyert ízlés-tény visszafordíthatatlanul
+    // eltűnt, mindössze egy natív confirm()-mal védve (§16.2).
+    const res = await mutate<{ bundle?: unknown }>(`/api/anime/${id}`, { method: 'DELETE' })
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    if (res.data?.bundle) {
+      try { sessionStorage.setItem(UNDO_KEY, JSON.stringify(res.data.bundle)) } catch { /* privát mód */ }
+      setUndoOpen(true)
+      window.clearTimeout(undoTimer.current)
+      undoTimer.current = window.setTimeout(() => setUndoOpen(false), 8000)
+    }
     // marad az oldalon; az overlay újratölt → megjelenik a hozzáadás-CTA
     setOwned(null); setFacts([]); setOpinion(''); setExtractStatus(null)
+  }
+
+  async function undoRemove() {
+    const raw = sessionStorage.getItem(UNDO_KEY)
+    if (!raw) return
+    let bundle: unknown
+    try { bundle = JSON.parse(raw) } catch { return }
+    // a route `{ bundle }` burkot vár — ugyanaz a forma, amit a /lista küld
+    const res = await mutate('/api/anime/restore', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bundle }),
+    })
+    if (!res.ok) { notify(res.error ?? t('undoFailed')); return }
+    sessionStorage.removeItem(UNDO_KEY)
+    setUndoOpen(false)
+    load()
   }
 
   async function addToList(status: string) {
@@ -155,7 +209,7 @@ export default function OwnerOverlay({
 
   if (!owned || !a) {
     return (
-      <section className="glass rounded-3xl p-5 flex flex-wrap items-center gap-2">
+      <section className="glass-3 rounded-3xl p-5 flex flex-wrap items-center gap-2">
         <span className="label-mono mr-1">{t('notOnYourList')}</span>
         {ADD_OPTIONS.map((s) => (
           <button
@@ -194,7 +248,7 @@ export default function OwnerOverlay({
       </p>
 
       {/* controls */}
-      <section className="glass rounded-3xl p-5 flex flex-wrap items-center gap-4">
+      <section className="glass-3 rounded-3xl p-5 flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-sm text-text-2">
           {t('statusLabel')}
           <select value={a.status} onChange={(e) => patch({ status: e.target.value })} className="field px-3 py-1.5 text-sm">
@@ -233,7 +287,9 @@ export default function OwnerOverlay({
         {pinError && <span className="text-xs text-[color:var(--status-dropped)]">{pinError}</span>}
         {a.status === 'completed' && (
           <button
-            onClick={() => { if (confirm(t('confirmRewatch'))) patch({ rewatch: true }) }}
+            // natív confirm() helyett az app saját felülete: a natív ablak
+            // kilóg a rendszerből, és nem viszi a §12 anyagát (§16.4)
+            onClick={() => setRewatchAsk(true)}
             className="btn-ghost border border-white/10 px-3.5 py-1.5 text-sm ml-auto"
           >
             {t('startRewatch')}
@@ -256,7 +312,7 @@ export default function OwnerOverlay({
       </section>
 
       {/* opinion */}
-      <section data-tour="opinion" className="glass rounded-3xl p-5">
+      <section data-tour="opinion" className="glass-3 rounded-3xl p-5">
         <p className="label-mono mb-3">{t('myReview')}</p>
         <textarea
           value={opinion}
@@ -282,7 +338,7 @@ export default function OwnerOverlay({
               const mark = KIND_MARK[f.kind] ?? KIND_MARK.note
               return (
                 <li key={f.id} className="flex items-start gap-2.5 rounded-xl bg-white/4 border border-white/5 px-3 py-2 text-sm">
-                  <span className={`${mark.cls} text-[10px] mt-1`}>{mark.glyph}</span>
+                  <span className={`${mark.cls} text-xxs mt-1`}>{mark.glyph}</span>
                   <span className="flex-1 text-text-1">{f.text}</span>
                   <button onClick={() => deleteFact(f.id)} className="text-text-3 hover:text-[color:var(--status-dropped)]">✕</button>
                 </li>
@@ -296,12 +352,15 @@ export default function OwnerOverlay({
         {t('removeFromList')}
       </button>
 
-      {/* frissen befejezve → pont + vélemény egy lépésben */}
-      {finishPrompt && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setFinishPrompt(false)}>
-          <div className="glass-strong rounded-3xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+      {/* frissen befejezve → pont + vélemény egy lépésben.
+          Eddig EGY képkockában pattant be a teljes képernyős fátyol és a
+          blurolt kártya, és ugyanúgy tűnt el: se opacity-rámpa, se skála, se
+          kilépési út (§7/§12), miközben az app másik két modálja rendesen
+          springel. A közös Dialog egységesíti — és hozza a hiányzó
+          role="dialog"/fókusz-csapda/Escape hármast is. */}
+      <Dialog open={finishPrompt} onClose={() => setFinishPrompt(false)} labelledBy={finishHeadingId}>
             <p className="label-mono mb-1">{t('finishedKicker')}</p>
-            <h2 className="text-lg font-semibold tracking-tight mb-4">{t('howWasIt')}</h2>
+            <h2 id={finishHeadingId} className="text-lg font-semibold mb-4">{t('howWasIt')}</h2>
             <div className="flex gap-1 mb-4">
               {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                 <button
@@ -326,9 +385,46 @@ export default function OwnerOverlay({
               <button onClick={() => setFinishPrompt(false)} className="btn-ghost px-4 py-2 text-sm">{t('skip')}</button>
               <button onClick={saveFinish} className="btn-solid px-5 py-2 text-sm">{t('save')}</button>
             </div>
-          </div>
+      </Dialog>
+
+      {/* újranézés megerősítése — az app saját felületén, nem natív ablakban */}
+      <Dialog
+        open={rewatchAsk}
+        onClose={() => setRewatchAsk(false)}
+        labelledBy={rewatchHeadingId}
+        panelClassName="glass-strong rounded-3xl w-full max-w-sm p-6"
+      >
+        <h2 id={rewatchHeadingId} className="text-lg font-semibold mb-2">{t('rewatchTitle')}</h2>
+        <p className="text-sm text-text-2 leading-relaxed mb-5">{t('confirmRewatch')}</p>
+        <div className="flex items-center justify-end gap-3">
+          <button onClick={() => setRewatchAsk(false)} className="btn-ghost px-4 py-2 text-sm">{tc('cancel')}</button>
+          <button
+            onClick={() => { setRewatchAsk(false); patch({ rewatch: true }) }}
+            className="btn-solid px-5 py-2 text-sm"
+          >
+            {t('rewatchConfirm')}
+          </button>
         </div>
-      )}
+      </Dialog>
+
+      {/* helyben megjelenő visszavonás: a törlés után is az oldalon maradunk,
+          tehát nem támaszkodhatunk a /lista későbbi megnyitására (§16.2) */}
+      <AnimatePresence>
+        {undoOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            transition={springModal}
+            className="surface-3 fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 rounded-full px-4 py-2 text-13"
+          >
+            <span className="text-text-2">{t('removed')}</span>
+            <button onClick={undoRemove} className="font-medium text-text-1 underline underline-offset-4">
+              {t('undo')}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }

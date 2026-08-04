@@ -1,8 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import Dialog from '@/components/ui/Dialog'
+import { tweenFluid } from '@/lib/motion'
 import { pickTonight, type TonightMood, type TonightPick, type TonightAnime } from '@/lib/tonight'
 
 const MOODS = ['barmi', 'folytatas', 'rovid', 'comfort'] as const satisfies readonly TonightMood[]
@@ -13,6 +15,7 @@ export default function TonightPicker() {
   const [pick, setPick] = useState<TonightPick | null>(null)
   const [mood, setMood] = useState<TonightMood>('barmi')
   const t = useTranslations('tonight')
+  const headingId = useId()
 
   useEffect(() => {
     if (!open || rows.length) return
@@ -45,25 +48,13 @@ export default function TonightPicker() {
       >
         {t('cta')}
       </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-            onClick={() => setOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-              className="glass-strong rounded-3xl w-full max-w-md p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
+      {/* A közös Dialog: ugyanaz a mozgás, plusz role/aria, fókusz-csapda,
+          Escape és görgetés-zár, ami eddig egyik modálon sem volt. */}
+      <Dialog open={open} onClose={() => setOpen(false)} labelledBy={headingId}>
+            <>
               <p className="label-mono mb-1">{t('kicker')}</p>
-              <h2 className="text-lg font-semibold tracking-tight mb-4">{t('question')}</h2>
+              {/* tracking-tight törölve: 18px-en a §15 szerint 0 a helyes */}
+              <h2 id={headingId} className="text-lg font-semibold mb-4">{t('question')}</h2>
               <div className="flex flex-wrap gap-1.5 mb-5">
                 {MOODS.map((m) => (
                   <button
@@ -85,6 +76,10 @@ export default function TonightPicker() {
                   key={pick.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  // transition NÉLKÜL a lib alapértelmezett, enyhén pattogó
+                  // springjére esett vissza — itt semmilyen gesztus nem vitt
+                  // lendületet, tehát a túllövés indokolatlan (§4)
+                  transition={tweenFluid}
                   className="flex gap-4"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -96,7 +91,7 @@ export default function TonightPicker() {
                     <p className="label-mono mt-1">
                       {pick.episodes != null ? t('episodeCount', { count: pick.episodes }) : pick.format ?? ''}
                     </p>
-                    <p className="text-[13px] text-text-2 leading-snug mt-2">
+                    <p className="text-13 text-text-2 leading-snug mt-2">
                       {/* A picker kulcsot ad, nem mondatot — lasd lib/tonight.ts */}
                       {t(`reason_${pick.reason.key}`, { ...pick.reason })}
                     </p>
@@ -113,10 +108,8 @@ export default function TonightPicker() {
               ) : (
                 <p className="text-sm text-text-3">{t('hint')}</p>
               )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </>
+      </Dialog>
     </>
   )
 }

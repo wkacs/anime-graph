@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { MotionConfig } from 'framer-motion'
 import { NextIntlClientProvider } from 'next-intl'
 import { LOCALE_COOKIE, DEFAULT_LOCALE, type Locale } from '@/lib/locale'
 import en from '../../messages/en.json'
@@ -36,9 +37,13 @@ export default function IntlProvider({ children }: { children: React.ReactNode }
   // Fix időzóna: enélkül a next-intl a futtató környezetére esik vissza
   // (ENVIRONMENT_FALLBACK), ami szerver és kliens között eltérhet → hidratálás-hiba.
   // A repó dátum-logikája amúgy is budapesti (weekdayIndexBudapest, time-capsule).
+  // A MotionConfig ITT ul, nem a template.tsx-ben: a template a layout ALATT
+  // van, tehat a ket globalisan allando framer-komponens (TopNav aktiv-pill,
+  // MobileTabBar jelolo) kivul esett rajta, es minden navigacionál springelt
+  // az OS-beallitastol fuggetlenul. Innen mindketto le van fedve.
   return (
     <NextIntlClientProvider locale={locale} messages={DICTS[locale]} timeZone="Europe/Budapest">
-      {children}
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
     </NextIntlClientProvider>
   )
 }

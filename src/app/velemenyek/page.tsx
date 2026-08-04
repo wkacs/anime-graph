@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { useStatusLabel } from '@/components/useLabels'
 import { STATUS_CSS_VARS } from '@/lib/status'
 import type { OpinionQueueInput } from '@/lib/opinion-queue'
+import PageShell from '@/components/ui/PageShell'
 
 // Vélemény-váró oldal: minden saját cím, amihez még nincs (sikeres) vélemény —
 // a kártyán azonnal írható, nem kell átugrani a címoldalra.
@@ -56,10 +57,10 @@ export default function VelemenyekPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-6">
+    <PageShell width="default" className="flex flex-col gap-6">
       <div>
         <p className="label-mono mb-1">{t('kicker')}</p>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="h2">
           {t('heading')}{items != null ? ` · ${items.length}` : ''}
         </h1>
         <p className="text-sm text-text-2 mt-1">{t('lead')}</p>
@@ -126,6 +127,6 @@ export default function VelemenyekPage() {
           ))}
         </div>
       )}
-    </main>
+    </PageShell>
   )
 }

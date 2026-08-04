@@ -16,6 +16,8 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
+import { notify } from '@/components/ui/Toast'
+import { mutate } from '@/lib/mutate'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 
@@ -55,6 +57,7 @@ export default function BrowsePage() {
   // `tr`, nem `t`: a fajlban tobb helyi `t` van (setTimeout-id, media-tipus param).
   const tr = useTranslations('browse')
   const ta = useTranslations('addSearch')
+  const tc = useTranslations('common')
   // A tura-lepesek forditva keletkeznek, ezert a komponensen belul allnak.
   const BONGESZO_TOUR: TourStep[] = [
     { selector: 'search', title: tr('tourCatalogTitle'), text: tr('tourCatalogText') },
@@ -198,7 +201,7 @@ export default function BrowsePage() {
   }
 
   async function quickAdd(h: TitleHit, status: string) {
-    const res = await fetch('/api/anime', {
+    const res = await mutate<{ anime: { id: number } }>('/api/anime', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ anilistId: h.anilistId, status }),
@@ -207,11 +210,10 @@ export default function BrowsePage() {
       router.push(`/login?next=${encodeURIComponent(`/browse?focus=1`)}`)
       return
     }
-    if (res.ok) {
-      const j = await res.json()
-      setAdded((s) => new Set(s).add(h.titleId))
-      setOwnIds((m) => new Map(m).set(h.anilistId, j.anime.id))
-    }
+    // else-ág nélkül a hozzáadás hibája teljesen néma volt (§16)
+    if (!res.ok || !res.data) { notify(res.error ?? tc('error')); return }
+    setAdded((s) => new Set(s).add(h.titleId))
+    setOwnIds((m) => new Map(m).set(h.anilistId, res.data!.anime.id))
   }
 
   return (

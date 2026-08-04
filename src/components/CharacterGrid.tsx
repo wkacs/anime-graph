@@ -76,7 +76,7 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
   if (loaded && characters.length === 0) return null
 
   return (
-    <section className="glass rounded-3xl p-5">
+    <section className="glass-3 rounded-3xl p-5">
       <p className="label-mono mb-3">
         {t('heading')}
         {!readOnly && <span className="text-text-3"> {t('favouritesHint')}</span>}
@@ -95,7 +95,7 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
                   <button
                     onClick={() => toggle(c)}
                     aria-label={fav ? t('unfavourite') : t('favourite')}
-                    className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full glass flex items-center justify-center text-sm transition-colors ${
+                    className={`absolute top-1.5 right-1.5 w-7 h-7 rounded-full chip-inset flex items-center justify-center text-sm transition-colors ${
                       fav ? 'text-[color:var(--status-dropped)]' : 'text-text-2 hover:text-text-1'
                     }`}
                   >
@@ -107,7 +107,7 @@ export default function CharacterGrid({ anilistId, animeId, readOnly = false }: 
                     onClick={() => togglePin(c.charId)}
                     aria-label={pinned.includes(c.charId) ? t('unpin') : t('pin')}
                     title={pinned.includes(c.charId) ? t('unpin') : t('pin')}
-                    className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full glass flex items-center justify-center text-xs transition-colors ${
+                    className={`absolute top-1.5 left-1.5 w-7 h-7 rounded-full chip-inset flex items-center justify-center text-xs transition-colors ${
                       pinned.includes(c.charId) ? 'text-text-1' : 'text-text-3 hover:text-text-1'
                     }`}
                   >

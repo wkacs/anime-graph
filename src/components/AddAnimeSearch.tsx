@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import Skeleton from '@/components/ui/Skeleton'
 import type { SearchResult } from '@/lib/anilist'
 import type { TitleHit } from '@/lib/search'
 import type { ApiAnime } from '@/lib/types'
@@ -23,6 +24,7 @@ export default function AddAnimeSearch({
   // AniList fallback for titles not yet in our catalog
   const [fallback, setFallback] = useState<SearchResult[]>([])
   const [busy, setBusy] = useState<number | null>(null)
+  const [searching, setSearching] = useState(false)
   // `tr`, nem `t`: a media-valto map parametere `t`, az arnyekolna.
   const tr = useTranslations('addSearch')
 
@@ -35,18 +37,27 @@ export default function AddAnimeSearch({
     : []
 
   useEffect(() => {
-    if (q.trim().length < 2) { setResults([]); setFallback([]); return }
+    if (q.trim().length < 2) { setResults([]); setFallback([]); setSearching(false); return }
+    // A `searching` SZINKRONBAN billen, még a 400ms-os debounce ELŐTT: a
+    // gépelés és az első látható jel közt eddig legalább 400ms + hálózat telt
+    // el teljes csendben, és az AniList-tartalék még egy kört tett rá (§1).
+    // A debounce marad 400ms — azt csökkenteni nem doktrína, csak több kérés.
+    setSearching(true)
     const t = setTimeout(async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}&limit=8`)
-      if (!res.ok) return
-      const { hits } = await res.json() as { hits: TitleHit[] }
-      setResults(hits)
-      if (hits.length === 0) {
-        // nothing in the catalog yet -> AniList fallback so brand-new titles are addable
-        const fb = await fetch(`/api/anilist/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}`)
-        setFallback(fb.ok ? (await fb.json()).results : [])
-      } else {
-        setFallback([])
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}&limit=8`)
+        if (!res.ok) return
+        const { hits } = await res.json() as { hits: TitleHit[] }
+        setResults(hits)
+        if (hits.length === 0) {
+          // nothing in the catalog yet -> AniList fallback so brand-new titles are addable
+          const fb = await fetch(`/api/anilist/search?q=${encodeURIComponent(q.trim())}&type=${mediaType}`)
+          setFallback(fb.ok ? (await fb.json()).results : [])
+        } else {
+          setFallback([])
+        }
+      } finally {
+        setSearching(false)
       }
     }, 400)
     return () => clearTimeout(t)
@@ -76,7 +87,9 @@ export default function AddAnimeSearch({
     if (res.ok) done((await res.json()).anime)
   }
 
+  // a `searching` is nyitja a listát: különben a vázlatnak nem lenne hova kerülnie
   const hasResults = results.length > 0 || fallback.length > 0 || ownMatches.length > 0
+  const listOpen = hasResults || searching
 
   return (
     // w-full + max-w, NEM w-[min(85vw,20rem)]: a kötött 85vw figyelmen kívül
@@ -88,6 +101,11 @@ export default function AddAnimeSearch({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={mediaType === 'ANIME' ? tr('placeholderAnime') : tr('placeholderManga')}
+          role="combobox"
+          aria-expanded={listOpen}
+          aria-controls="add-search-results"
+          aria-autocomplete="list"
+          aria-busy={searching}
           className="field surface-overlay w-full rounded-full px-4 py-2.5 pr-24"
         />
         <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex rounded-full border border-white/10 overflow-hidden">
@@ -95,7 +113,7 @@ export default function AddAnimeSearch({
             <button
               key={t}
               onClick={() => setMediaType(t)}
-              className={`px-2 py-1 text-[9px] font-mono uppercase tracking-wide transition-colors ${
+              className={`px-2 py-1 text-2xs font-mono uppercase tracking-wide transition-colors ${
                 mediaType === t ? 'bg-white/10 text-text-1' : 'text-text-3 hover:text-text-1'
               }`}
             >
@@ -104,8 +122,21 @@ export default function AddAnimeSearch({
           ))}
         </div>
       </div>
-      {hasResults && (
-        <ul className="surface-menu absolute mt-2 w-full max-h-80 overflow-auto rounded-2xl p-1.5 z-20">
+      {/* a folyamat állapota képernyőolvasónak is szól, nem csak vizuálisan */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {searching ? tr('searching') : hasResults ? tr('resultCount', { count: results.length + fallback.length + ownMatches.length }) : ''}
+      </p>
+      {listOpen && (
+        <ul
+          id="add-search-results"
+          role="listbox"
+          // overscroll-contain: a lista alján eddig keményen átadta a
+          // görgetést a mögötte álló lapnak (§9)
+          className="surface-menu absolute mt-2 w-full max-h-80 overflow-auto overscroll-contain rounded-2xl p-1.5 z-20"
+        >
+          {searching && !hasResults && (
+            <li className="flex flex-col gap-2 p-2"><Skeleton variant="row" count={3} /></li>
+          )}
           {ownMatches.length > 0 && (
             <li className="label-mono px-2 pt-1 pb-0.5">{tr('onYourListJump')}</li>
           )}

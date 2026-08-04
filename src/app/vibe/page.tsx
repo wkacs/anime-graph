@@ -1,11 +1,12 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
 import DiscoverTabs from '@/components/DiscoverTabs'
+import Dialog from '@/components/ui/Dialog'
 import { VIBE_PRESETS, buildVibePrompt } from '@/lib/vibe-presets'
 import type { ApiAnime } from '@/lib/types'
+import PageShell from '@/components/ui/PageShell'
 
 type OwnPick = { animeId: number; title: string; coverUrl: string | null; genres: string[]; status: string; reason: string }
 type NewPick = {
@@ -94,9 +95,9 @@ export default function VibePage() {
   }
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
+    <PageShell width="compact" className="flex flex-col gap-5">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">{t('heading')}</h1>
+        <h1 className="display-m">{t('heading')}</h1>
         <p className="text-sm text-text-2 mt-1">{t('lead')}</p>
         <div className="mt-4"><DiscoverTabs /></div>
       </div>
@@ -220,23 +221,14 @@ export default function VibePage() {
         <p className="text-sm text-text-3">{t('noResults')}</p>
       )}
 
-      <AnimatePresence>
-        {pickerOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-            onClick={() => setPickerOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-              className="glass-strong rounded-3xl w-full max-w-lg max-h-[70vh] flex flex-col p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
+      {/* ugyanaz a mozgás, mint eddig — de most role="dialog", fókusz-csapda,
+          Escape és görgetés-zár is jár hozzá (§16.5) */}
+      <Dialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        ariaLabel={t('pickerPlaceholder')}
+        panelClassName="glass-strong rounded-3xl w-full max-w-lg max-h-[70vh] flex flex-col p-4"
+      >
               <div className="flex items-center gap-3 mb-3">
                 <input
                   value={pickerQ}
@@ -247,7 +239,7 @@ export default function VibePage() {
                 />
                 <button onClick={() => setPickerOpen(false)} className="btn-ghost px-3 py-1.5 text-sm">{t('done')}</button>
               </div>
-              <div className="overflow-y-auto grid grid-cols-3 sm:grid-cols-4 gap-2">
+              <div className="overflow-y-auto overscroll-contain grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {pickerRows.map((a) => {
                   const isSel = selected.has(a.id)
                   return (
@@ -264,7 +256,7 @@ export default function VibePage() {
                       ) : (
                         <div className="w-full aspect-[2/3] bg-white/5" />
                       )}
-                      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pt-5 pb-1.5 text-[11px] leading-tight">
+                      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-2 pt-5 pb-1.5 text-11 text-micro leading-tight">
                         {a.titleRomaji}
                       </span>
                       {isSel && (
@@ -277,10 +269,7 @@ export default function VibePage() {
                   <p className="col-span-full text-center text-sm text-text-3 py-6">{t('pickerEmpty')}</p>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </main>
+      </Dialog>
+    </PageShell>
   )
 }

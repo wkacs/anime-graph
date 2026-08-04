@@ -1,7 +1,12 @@
 import type { ReactNode } from 'react'
 
 const WIDTHS = {
+  // egy lepcsofokkal szukebb, mint a narrow: urlap-jellegu oldalak
+  // (beallitasok, onboarding, vibe) eddig kezzel irt max-w-2xl-t hasznaltak
+  compact: 'max-w-2xl',
   narrow: 'max-w-3xl',
+  // a 4xl-t is a rendszer adja: harom oldal irta kulon
+  mid: 'max-w-4xl',
   default: 'max-w-5xl',
   wide: 'max-w-7xl',
 } as const

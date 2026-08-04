@@ -8,7 +8,10 @@ import SyncAccounts from '@/components/SyncAccounts'
 import EmailPrompt from '@/components/EmailPrompt'
 import LocaleSwitcher from '@/components/LocaleSwitcher'
 import ProfileSettings from '@/components/ProfileSettings'
+import Skeleton from '@/components/ui/Skeleton'
+import { mutate } from '@/lib/mutate'
 import { readMalExport } from '@/lib/mal-export'
+import PageShell from '@/components/ui/PageShell'
 
 const CONFIG_KEY = 'anime-graph-config'
 
@@ -30,24 +33,54 @@ export default function BeallitasokPage() {
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+  // A beolvasás állapota KÜLÖN áll. Enélkül egy 401/500/nem-JSON válasz után
+  // a két textarea üresen renderelt — megkülönböztethetetlenül attól, hogy a
+  // felhasználó sosem írt bele —, a Mentés viszont ÉLES volt. Egy kattintás
+  // PUT-olta a `{ tasteLikes:'', tasteDislikes:'' }`-t, és megsemmisítette az
+  // ízlésprofilt, ami az összes ajánlást hajtja. Visszavonás nincs (§16.2/§16.3).
+  const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [hasSavedLayout, setHasSavedLayout] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const router = useRouter()
+  const tc = useTranslations('common')
 
-  useEffect(() => {
-    fetch('/api/settings').then((r) => r.json()).then((j) => {
-      setLikes(j.tasteLikes ?? '')
-      setDislikes(j.tasteDislikes ?? '')
-      setPublicToken(j.publicToken ?? null)
-    })
-  }, [])
+  useEffect(() => { setHasSavedLayout(localStorage.getItem(CONFIG_KEY) != null) }, [])
+
+  function loadSettings() {
+    setLoadError(false)
+    fetch('/api/settings')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('http'))))
+      .then((j) => {
+        setLikes(j.tasteLikes ?? '')
+        setDislikes(j.tasteDislikes ?? '')
+        setPublicToken(j.publicToken ?? null)
+        setLoaded(true)
+      })
+      .catch(() => setLoadError(true))
+  }
+
+  useEffect(loadSettings, [])
 
   async function togglePublicLink() {
-    const res = await fetch('/api/settings', {
+    const creating = !publicToken
+    setSaveError('')
+    const res = await mutate<{ publicToken?: string }>('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ publicToken: publicToken ? null : true }),
+      body: JSON.stringify({ publicToken: creating ? true : null }),
     })
-    const json = await res.json().catch(() => null)
-    setPublicToken(publicToken ? null : json?.publicToken ?? null)
+    // csak VALÓS siker után írjuk át a helyi állapotot; létrehozásnál pedig
+    // csak akkor, ha tényleg érkezett token — különben egy nem létező
+    // /p/<token> útvonalat mutatnánk késznek
+    if (!res.ok) { setSaveError(t('genericError')); return }
+    if (creating) {
+      if (!res.data?.publicToken) { setSaveError(t('genericError')); return }
+      setPublicToken(res.data.publicToken)
+    } else {
+      setPublicToken(null)
+    }
   }
 
   async function copyPublicLink() {
@@ -58,24 +91,36 @@ export default function BeallitasokPage() {
   }
 
   async function saveTaste() {
+    // PUT SOSEM indulhat feloldatlan olvasásból
+    if (!loaded) return
     setSaving(true)
-    await fetch('/api/settings', {
+    setSaveError('')
+    const res = await mutate('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tasteLikes: likes, tasteDislikes: dislikes }),
     })
     setSaving(false)
+    // A „✓ mentve" eddig FELTÉTEL NÉLKÜL megjelent: 500-nál, rate-limitnél,
+    // offline fülnél is azt üzente, hogy elmentettük. Egy meg nem történt
+    // művelet nyugtázása rosszabb, mint a semmi (§16.7).
+    if (!res.ok) { setSaveError(t('genericError')); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
 
   async function saveHierarchyDefault() {
     const current = localStorage.getItem(CONFIG_KEY)
-    await fetch('/api/settings', {
+    // null-t PUT-olni és sikert jelenteni félrevezető: ha nincs mentett
+    // elrendezés, a gomb eleve tiltva van (lásd a `disabled`-et lent)
+    if (!current) return
+    setSaveError('')
+    const res = await mutate('/api/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hierarchyDefault: current ? JSON.parse(current) : null }),
+      body: JSON.stringify({ hierarchyDefault: JSON.parse(current) }),
     })
+    if (!res.ok) { setSaveError(t('genericError')); return }
     setHierarchySaved(true)
     setTimeout(() => setHierarchySaved(false), 2500)
   }
@@ -163,8 +208,8 @@ export default function BeallitasokPage() {
   }
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
-      <h1 className="text-xl font-semibold tracking-tight">{t('title')}</h1>
+    <PageShell width="compact" className="flex flex-col gap-5">
+      <h1 className="display-m">{t('title')}</h1>
 
       <EmailPrompt />
 
@@ -181,31 +226,48 @@ export default function BeallitasokPage() {
       <section className="glass rounded-3xl p-6">
         <p className="label-mono mb-1">{t('tasteKicker')}</p>
         <p className="text-sm text-text-2 mb-5">{t('tasteText')}</p>
-        <label className="block mb-4">
-          <span className="text-sm text-text-1 mb-1.5 block">{t('likesLabel')}</span>
-          <textarea
-            value={likes}
-            onChange={(e) => setLikes(e.target.value)}
-            rows={5}
-            placeholder={t('likesPlaceholder')}
-            className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
-          />
-        </label>
-        <label className="block mb-4">
-          <span className="text-sm text-text-1 mb-1.5 block">{t('dislikesLabel')}</span>
-          <textarea
-            value={dislikes}
-            onChange={(e) => setDislikes(e.target.value)}
-            rows={5}
-            placeholder={t('dislikesPlaceholder')}
-            className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
-          />
-        </label>
+        {loadError && (
+          <div className="mb-4 flex items-center gap-3">
+            <p className="text-sm text-[color:var(--status-dropped)]">{t('loadFailed')}</p>
+            <button onClick={loadSettings} className="btn-ghost border border-white/10 px-4 py-1.5 text-xs">
+              {tc('retry')}
+            </button>
+          </div>
+        )}
+        {!loaded && !loadError && (
+          <div className="mb-4 flex flex-col gap-2"><Skeleton variant="text" count={5} /></div>
+        )}
+        {loaded && (
+          <>
+            <label className="block mb-4">
+              <span className="text-sm text-text-1 mb-1.5 block">{t('likesLabel')}</span>
+              <textarea
+                value={likes}
+                onChange={(e) => setLikes(e.target.value)}
+                rows={5}
+                placeholder={t('likesPlaceholder')}
+                className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
+              />
+            </label>
+            <label className="block mb-4">
+              <span className="text-sm text-text-1 mb-1.5 block">{t('dislikesLabel')}</span>
+              <textarea
+                value={dislikes}
+                onChange={(e) => setDislikes(e.target.value)}
+                rows={5}
+                placeholder={t('dislikesPlaceholder')}
+                className="field w-full rounded-2xl p-4 text-sm leading-relaxed"
+              />
+            </label>
+          </>
+        )}
         <div className="flex items-center gap-3">
-          <button onClick={saveTaste} disabled={saving} className="btn-solid px-5 py-2 text-sm">
+          <button onClick={saveTaste} disabled={saving || !loaded} className="btn-solid px-5 py-2 text-sm">
             {saving ? t('saving') : t('save')}
           </button>
-          {saved && <span className="label-mono text-[color:var(--status-watching)]">{t('savedBadge')}</span>}
+          {/* siker és hiba EGY helyen lakik: nem lehet mindkettőt látni */}
+          {saved && !saveError && <span className="label-mono text-[color:var(--status-watching)]">{t('savedBadge')}</span>}
+          {saveError && <span className="label-mono text-[color:var(--status-dropped)]">{saveError}</span>}
         </div>
       </section>
 
@@ -213,9 +275,22 @@ export default function BeallitasokPage() {
         <p className="label-mono mb-1">{t('graphKicker')}</p>
         <p className="text-sm text-text-2 mb-4">{t('graphText')}</p>
         <div className="flex items-center gap-3">
-          <button onClick={saveHierarchyDefault} className="btn-ghost border border-white/10 px-5 py-2 text-sm">
+          {/* A vezérlő attól a gráftól MESSZE lakik, amit befolyásol (§16:
+              a vezérlő álljon amellett, amire hat). Amíg át nem költözik a
+              HierarchyPanelbe, legalább ne PUT-oljon null-t sikert jelentve:
+              mentett elrendezés nélkül tiltva van, és a link odavisz. */}
+          <button
+            onClick={saveHierarchyDefault}
+            disabled={!hasSavedLayout}
+            className="btn-ghost border border-white/10 px-5 py-2 text-sm disabled:opacity-40"
+          >
             {t('graphSave')}
           </button>
+          {!hasSavedLayout && (
+            <a href="/graph" className="text-xs text-text-3 underline underline-offset-4 hover:text-text-1">
+              {t('graphOpen')}
+            </a>
+          )}
           {hierarchySaved && <span className="label-mono text-[color:var(--status-watching)]">{t('savedBadge')}</span>}
         </div>
       </section>
@@ -290,35 +365,6 @@ export default function BeallitasokPage() {
         </button>
       </section>
 
-      <section className="rounded-3xl border border-red-400/25 bg-red-500/5 p-6">
-        <p className="label-mono mb-1 text-red-200">{t('deleteKicker')}</p>
-        <p className="text-sm text-text-2 mb-4">{t('deleteText')}</p>
-        <div className="grid gap-3 max-w-md">
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={deletePassword}
-            onChange={(e) => setDeletePassword(e.target.value)}
-            placeholder={t('currentPassword')}
-            className="field px-4 py-2 text-sm"
-          />
-          <input
-            value={deleteConfirmation}
-            onChange={(e) => setDeleteConfirmation(e.target.value)}
-            placeholder={t('typeDelete')}
-            className="field px-4 py-2 text-sm"
-          />
-          <button
-            onClick={deleteAccount}
-            disabled={deleting || !deletePassword || deleteConfirmation !== 'DELETE'}
-            className="btn-ghost border border-red-400/35 px-4 py-2 text-sm text-red-200 hover:bg-red-500/10 disabled:opacity-40"
-          >
-            {deleting ? t('deleting') : t('deleteCta')}
-          </button>
-          {deleteError && <p className="text-sm text-red-200">{deleteError}</p>}
-        </div>
-      </section>
-
       <section className="glass rounded-3xl p-6 flex items-center justify-between">
         <div>
           <p className="label-mono mb-1">{t('onboardingKicker')}</p>
@@ -347,7 +393,60 @@ export default function BeallitasokPage() {
         </button>
       </section>
 
+      {/* A fióktörlés LEGALULRA került, és az űrlapja lenyíló mögé.
+          Korábban tizenkét szekció állt egy szinten, és a visszafordíthatatlan
+          művelet űrlapja VÉGIG kinyitva ült közöttük — a §16.6 szerint a
+          gyakori út jön elöl, a haladó/veszélyes egy szinttel lejjebb.
+          A nyitás-mechanika a SeasonFilterBar bevált 0fr→1fr rácsa. */}
+      <section className="rounded-3xl border border-red-400/25 bg-red-500/5 p-6">
+        <button
+          onClick={() => setDeleteOpen((o) => !o)}
+          aria-expanded={deleteOpen}
+          className="flex w-full items-center justify-between gap-4 text-left"
+        >
+          <span>
+            <span className="label-mono mb-1 block text-red-200">{t('deleteKicker')}</span>
+            <span className="block text-sm text-text-2">{t('deleteText')}</span>
+          </span>
+          <span aria-hidden className="shrink-0 text-text-3">{deleteOpen ? '▾' : '▸'}</span>
+        </button>
+        <div
+          className="grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]"
+          style={{ gridTemplateRows: deleteOpen ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
+            <div className="grid gap-3 max-w-md pt-5">
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder={t('currentPassword')}
+                className="field px-4 py-2 text-sm"
+                tabIndex={deleteOpen ? 0 : -1}
+              />
+              <input
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+                placeholder={t('typeDelete')}
+                className="field px-4 py-2 text-sm"
+                tabIndex={deleteOpen ? 0 : -1}
+              />
+              <button
+                onClick={deleteAccount}
+                disabled={deleting || !deletePassword || deleteConfirmation !== 'DELETE'}
+                tabIndex={deleteOpen ? 0 : -1}
+                className="btn-ghost border border-red-400/35 px-4 py-2 text-sm text-red-200 hover:bg-red-500/10 disabled:opacity-40"
+              >
+                {deleting ? t('deleting') : t('deleteCta')}
+              </button>
+              {deleteError && <p className="text-sm text-red-200">{deleteError}</p>}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <ProfileReveal open={revealOpen} onClose={() => setRevealOpen(false)} />
-    </main>
+    </PageShell>
   )
 }

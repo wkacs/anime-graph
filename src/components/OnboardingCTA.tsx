@@ -9,7 +9,7 @@ export default function OnboardingCTA({ compact = false }: { compact?: boolean }
   return (
     <div className={`glass rounded-3xl text-center ${compact ? 'px-6 py-5' : 'px-8 py-8'}`}>
       <p className="label-mono mb-2">{t('kicker')}</p>
-      <h2 className={`font-semibold tracking-tight ${compact ? 'text-base mb-2' : 'text-xl mb-3'}`}>
+      <h2 className={`font-semibold ${compact ? 'text-base mb-2' : 'text-xl tracking-[-0.01em] mb-3'}`}>
         {t('headline')}
       </h2>
       <p className="text-sm text-text-2 mb-5 max-w-md mx-auto">

@@ -17,6 +17,37 @@ export const springFluid = {
 export const tweenFluid: Transition = { duration: 0.5, ease: fluidEase }
 export const tweenExit: Transition = { duration: 0.35, ease: fluidEase }
 
+// Modálok / fiókok / felugró menük. csillapítási arány ≈ 0,84, válaszidő
+// ≈ 0,35s — az Apple „drawer/sheet: damping 0,8 / response 0,3" sora.
+// A TonightPicker már ezt hozta inline; itt tokenné vált, mert öt további
+// felület ugyanilyen, és eddig mindegyik MOZGÁS NÉLKÜL vágott be.
+export const springModal = { type: 'spring', stiffness: 320, damping: 30 } as const
+
+// A modál-panel be/kilépése EGY úton jár (§7), és a blur+scale együtt mozdul,
+// hogy az üveg anyagként érkezzen, ne sima opacity-fade legyen (§12).
+export const modalScrim = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.25, ease: fluidEase },
+} as const
+
+export const modalPanel = {
+  initial: { opacity: 0, scale: 0.96, y: 12 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.96, y: 12 },
+  transition: springModal,
+} as const
+
+// Felugró menü: a triggerből nő ki, oda is húzódik vissza. A transform-origin
+// hívási helyenként dől el (jobb felül / jobb alul), ezért nincs benne.
+export const popMenu = {
+  initial: { opacity: 0, scale: 0.94, y: -6 },
+  animate: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.94, y: -6 },
+  transition: springModal,
+} as const
+
 export const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24, scale: 0.985 },
   show: { opacity: 1, y: 0, scale: 1, transition: tweenFluid },

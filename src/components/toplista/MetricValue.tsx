@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { useInView, useMotionValue, animate } from 'framer-motion'
+import { useInView, useMotionValue, useReducedMotion, animate } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { fluidEase } from '@/lib/motion'
 import { formatMetric, type LeaderRow } from '@/lib/leaderboard-metric'
@@ -13,8 +13,8 @@ type Props = {
 }
 
 const NUM = { lg: 'text-2xl', md: 'text-base', sm: 'text-sm' } as const
-const SUF = { lg: 'text-lg', md: 'text-xs', sm: 'text-[11px]' } as const
-const UNIT = { lg: 'text-xs', md: 'text-[10px]', sm: 'text-[11px]' } as const
+const SUF = { lg: 'text-lg', md: 'text-xs', sm: 'text-11' } as const
+const UNIT = { lg: 'text-xs', md: 'text-xxs', sm: 'text-11' } as const
 
 // A szám felpörög, amikor a viewportba ér — de CSAK ha numerikus.
 // SSR/no-JS a végértéket kapja (a span kezdő tartalma a kész érték),
@@ -26,16 +26,19 @@ function RollingNumber({ value, className }: { value: string; className: string 
   const target = Number.parseFloat(value)
   const decimals = value.includes('.') ? (value.split('.')[1]?.length ?? 0) : 0
   const numeric = Number.isFinite(target)
+  // A span kezdő tartalma MÁR a végérték (lásd lent), tehát csökkentett
+  // mozgásnál elég nem elindítani: a helyes szám ott áll, statikusan.
+  const reduced = useReducedMotion()
 
   useEffect(() => {
-    if (!inView || !numeric || !ref.current) return
+    if (reduced || !inView || !numeric || !ref.current) return
     const ctrl = animate(mv, target, {
       duration: 1.1,
       ease: fluidEase,
       onUpdate: (v) => { if (ref.current) ref.current.textContent = v.toFixed(decimals) },
     })
     return () => ctrl.stop()
-  }, [inView, numeric, target, decimals, mv])
+  }, [reduced, inView, numeric, target, decimals, mv])
 
   return <span ref={ref} className={className}>{value}</span>
 }

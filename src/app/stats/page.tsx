@@ -258,7 +258,7 @@ export default function StatsPage() {
   return (
     <main className="min-h-screen max-w-5xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
+        <h1 className="display-m">Stats</h1>
         <div className="flex items-center gap-2">
           <Link href="/wrapped" className="btn-solid px-4 py-2 text-sm">{t('yearlyWrapped')}</Link>
           <WrappedCard list={list} />
@@ -268,7 +268,7 @@ export default function StatsPage() {
       {pinned && <PinnedShowcase pinned={pinned} />}
 
       {profile && (
-        <section className="glass rounded-3xl p-6">
+        <section className="glass-3 rounded-3xl p-6">
           <div className="flex items-start justify-between gap-3 mb-3">
             <p className="label-mono">{t('yourTasteProfile')}</p>
             <div className="flex items-center gap-2">

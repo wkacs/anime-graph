@@ -34,9 +34,13 @@ export const DISCOVER_TABS: NavTab[] = [
   { href: '/vibe', key: 'vibe' },
 ]
 
-// Vendegnek a Taste Scan az elso ajanlat: az az egyetlen felulet, ami fiok
-// nelkul is mond rola valamit.
+// A '/' azert all elol, mert a kijelentkezett latogatonak is kell hazafele ut:
+// enelkul mobilon se termekjel, se '/'-re mutato fogodzo nem volt sehol
+// (§16 wayfinding: „hova mehetek? hogyan jutok ki?"). Utana rogton a Taste
+// Scan, az elso ajanlat: az az egyetlen felulet, ami fiok nelkul is mond
+// rola valamit.
 export const GUEST_TABS: NavTab[] = [
+  { href: '/', key: 'news' },
   { href: '/scan', key: 'scan' },
   { href: '/browse', key: 'browse' },
   { href: '/leaderboard', key: 'leaderboard' },
@@ -99,7 +103,13 @@ export function isMoreActive(pathname: string): boolean {
   return MORE_TABS.some((t) => isTabActive(t.href, pathname))
 }
 
-// A mobil 'Tovabb' tobbet fed le, mert a savba csak negy tab fer.
+// A mobil 'Tovabb' tobbet fed le, mert a savba csak negy tab fer. A /settings
+// a lapon kulon zaroelemkent all, ezert itt is jelolni kell — enelkul a tabsav
+// a /settings-en egyetlen aktiv jelolot sem mutatna (§16 wayfinding: a „hol
+// vagyok?" kerdesre nem volt valasz).
 export function isMobileMoreActive(pathname: string): boolean {
-  return MOBILE_MORE_TABS.some((t) => isTabActive(t.href, pathname))
+  return (
+    MOBILE_MORE_TABS.some((t) => isTabActive(t.href, pathname)) ||
+    isTabActive('/settings', pathname)
+  )
 }

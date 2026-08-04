@@ -65,7 +65,9 @@ export default function Podium({ rows, tab }: Props) {
           <Link
             key={r.id}
             href={href(r)}
-            className="surface-1 relative isolate flex items-center gap-4 overflow-hidden rounded-[var(--r-md)] p-3 pl-4 transition-colors hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            // ugyanaz a lenyomás-fizika, mint a #1 kártyán: azonos kinézetű
+            // elem nem viselkedhet másképp (§16.4)
+            className="surface-1 relative isolate flex items-center gap-4 overflow-hidden rounded-[var(--r-md)] p-3 pl-4 transition-[transform,background-color] active:scale-[0.99] hover:bg-white/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             <PosterAmbient src={r.coverUrl} intensity="row" />
             <div className="absolute inset-0 bg-black/35" aria-hidden />

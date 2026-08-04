@@ -58,7 +58,7 @@ export default function PublicProfilePage() {
         <p className="label-mono mb-1">
           アニメグラフ · {t('collectionOf', { user: data.username ?? t('shared') })}
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="h2">
           {t('totals', { total: data.stats.total, completed: data.stats.completed })}
         </h1>
         <div className="mt-3">

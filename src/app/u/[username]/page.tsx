@@ -8,6 +8,7 @@ import { toPublicPinned } from '@/lib/public-view'
 import { canViewProfile, profileVisibility } from '@/lib/profile-visibility'
 import { requireUserId } from '@/lib/session'
 import PinnedShowcase from '@/components/PinnedShowcase'
+import PageShell from '@/components/ui/PageShell'
 import Avatar from '@/components/Avatar'
 
 // force-dynamic + no-store `db`: a profil a friss adatot mutassa. Nem ISR-oldal,
@@ -77,12 +78,12 @@ export default async function Page({ params }: { params: Promise<{ username: str
   if (!data || !canViewProfile(viewerId, data.user.id, data.visibility)) notFound()
 
   return (
-    <main className="min-h-screen pb-24 md:pb-16">
-      <div className="max-w-3xl mx-auto px-4 pt-28 flex flex-col gap-6">
+    // a pt-28 egyszeri érték törölve: a nav-magasság egy helyen dől el
+    <PageShell width="narrow" className="flex flex-col gap-6">
         <header className="flex items-center gap-5">
           <Avatar username={data.user.username} size={72} />
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight">{data.user.username}</h1>
+            <h1 className="h2">{data.user.username}</h1>
             {data.user.bio && (
               <p className="text-sm text-text-2 mt-1 whitespace-pre-line">{data.user.bio}</p>
             )}
@@ -90,7 +91,6 @@ export default async function Page({ params }: { params: Promise<{ username: str
         </header>
 
         <PinnedShowcase pinned={data.pinned} />
-      </div>
-    </main>
+    </PageShell>
   )
 }

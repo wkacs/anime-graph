@@ -7,15 +7,20 @@ import TopNav from "@/components/TopNav";
 import MobileTabBar from "@/components/MobileTabBar";
 import InstallPrompt from "@/components/InstallPrompt";
 import SiteFooter from "@/components/SiteFooter";
+import Toaster from "@/components/ui/Toast";
 import { siteUrl } from "@/lib/seo";
 import "./globals.css";
 
 // Egyetlen sans-család: Inter. A display-fokozatok súllyal (700-800) és
 // szoros trackinggel különülnek el, nem külön fonttal.
 // latin-ext explicit: a magyar ő/ű a display-fokozaton is a webfontból jöjjön.
+// axes: ["opsz"] — az Inter változó vágata visz optikai-méret tengelyt, és a
+// böngésző a font-optical-sizing: auto kezdőérték miatt magától alkalmazza:
+// a 60px-es display-számok más raszterrel jönnek, mint a 11px-es címkék.
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin", "latin-ext"],
+  axes: ["opsz"],
 });
 
 const geistMono = Geist_Mono({
@@ -71,6 +76,7 @@ export default function RootLayout({
           {/* A sav csak a fooldalon latszik, de a listenernek mindenhol elnie
               kell: a beforeinstallprompt a betoltes utan azonnal tuzel. */}
           <InstallPrompt />
+          <Toaster />
         </IntlProvider>
       </body>
     </html>

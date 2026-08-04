@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { cardHover, springFluid } from '@/lib/motion'
+import { cardHover, springFluid, tapScale } from '@/lib/motion'
 import { stripHtml, clampText } from '@/lib/description'
 
 type StreamLink = { site: string; url: string }
@@ -37,9 +37,9 @@ export default function MediaCard({
           {coverUrl && <Image src={coverUrl} alt="" fill sizes="32px" className="object-cover" />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-medium text-text-1 truncate">{title}</p>
+          <p className="text-15 font-medium text-text-1 truncate">{title}</p>
           {genres.length > 0 && (
-            <p className="font-mono text-[10px] text-text-3 truncate">{genres.slice(0, 2).join(' · ')}</p>
+            <p className="font-mono text-xxs text-text-3 truncate">{genres.slice(0, 2).join(' · ')}</p>
           )}
         </div>
         {badge}
@@ -48,6 +48,9 @@ export default function MediaCard({
     return (
       <motion.div
         whileHover={{ x: 6, transition: springFluid }}
+        // §1: az app legtöbbször ismételt vezérlőjén eddig CSAK hover volt,
+        // érintésen tehát semmi. A tapScale ugyanaz a 0.97, mint a Buttonon.
+        whileTap={tapScale}
         className="group relative flex items-center gap-3 rounded-[var(--r-md)] px-2 py-2 glass-lite"
       >
         {href ? (
@@ -79,7 +82,7 @@ export default function MediaCard({
       {/* a leiras hoverre csuszik be a poszter aljara */}
       {desc && (
         <div className="absolute inset-x-0 bottom-0 p-3 pt-8 bg-gradient-to-t from-black/90 via-black/70 to-transparent translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-out pointer-events-none">
-          <p className="text-[11px] text-text-1/90 leading-snug line-clamp-4">{desc}</p>
+          <p className="text-11 text-micro text-text-1/90 leading-snug line-clamp-4">{desc}</p>
         </div>
       )}
     </div>
@@ -92,7 +95,7 @@ export default function MediaCard({
   )
 
   return (
-    <motion.div whileHover={cardHover} className="group relative flex flex-col gap-2">
+    <motion.div whileHover={cardHover} whileTap={tapScale} className="group relative flex flex-col gap-2">
       {/* a poszter sajat szine izzik a kartya alatt — idle-ben derengve, hoverre erosebben */}
       {coverUrl && (
         /* eslint-disable-next-line @next/next/no-img-element */
@@ -103,15 +106,15 @@ export default function MediaCard({
         {href ? (
           <Link
             href={href}
-            className="text-[15px] font-medium text-text-1 line-clamp-2 leading-snug hover:underline decoration-white/25 underline-offset-4"
+            className="text-15 font-medium text-text-1 line-clamp-2 leading-snug hover:underline decoration-white/25 underline-offset-4"
           >
             {title}
           </Link>
         ) : (
-          <span className="text-[15px] font-medium text-text-1 line-clamp-2 leading-snug">{title}</span>
+          <span className="text-15 font-medium text-text-1 line-clamp-2 leading-snug">{title}</span>
         )}
         {genres.length > 0 && (
-          <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-text-3 truncate">
+          <p className="mt-0.5 font-mono text-xxs uppercase tracking-wide text-text-3 truncate">
             {genres.slice(0, 2).join(' · ')}
           </p>
         )}
@@ -120,7 +123,7 @@ export default function MediaCard({
             {streaming.map((s) => (
               <a
                 key={s.url} href={s.url} target="_blank" rel="noreferrer" title={s.site}
-                className="rounded-[var(--r-sm)] bg-white/8 px-1.5 py-0.5 font-mono text-[9px] uppercase text-text-2 hover:text-text-1"
+                className="rounded-[var(--r-sm)] bg-white/8 px-1.5 py-0.5 font-mono text-2xs uppercase text-text-2 hover:text-text-1"
               >
                 {s.site.slice(0, 4)}
               </a>

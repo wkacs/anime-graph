@@ -1,11 +1,13 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import PushToggle from '@/components/PushToggle'
+import Dialog from '@/components/ui/Dialog'
 import type { TasteProfile } from '@/lib/profile'
 import { readMalExport } from '@/lib/mal-export'
+import PageShell from '@/components/ui/PageShell'
 
 const SEED_MIN = 5
 
@@ -38,6 +40,8 @@ async function fetchSeedPool(): Promise<SeedTitle[]> {
 // az 1.-nél megerősítéssel (enélkül üres az ajánló/gráf).
 export default function OnboardingPage() {
   const t = useTranslations('onboarding')
+  const tc = useTranslations('common')
+  const skipHeadingId = useId()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [tab, setTab] = useState<'import' | 'seed'>('import')
@@ -136,12 +140,26 @@ export default function OnboardingPage() {
   const stepLabel = [t('step1'), t('step2'), t('step3'), t('step4')][step - 1]
 
   return (
-    <main className="min-h-screen max-w-2xl mx-auto px-4 pt-24 pb-24 md:pb-16 flex flex-col gap-5">
+    <PageShell width="compact" className="flex flex-col gap-5">
       <div>
         <p className="label-mono mb-1">{t('kicker', { step, label: stepLabel })}</p>
+        {/* A már elhagyott lépések VISSZAKATTINTHATÓK. A varázsló eddig csak
+            előre engedett: egy elgépelt AniList-név vagy rossz gombválasztás
+            után nem volt út vissza (§16.2 — kínálj választást, ne kényszeríts
+            egyetlen útra). A `picked`/`anilistUser`/`hasList` komponens-állapot
+            és nem törlődik lépéskor, tehát a korábbi lépés a beírt adattal jön. */}
         <div className="flex gap-1.5">
           {[1, 2, 3, 4].map((s) => (
-            <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-white/70' : 'bg-white/10'}`} />
+            s < step ? (
+              <button
+                key={s}
+                onClick={() => setStep(s)}
+                aria-label={t('backToStep', { step: s })}
+                className="h-1 flex-1 rounded-full bg-white/70 hover:bg-white cursor-pointer"
+              />
+            ) : (
+              <span key={s} className={`h-1 flex-1 rounded-full ${s <= step ? 'bg-white/70' : 'bg-white/10'}`} />
+            )
           ))}
         </div>
       </div>
@@ -149,7 +167,7 @@ export default function OnboardingPage() {
       {step === 1 && (
         <section className="glass rounded-3xl p-6 flex flex-col gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight mb-1">{t('s1Title')}</h1>
+            <h1 className="display-m mb-1">{t('s1Title')}</h1>
             <p className="text-sm text-text-2">{t('s1Text')}</p>
           </div>
           <div className="flex gap-2">
@@ -229,7 +247,7 @@ export default function OnboardingPage() {
       {step === 2 && (
         <section className="glass rounded-3xl p-6">
           <p className="label-mono mb-1">{t('s2Kicker')}</p>
-          <h1 className="text-xl font-semibold tracking-tight mb-4">{t('s2Title')}</h1>
+          <h1 className="display-m mb-4">{t('s2Title')}</h1>
           {profileState === 'busy' && <p className="text-sm text-text-2 animate-pulse py-4">{t('s2Busy')}</p>}
           {profileState === 'error' && (
             <p className="text-sm text-text-3 py-4">{t('s2Error')}</p>
@@ -239,22 +257,27 @@ export default function OnboardingPage() {
               <p className="text-sm text-text-1 leading-relaxed mb-4">{profile.portrait}</p>
               <div className="flex flex-wrap gap-2 mb-2">
                 {profile.badges.map((b) => (
-                  <span key={b} className="glass rounded-full px-3.5 py-1.5 text-xs font-mono text-text-1">{b}</span>
+                  // chip-inset, nem glass: üveg fölé nem kerülhet üveg (§12)
+                  <span key={b} className="chip-inset rounded-full px-3.5 py-1.5 text-xs font-mono text-text-1">{b}</span>
                 ))}
               </div>
             </>
           )}
-          <button onClick={() => setStep(3)} className="btn-solid px-5 py-2 text-sm mt-4">{t('next')}</button>
+          <div className="flex items-center gap-3 mt-4">
+            <button onClick={() => setStep(1)} className="btn-ghost px-4 py-2 text-sm">{tc('back')}</button>
+            <button onClick={() => setStep(3)} className="btn-solid px-5 py-2 text-sm">{t('next')}</button>
+          </div>
         </section>
       )}
 
       {step === 3 && (
         <section className="glass rounded-3xl p-6">
           <p className="label-mono mb-1">{t('s3Kicker')}</p>
-          <h1 className="text-xl font-semibold tracking-tight mb-2">{t('s3Title')}</h1>
+          <h1 className="display-m mb-2">{t('s3Title')}</h1>
           <p className="text-sm text-text-2 mb-4">{t('s3Text')}</p>
           <PushToggle />
-          <div className="mt-5">
+          <div className="flex items-center gap-3 mt-5">
+            <button onClick={() => setStep(2)} className="btn-ghost px-4 py-2 text-sm">{tc('back')}</button>
             <button onClick={() => setStep(4)} className="btn-solid px-5 py-2 text-sm">{t('next')}</button>
           </div>
         </section>
@@ -263,9 +286,12 @@ export default function OnboardingPage() {
       {step === 4 && (
         <section className="glass rounded-3xl p-6">
           <p className="label-mono mb-1">{t('s4Kicker')}</p>
-          <h1 className="text-xl font-semibold tracking-tight mb-2">{t('s4Title')}</h1>
+          <h1 className="display-m mb-2">{t('s4Title')}</h1>
           <p className="text-sm text-text-2 mb-5">{t('s4Text')}</p>
-          <button onClick={finishWizard} className="btn-solid px-6 py-2.5 text-sm">{t('s4Cta')}</button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setStep(3)} className="btn-ghost px-4 py-2 text-sm">{tc('back')}</button>
+            <button onClick={finishWizard} className="btn-solid px-6 py-2.5 text-sm">{t('s4Cta')}</button>
+          </div>
         </section>
       )}
 
@@ -273,23 +299,25 @@ export default function OnboardingPage() {
         <p className="text-xs text-text-3">{t('s1Note')}</p>
       )}
 
-      {skipConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setSkipConfirm(false)}>
-          <div className="glass-strong rounded-3xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-            <p className="label-mono mb-1">{t('skipConfirmTitle')}</p>
-            <p className="text-sm text-text-2 mb-5">{t('skipConfirmText')}</p>
-            <div className="flex items-center justify-end gap-3">
-              <button onClick={() => setSkipConfirm(false)} className="btn-solid px-4 py-2 text-sm">{t('skipBack')}</button>
-              <button
-                onClick={() => { setSkipConfirm(false); setStep(3) }}
-                className="btn-ghost px-4 py-2 text-sm text-text-3"
-              >
-                {t('skipAnyway')}
-              </button>
-            </div>
-          </div>
+      {/* eddig mozgás nélkül vágott be és tűnt el, aria és Escape nélkül */}
+      <Dialog
+        open={skipConfirm}
+        onClose={() => setSkipConfirm(false)}
+        labelledBy={skipHeadingId}
+        panelClassName="glass-strong rounded-3xl w-full max-w-sm p-6"
+      >
+        <p id={skipHeadingId} className="label-mono mb-1">{t('skipConfirmTitle')}</p>
+        <p className="text-sm text-text-2 mb-5">{t('skipConfirmText')}</p>
+        <div className="flex items-center justify-end gap-3">
+          <button onClick={() => setSkipConfirm(false)} className="btn-solid px-4 py-2 text-sm">{t('skipBack')}</button>
+          <button
+            onClick={() => { setSkipConfirm(false); setStep(3) }}
+            className="btn-ghost px-4 py-2 text-sm text-text-3"
+          >
+            {t('skipAnyway')}
+          </button>
         </div>
-      )}
-    </main>
+      </Dialog>
+    </PageShell>
   )
 }

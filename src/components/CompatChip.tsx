@@ -19,7 +19,7 @@ export default function CompatChip({ token }: { token: string }) {
   if (!compat) return null
 
   return (
-    <div className="glass rounded-full px-4 py-2 inline-flex items-center gap-2.5 self-start">
+    <div className="glass-chip rounded-full px-4 py-2 inline-flex items-center gap-2.5 self-start">
       <span className="label-mono">{t('tasteMatch')}</span>
       <span className="font-mono font-semibold" style={{ color: compat.score >= 70 ? 'var(--status-watching)' : undefined }}>
         {compat.score}%

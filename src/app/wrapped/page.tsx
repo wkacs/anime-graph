@@ -55,7 +55,7 @@ export default function WrappedPage() {
       {storyOpen && <WrappedStory data={data} onExit={() => setStoryOpen(false)} />}
       <Slide>
         <p className="label-mono mb-2">Anime Wrapped</p>
-        <h1 className="text-5xl font-semibold tabular-nums">{data.year}</h1>
+        <h1 className="text-5xl font-semibold tracking-[-0.025em] tabular-nums">{data.year}</h1>
         <div className="mt-4 flex justify-center gap-2 flex-wrap">
           {data.years.map((y) => (
             <button key={y} onClick={() => load(y)}
@@ -71,7 +71,7 @@ export default function WrappedPage() {
       </Slide>
       <Slide>
         <p className="label-mono mb-3">{t('watchedThisMuch')}</p>
-        <p className="text-5xl font-semibold tabular-nums">{t('hours', { count: Math.round(data.totalHours) })}</p>
+        <p className="text-5xl font-semibold tracking-[-0.025em] tabular-nums">{t('hours', { count: Math.round(data.totalHours) })}</p>
         <p className="text-text-2 mt-2">{t('episodesChapters', { count: data.totalEpisodes })}</p>
       </Slide>
       {data.topGenres.length > 0 && (
@@ -117,21 +117,21 @@ export default function WrappedPage() {
       {data.longestStreakDays > 1 && (
         <Slide>
           <p className="label-mono mb-3">{t('longestStreak')}</p>
-          <p className="text-5xl font-semibold tabular-nums">{t('days', { count: data.longestStreakDays })}</p>
+          <p className="text-5xl font-semibold tracking-[-0.025em] tabular-nums">{t('days', { count: data.longestStreakDays })}</p>
           <p className="text-text-2 mt-2">{t('everyDayNonstop')}</p>
         </Slide>
       )}
       {data.maxEpisodesInDay > 1 && (
         <Slide>
           <p className="label-mono mb-3">{t('bingeRecord')}</p>
-          <p className="text-5xl font-semibold tabular-nums">{t('episodes', { count: data.maxEpisodesInDay })}</p>
+          <p className="text-5xl font-semibold tracking-[-0.025em] tabular-nums">{t('episodes', { count: data.maxEpisodesInDay })}</p>
           <p className="text-text-2 mt-2">{t('inOneDay')}</p>
         </Slide>
       )}
       {data.drops > 0 && (
         <Slide>
           <p className="label-mono mb-3">{t('letGo')}</p>
-          <p className="text-5xl font-semibold tabular-nums">{t('titleCount', { count: data.drops })}</p>
+          <p className="text-5xl font-semibold tracking-[-0.025em] tabular-nums">{t('titleCount', { count: data.drops })}</p>
           <p className="text-text-2 mt-2">{t('thatsFine')}</p>
         </Slide>
       )}
@@ -152,7 +152,7 @@ export default function WrappedPage() {
       {data.manga && (
         <Slide>
           <p className="label-mono mb-3">{t('manga')}</p>
-          <p className="text-4xl font-semibold tabular-nums">{t('titleCount', { count: data.manga.count })}</p>
+          <p className="text-4xl font-semibold tracking-[-0.02em] tabular-nums">{t('titleCount', { count: data.manga.count })}</p>
           <p className="text-text-2 mt-2">{t('chaptersRead', { count: data.manga.chapters })}</p>
         </Slide>
       )}

@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import type { RecCandidate } from '@/lib/anilist'
 
@@ -28,6 +28,7 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
   const [explainNote, setExplainNote] = useState('')
   const t = useTranslations('recommend')
   const tc = useTranslations('common')
+  const reduced = useReducedMotion()
 
   // A rangsor lokalis (fit-vektor). Ez a gomb EGY AI-hivast inditi, es CSAK az
   // indoklas szoveget csereli le — hiba eseten a lista es a lokalis indoklas marad.
@@ -115,7 +116,9 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
             <div className="flex items-center justify-between px-5 pt-4 pb-2">
               <div>
                 <p className="label-mono">{t('kicker')}</p>
-                <h2 className="text-base font-semibold tracking-tight">{t('heading')}</h2>
+                {/* tracking-tight törölve: 16px-en a §15 szerint 0 a helyes,
+                    egy fix érték nem szolgálhat ki 16-tól 30px-ig mindent */}
+                <h2 className="text-base font-semibold">{t('heading')}</h2>
               </div>
               <div className="flex items-center gap-1">
                 {!loading && (
@@ -124,11 +127,16 @@ export default function RecommendMorph({ onAdded }: { onAdded: () => void }) {
                 <button onClick={() => setOpen(false)} className="btn-ghost px-2.5 py-1 text-xs">✕</button>
               </div>
             </div>
-            <div className="overflow-y-auto max-h-[62vh] px-3 pb-3">
+            {/* overscroll-contain: a panel alján eddig keményen átadta a
+                görgetést a mögötte álló lapnak (§9) */}
+            <div className="overflow-y-auto overscroll-contain max-h-[62vh] px-3 pb-3">
               {loading && (
                 <motion.p
-                  animate={{ opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 1.6, repeat: Infinity }}
+                  // A MotionConfig reducedMotion="user" CSAK a transform- és
+                  // layout-animációkat fogja meg, az opacity-loopot nem: ez a
+                  // pulzus csökkentett mozgásnál is örökké ketyegett (§14).
+                  animate={reduced ? { opacity: 0.7 } : { opacity: [0.4, 1, 0.4] }}
+                  transition={reduced ? { duration: 0 } : { duration: 1.6, repeat: Infinity }}
                   className="label-mono px-2 py-6 text-center"
                 >
                   {t('analysing')}

@@ -7,6 +7,9 @@ import OnboardingCTA from '@/components/OnboardingCTA'
 import PageShell from '@/components/ui/PageShell'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
+import Skeleton from '@/components/ui/Skeleton'
+import { notify } from '@/components/ui/Toast'
+import { mutate } from '@/lib/mutate'
 import { useStatusLabel } from '@/components/useLabels'
 import { filterByMedia, type MediaMode } from '@/lib/graph-builder'
 import { STATUS_CSS_VARS } from '@/lib/status'
@@ -19,7 +22,12 @@ const FILTERS = ['all', 'watching', 'completed', 'planned', 'dropped'] as const
 const MEDIA_MODES = ['ANIME', 'MANGA', 'ALL'] as const satisfies readonly MediaMode[]
 
 export default function ListaPage() {
-  const [list, setList] = useState<ApiAnime[]>([])
+  // `null` = MÉG TÖLT, `[]` = tényleg üres a lista. Korábban mindkettő `[]`
+  // volt, ezért egy 400 címes felhasználó is a „Kezdjük itt / Hozd át a
+  // listád" onboarding-CTA-t kapta minden betöltéskor: az üres állapotot
+  // használtuk betöltési állapotnak, ami félretájékoztat (§16).
+  const [list, setList] = useState<ApiAnime[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all')
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
@@ -32,7 +40,12 @@ export default function ListaPage() {
   const statusLabel = useStatusLabel()
 
   const reload = useCallback(() => {
-    fetch('/api/anime').then((r) => r.json()).then((j) => setList(j.anime ?? []))
+    setLoadError(false)
+    fetch('/api/anime')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('http'))))
+      .then((j) => setList(j.anime ?? []))
+      // hiba esetén NE üres listát mutassunk: az „nincs semmid"-et üzenne
+      .catch(() => { setLoadError(true); setList([]) })
   }, [])
 
   useEffect(() => { reload() }, [reload])
@@ -52,25 +65,28 @@ export default function ListaPage() {
     if (pinnedTitles == null) return
     const isPinned = pinnedTitles.includes(titleId)
     const next = isPinned ? pinnedTitles.filter((t) => t !== titleId) : [...pinnedTitles, titleId]
-    const res = await fetch('/api/pins', {
+    // natív alert() helyett a közös sáv: ugyanez a művelet máshol (OwnerOverlay)
+    // inline szöveget mutat, tehát két helyen kétféleképp viselkedett (§16.4)
+    const res = await mutate('/api/pins', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ titles: next }),
     })
     if (res.ok) setPinnedTitles(next)
-    else alert((await res.json()).error ?? t('pinFailed'))
+    else notify(res.error ?? t('pinFailed'))
   }
 
   // egykattintasos haladas a soron: korabban ehhez meg kellett nyitni a
   // detail-oldalt
   async function bumpOne(a: ApiAnime) {
-    const res = await fetch(`/api/anime/${a.id}`, {
+    const res = await mutate(`/api/anime/${a.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ progress: a.progress + 1 }),
     })
-    if (res.ok) {
-      setList((l) => l.map((x) => (x.id === a.id ? { ...x, progress: x.progress + 1 } : x)))
-    }
+    // else-ág NÉLKÜL a hiba teljesen néma volt: a szám nem mozdult, üzenet
+    // nem jött, tehát a felhasználó modellje „elromlott a gomb" lett (§16)
+    if (!res.ok) { notify(res.error ?? tc('error')); return }
+    setList((l) => (l ?? []).map((x) => (x.id === a.id ? { ...x, progress: x.progress + 1 } : x)))
   }
 
   // törlés utáni undo-toast (a detail-oldal teszi be a sessionStorage-ba)
@@ -120,7 +136,7 @@ export default function ListaPage() {
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
-    return filterByMedia(list, mediaMode)
+    return filterByMedia(list ?? [], mediaMode)
       .filter((a) => filter === 'all' || a.status === filter)
       // AI-találat aktív: csak a matchelt sorok, a szöveges szűrő helyett
       .filter((a) => (aiMatches != null
@@ -185,13 +201,18 @@ export default function ListaPage() {
           placeholder={t('searchPlaceholder')}
           className="field rounded-full px-4 py-2 text-sm w-52"
         />
+        {/* A jelentés eddig KIZÁRÓLAG a tooltipben élt: „✨ AI" nem mondja
+            meg, mit csinál a gomb — ha egy vezérlőt magyarázni kell, a
+            leképezés gyenge (§16). Most a szó a címke, a csillag az ikon. */}
         <button
           onClick={runNlSearch}
           disabled={aiLoading || !q.trim()}
+          aria-busy={aiLoading}
           title={t('aiSearchTooltip')}
           className="btn-ghost border border-white/10 rounded-full px-3 py-2 text-xs disabled:opacity-40"
         >
-          {aiLoading ? '…' : '✨ AI'}
+          <span aria-hidden className="mr-1">✨</span>
+          {aiLoading ? t('askBusy') : t('askLabel')}
         </button>
       </div>
 
@@ -208,9 +229,14 @@ export default function ListaPage() {
       {/* NINCS overflow-hidden: az scroll-kontenert csinal, ami elrontja a
           <thead> position:sticky-jet. A sarok-lekerekites a tablan van. */}
       <div className="surface-1 rounded-[var(--r-lg)]">
-        <table className="w-full text-[15px] rounded-[var(--r-lg)]">
-          <thead className="sticky top-[4.5rem] z-20 backdrop-blur-md bg-[#0d0d10]/95">
-            <tr className="border-b border-white/8">
+        <table className="w-full text-15 rounded-[var(--r-lg)]">
+          {/* A közel opak kitöltés MARAD: ez tartja olvashatóan a text-3
+              oszlopcímkéket a gördülő poszter-sorok fölött. Ami változott: a
+              kemény 1px-es elválasztó helyett halványuló él (§12 — az úszó
+              króm alatt görgetés-él legyen, ne vonal). A top-érték a
+              --nav-clearance tokenből jön, nem kézzel írt 4.5rem-ből. */}
+          <thead className="sticky top-[var(--nav-clearance)] z-20 backdrop-blur-md bg-[#0d0d10]/95 [box-shadow:0_10px_10px_-10px_rgba(13,13,16,0.95)]">
+            <tr>
               <th className="w-20" />
               <Th k="titleRomaji">{t('colTitle')}</Th>
               <Th k="year" className="hidden sm:table-cell">{t('colYear')}</Th>
@@ -306,7 +332,28 @@ export default function ListaPage() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {list == null && (
+              // BETÖLTÉS: vázlat, nem onboarding-CTA. A szomszédos /bongeszo
+              // már így csinálja — a primitív megvolt, csak itt nem használtuk.
+              <tr>
+                <td colSpan={9} className="px-4 py-6">
+                  <div className="flex flex-col gap-3"><Skeleton variant="row" count={8} /></div>
+                </td>
+              </tr>
+            )}
+            {list != null && loadError && (
+              <tr>
+                <td colSpan={9} className="px-4 py-6">
+                  <EmptyState
+                    eyebrow={tc('error')}
+                    title={tc('error')}
+                    text={t('loadFailed')}
+                    action={<Button onClick={reload}>{tc('retry')}</Button>}
+                  />
+                </td>
+              </tr>
+            )}
+            {list != null && !loadError && rows.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-6">
                   {list.length === 0 ? (
@@ -329,7 +376,9 @@ export default function ListaPage() {
           </tbody>
         </table>
       </div>
-      <p className="label-mono mt-3 text-right">{t('countOf', { shown: rows.length, total: list.length })}</p>
+      {list != null && (
+        <p className="label-mono mt-3 text-right">{t('countOf', { shown: rows.length, total: list.length })}</p>
+      )}
 
       {undoBundle && (
         // mobilon a toast a also tab-sav fole kerul, kulonben az fedne

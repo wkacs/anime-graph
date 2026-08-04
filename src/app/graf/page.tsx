@@ -1,5 +1,6 @@
 'use client'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { tweenFluid } from '@/lib/motion'
@@ -35,7 +36,6 @@ export default function GrafPage() {
   const [, setFacts] = useState<ApiFact[]>([])
   const [config, setConfig] = useState<GraphConfig>(DEFAULT_CONFIG)
   const [hoverId, setHoverId] = useState<number | null>(null)
-  const [mouse, setMouse] = useState({ x: 0, y: 0 })
   const [loaded, setLoaded] = useState(false)
   const [flythrough, setFlythrough] = useState(0) // 0 = nem idővonal, timestamp = idővonal
   const [advanced, setAdvanced] = useState(false)
@@ -256,6 +256,47 @@ export default function GrafPage() {
     : coverMode === 'on' || animeNodeCount <= COVER_AUTO_LIMIT ? 'full' as const
     : 'lite' as const
 
+  /* A lebegő kártya pozíciója NEM React-állapot.
+     Korábban az onMouseMove a <main>-en setState-elt, tehát a teljes GrafPage
+     fa — a ForceGraph3D részfájával együtt — mutató-ütemben (120Hz-es kijelzőn
+     120/mp) rekonciliált, a kártya pedig `left`/`top`-pal helyeződött, és a
+     render KÖZBEN olvasott window.innerWidth/Height-et. Az utóbbi kiüríti a
+     függő layoutot, tehát minden mutató-esemény írás→olvasás→kényszerített
+     layout ciklussá vált, ugyanabban a képkockában, amiben a WebGL-jelenet
+     rajzolódik. Most: ref + egyszálú rAF + translate3d, compositoron. */
+  const cardRef = useRef<HTMLDivElement>(null)
+  const posRef = useRef({ x: 0, y: 0 })
+  const rafRef = useRef(0)
+
+  const writeCardPos = useCallback(() => {
+    const el = cardRef.current
+    if (!el) return
+    el.style.transform = `translate3d(${posRef.current.x}px, ${posRef.current.y}px, 0)`
+  }, [])
+
+  useEffect(() => {
+    // a kártya mérete: a levágás a rAF-ben történik, nem renderben
+    const CARD_W = 280
+    const CARD_H = 180
+    function onMove(e: PointerEvent) {
+      posRef.current = {
+        x: Math.max(0, Math.min(e.clientX + 18, window.innerWidth - CARD_W)),
+        y: Math.max(0, Math.min(e.clientY + 18, window.innerHeight - CARD_H)),
+      }
+      if (rafRef.current) return
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0
+        writeCardPos()
+      })
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
+    }
+  }, [writeCardPos])
+
   const handleDimClick = useCallback((n: GraphNode) => {
     if (n.dim !== 'genre') return
     if (n.bubble) {
@@ -270,10 +311,7 @@ export default function GrafPage() {
   if (!loaded) return null
 
   return (
-    <main
-      className="relative h-[100dvh] w-screen overflow-hidden"
-      onMouseMove={(e) => setMouse({ x: e.clientX, y: e.clientY })}
-    >
+    <main className="relative h-[100dvh] w-screen overflow-hidden">
       {/* fade+scale belepes a canvas KOROL — a Graph3D belso kameraja nem valtozik */}
       <motion.div
         data-tour="graph"
@@ -282,18 +320,43 @@ export default function GrafPage() {
         animate={{ opacity: 1, scale: 1 }}
         transition={tweenFluid}
       >
-        <Graph3D
-          data={withGhosts}
-          onAnimeClick={openAnime}
-          onAnimeHover={setHoverId}
-          flythrough={flythrough}
-          nodeMode={nodeMode}
-          onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
-          fitKey={fitKey}
-          focusNodeId={focusNodeId}
-          onGhostClick={setOpenGhost}
-        />
+        {/* A vászon önmagában elérhetetlen billentyűzetről: a raycasting
+            egérre épül. A régió így legalább bejelentkezik és fókuszálható,
+            a tartalma pedig valódi linkekként olvasható fel — a nyilas
+            csomópont-léptetés külön munka (saját, node-hoz kötött
+            kártyapozicionálást igényel). */}
+        <div
+          role="application"
+          aria-label={t('ariaLabel')}
+          tabIndex={0}
+          className="absolute inset-0 outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        >
+          <Graph3D
+            data={withGhosts}
+            onAnimeClick={openAnime}
+            onAnimeHover={setHoverId}
+            flythrough={flythrough}
+            nodeMode={nodeMode}
+            onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
+            fitKey={fitKey}
+            focusNodeId={focusNodeId}
+            onGhostClick={setOpenGhost}
+          />
+        </div>
       </motion.div>
+
+      {/* képernyőolvasós megfelelő: a térkép tartalma listaként, valódi linkekkel */}
+      <nav className="sr-only" aria-label={t('nodeListLabel')}>
+        <ul>
+          {graph.nodes
+            .filter((n) => n.type === 'anime' && n.animeId != null)
+            .map((n) => (
+              <li key={n.id}>
+                <Link href={`/anime/${n.animeId}`}>{n.label}</Link>
+              </li>
+            ))}
+        </ul>
+      </nav>
 
       {/* Kereső és „Ajánlj nekem" EGY sorban osztozik. Külön fixed elemként
           390px-en egymásra csúsztak (x 234–336 átfedés). Desktopon a
@@ -325,7 +388,9 @@ export default function GrafPage() {
           a gombsor 592px-re nőtt (kilógott), és rácsúszott a csúszkára.
           Mobilon egymás alá kerülnek, a gombsor vízszintesen görgethető. */}
       <div className="fixed bottom-24 md:bottom-4 left-0 right-0 z-20 flex flex-col gap-2 px-4 pointer-events-none md:flex-row md:items-end md:justify-between">
-        <div className="-mx-4 flex items-end gap-2 overflow-x-auto px-4 no-scrollbar pointer-events-auto md:mx-0 md:overflow-visible md:px-0">
+        {/* overscroll-x contain: vízszintes flingnél eddig a böngésző
+            vissza-gesztusa sült el a sáv végén (§9) */}
+        <div className="-mx-4 flex items-end gap-2 overflow-x-auto overscroll-x-contain px-4 no-scrollbar pointer-events-auto md:mx-0 md:overflow-visible md:px-0">
         {advanced && !timelineMode && <HierarchyPanel config={config} onChange={updateConfig} />}
         <div className="surface-overlay rounded-full p-1 flex shrink-0">
           {MEDIA_MODES.map((m) => (
@@ -441,10 +506,12 @@ export default function GrafPage() {
 
       {hoverAnime && (
         <div
-          className="surface-overlay fixed z-30 w-64 rounded-2xl p-3 pointer-events-none flex gap-3"
+          ref={cardRef}
+          className="surface-overlay fixed left-0 top-0 z-30 w-64 rounded-2xl p-3 pointer-events-none flex gap-3"
           style={{
-            left: Math.min(mouse.x + 18, typeof window !== 'undefined' ? window.innerWidth - 280 : mouse.x),
-            top: Math.min(mouse.y + 18, typeof window !== 'undefined' ? window.innerHeight - 180 : mouse.y),
+            // a felcsatoláskori pozíció; onnantól a rAF írja közvetlenül
+            transform: `translate3d(${posRef.current.x}px, ${posRef.current.y}px, 0)`,
+            willChange: 'transform',
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -452,7 +519,7 @@ export default function GrafPage() {
           <div className="min-w-0">
             <p className="text-sm font-medium leading-tight">{hoverAnime.titleRomaji}</p>
             {hoverAnime.titleNative && (
-              <p className="text-[11px] text-text-3 leading-tight mt-0.5">{hoverAnime.titleNative}</p>
+              <p className="text-11 text-micro text-text-3 leading-tight mt-0.5">{hoverAnime.titleNative}</p>
             )}
             <p className="label-mono mt-1.5">
               {hoverAnime.year ?? '?'} · {hoverAnime.format ?? '?'} ·{' '}
