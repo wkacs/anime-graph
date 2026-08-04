@@ -1,5 +1,12 @@
 # Promó videó (Remotion) Implementation Plan
 
+> **VÉGREHAJTVA 2026-08-04.** Mind a 9 task kész, 46 teszt zöld, 13 commit a
+> `C:\Users\konig\anime-graph-promo` repóban. A megvalósítás során hat ponton
+> tért el ez a terv a valóságtól; a teljes lista a spec 12. pontjában van, a
+> Task 5 és Task 6 fejlécében pedig az ott érvényes revíziók. A lenti
+> lépéssorok az eredeti tervet őrzik, nem a végállapotot: a kód az igazság
+> forrása.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Egy 28 másodperces, 9:16-os angol nyelvű promó klip az Anime Graphról Remotionnel, amely a fit-score és a népszerűségi sorrend különbségét teszi látvánnyá.

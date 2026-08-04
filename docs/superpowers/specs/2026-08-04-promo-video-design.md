@@ -1,7 +1,10 @@
 # Promó videó (Remotion) — design
 
 Dátum: 2026-08-04
-Állapot: elfogadott design, implementációs terv még nem készült
+Állapot: **megvalósult**. A klip elkészült, a kód a
+`C:\Users\konig\anime-graph-promo` repóban van, a kimenetek az `out/` mappában.
+Az alábbi szöveg az eredeti design, a megvalósítás során kikényszerített
+eltérésekkel együtt. A záró összegzés a dokumentum végén.
 
 ## 1. Cél
 
@@ -23,7 +26,7 @@ ugyanebből a kompozícióból származtathatók, de most nem készülnek el.
 | Fő arány | 1080×1920 (9:16) |
 | Másodlagos arányok | 1080×1080, 1920×1080 ugyanabból a kompozícióból |
 | Nyelv | angol |
-| Hang | zene, narráció nincs |
+| Hang | **nincs**; a tulajdonosnak nem volt sávja, a klip némán is teljes |
 | Felirat | égetett, Inter, glass-lite pill, alsó harmad |
 | Nyersanyag | hibrid: valódi képernyőfelvétel + Remotionben újraépített hős-jelenet |
 | Adatforrás | prod (anime-graph.vercel.app), a tulajdonos saját fiókja |
@@ -281,3 +284,35 @@ npx remotion render Promo9x16 out/promo-9x16.mp4
   jönnek, így egy magyar variáns később olcsón hozzáadható.
 - Landing-beágyazás és README-GIF.
 - Automatizált CI-render. A promó eseti anyag, nem folyamatos build-termék.
+
+## 12. Megvalósult állapot
+
+Három fájl készült el, mind 840 képkocka, 30 fps, 28,0 másodperc, hangsáv
+nélkül; ffprobe-bal visszaellenőrizve:
+`out/promo-9x16.mp4` (1080×1920), `out/promo-1x1.mp4` (1080×1080),
+`out/promo-16x9.mp4` (1920×1080). 46 egységteszt zöld, 13 commit.
+
+Amiben a megvalósítás eltér a fenti designtól, mindig mérés vagy renderelt kép
+alapján:
+
+1. **A hős-jelenet egy oszlop, 8 sorral, nem két oszlop 5 sorral.** Az 5 soros
+   nézetben a valódi adaton 3 kártya az 5-ből meg sem mozdul. Részletes tábla a
+   3. pontban.
+2. **Az indoklás tag-chipekké bomlik angol címke alatt.** A `reason` mező a
+   fiók locale-ját követi, magyarul jön, és minden címnél azonos sablonú.
+3. **A `/wrapped` helyett a `/toplista` került a MÉRET blokkba.** A wrapped
+   nyitóképe üres belépő, és az indító elemet sem szerep, sem szöveg alapján
+   nem sikerült megtalálni a DOM-ban.
+4. **A felvétel headless, nem headed.** Headed módban a viewport a fizikai
+   képernyőhöz kötött, és 1080×1920 nem vehető fel 1080p-s kijelzőn. Az új
+   headless Chromium SwiftShaderrel kirajzolta a gráfot, tehát a spec 9.
+   pontjában felvett WebGL-kockázat nem realizálódott.
+5. **A sorszám aránytól függ.** Nyolc sor 1080 képpont magasságban 16 képpontos
+   címeket adna, ezért az 1:1 és a 16:9 változat öt sort mutat. A „három arány
+   egy kompozícióból" nem jött ingyen, ahogy a 7. pont sugallta.
+6. **Zene nincs.** Nullázható propként van beépítve, tehát később egy fájl és
+   egy `--props` kapcsoló elég hozzá, kódmódosítás nélkül.
+
+Nyitott, a tulajdonos döntésére vár: a gráf-felvételen olvasható a fiók saját
+műfaj-statisztikája darabszámmal (`Mystery · 57`, `Ecchi · 19`). Jelezve lett,
+változtatás nem történt.
