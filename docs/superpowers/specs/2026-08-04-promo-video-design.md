@@ -60,9 +60,15 @@ Felirat: *"Ranked by your ratings. Not everyone else's."*
 ### 0:11–0:18 BIZONYÍTÉK (3,5 ütem)
 
 Az új első kártya kinagyít és középre áll. Alatta feltárul a fiókból
-származó valódi AI-indoklás. Mellette két-három chip mutatja, mely saját
-értékelésekből következik (például *"you rated Steins;Gate 10"*).
+származó valódi fit-indoklás, alatta pedig a rangváltás sora
+(`popularity #12 → your rank #1`).
 Itt nincs plusz felirat: az indoklás maga a bizonyíték, olvasni kell hagyni.
+
+Megjegyzés az indoklásról: a `/api/news/season-scores` a `fitReason()`
+függvénnyel **lokálisan**, modellhívás nélkül állítja elő ezt a szöveget.
+Determinisztikus, és valószínűleg rövid, címkeszerű. Ezért a jelenetnek két
+megjelenítési módja van, és a valódi adat ismeretében kell választani:
+mondatszerű indoklásnál egyetlen glass-panel, rövid címkéknél két-három chip.
 
 ### 0:18–0:24 MÉRET ÉS HITELESSÉG (3 ütem)
 
@@ -96,10 +102,17 @@ döntés.
 
 Végpontok:
 
-- `/api/browse?season=<szezon>&type=ANIME&sort=POPULARITY_DESC` — népszerűségi
-  sorrend, borító-URL, cím
-- `/api/news/season-scores` — `anilistId`, `score`, `reason` a bejelentkezett
-  fiókra
+- `/api/browse?season=current&type=ANIME&sort=POPULARITY_DESC` — népszerűségi
+  sorrend, borító-URL, cím. A `season` paraméter kizárólag a `current` és
+  `next` literált fogadja el. Oldalanként 30 tétel, a helyi katalógusból.
+- `/api/news/season-scores` — `anilistId`, `title`, `score`, `reason` a
+  bejelentkezett fiókra. Legfeljebb 30 tétel, már pontszám szerint rendezve.
+  Bejelentkezés nélkül 401. Üres tömb, ha a fióknak nincs saját anime-sora.
+
+A két végpont **nem azonos forrásból** olvas: a browse a helyi `title`
+katalógusból, a season-scores az AniList szezon-listájából. Összefésülés
+`anilistId`-n, és a metszet mindkettőnél kisebb lehet. A népszerűségi rang a
+browse-válasz tömb-indexéből származik, nem oszlopból.
 
 Kimeneti rekord:
 
@@ -226,7 +239,7 @@ npx remotion render Promo9x16 out/promo-9x16.mp4
 | --- | --- |
 | A fit-score sorrend nem tér el láthatóan a népszerűségitől, így az átrendeződés lapos | Az adat-lehúzás az első implementációs lépés, még a jelenetek kódja előtt. Ha az eltérés kicsi, szezont váltunk, vagy a kreatív irányt igazítjuk. |
 | A 3D gráf headless Chrome-ban üres képet ad | Headed Chromium a felvételhez. Ha úgy sem megy, kézi OBS-felvétel. |
-| Az AI-indoklás szövege gyenge vagy zavaros egy adott címnél | A `season.json`-ból a legjobb indoklású cím választható a hős-pillanathoz, nem kötelező a legmagasabb pontszámú. |
+| A fit-indoklás túl rövid ahhoz, hogy 7 másodpercet kitöltsön | A BIZONYÍTÉK jelenetnek két módja van (mondat vagy chipek), a valódi adat ismeretében választva. A hős-kártya a legnagyobb rangváltású cím, nem a legmagasabb pontszámú, így a rangváltás sora önmagában is hordoz információt. |
 | A klip generikus SaaS-reklámnak hat | A kontakt-lapos checkpoint a vázlat után, még a finomítás előtt. |
 | A zene ütemezése eltér a vágásoktól | A végleges zenesáv előtt minden időzítés provizórikus. A `theme.ts` egy `BPM` konstansból számolja az ütemhatárokat, így a sáv cseréjekor egy szám átírása elég. |
 
