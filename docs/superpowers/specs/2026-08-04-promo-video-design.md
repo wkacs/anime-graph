@@ -45,30 +45,55 @@ Mozgás: a rács lassan befelé skálázódik.
 
 ### 0:02–0:05 SETUP (1,5 ütem)
 
-A kép két oszlopra hasad. Bal oszlop címkéje `POPULAR`, jobbé `YOU`. A jobb
-oszlop kezdetben azonos sorrendű és kiszürkített.
-Felirat: *"Same season. Two orders."*
+Egyetlen teljes szélességű lista, **8 sor**, népszerűségi sorrendben. Soronként
+borító-bélyeg, cím és a fit-score jelvény helye. A lista fejléce `MOST POPULAR`.
+Felirat: *"This is what everyone sees."*
 
 ### 0:05–0:11 ÁTRENDEZŐDÉS (3 ütem) — hős-pillanat
 
-A jobb oszlop kártyái új pozícióba ugranak, kártyánként `spring()`
-animációval, lépcsőzetes késleltetéssel. A népszerűségi élen álló cím
-lesüllyed, egy hátsó cím az első helyre kerül. Közben minden kártyára
-fit-score jelvény úszik be, a szám nullától felszámol.
+A lista **helyben** rendeződik át: a sorok új pozícióba ugranak, soronként
+`spring()` animációval, lépcsőzetes késleltetéssel. A fejléc `YOUR RANKING`-re
+vált. Közben minden sorra fit-score jelvény úszik be, a szám nullától felszámol.
 Felirat: *"Ranked by your ratings. Not everyone else's."*
+
+**Miért egy oszlop és miért 8 sor.** Az eredeti terv két oszlopot és 5 sort írt
+elő. A 2026-08-04-i adat-lehúzás megmérte, mit csinál ténylegesen a képernyőn
+látható részhalmaz:
+
+| sorok | mozdul | legnagyobb ugrás | divergencia |
+| --- | --- | --- | --- |
+| 5 | 2/5 | 3 | 0,300 |
+| **8** | **6/8** | **6** | **0,393** |
+| 10 | 7/10 | 6 | 0,289 |
+| 12 | 10/12 | 7 | 0,258 |
+| 15 | 14/15 | 9 | 0,286 |
+
+Öt sornál három kártya az ötből meg sem mozdul, tehát a hős-pillanat halott.
+Nyolc sor a legerősebb, viszont nyolc sor két borító-oszlopban 9:16-ban
+körülbelül 140 pixel széles kártyákat jelentene, ami olvashatatlan. Ezért egy
+oszlop, teljes szélességű sorokkal, helyben átrendeződve. A két sorrend nem
+egyszerre látszik, hanem egymás után: előbb elolvasod, aztán a szemed előtt
+rendeződik át.
 
 ### 0:11–0:18 BIZONYÍTÉK (3,5 ütem)
 
-Az új első kártya kinagyít és középre áll. Alatta feltárul a fiókból
-származó valódi fit-indoklás, alatta pedig a rangváltás sora
-(`popularity #12 → your rank #1`).
-Itt nincs plusz felirat: az indoklás maga a bizonyíték, olvasni kell hagyni.
+A legnagyobbat előrelépő cím kártyája kinagyít és középre áll. Alatta a cím,
+a `MATCHES YOUR TASTE` címke, majd az ízlés-tagek chipként, egymás után
+beúszva. Legalul a rangváltás sora: `popularity #13 → your rank #6`.
 
-Megjegyzés az indoklásról: a `/api/news/season-scores` a `fitReason()`
-függvénnyel **lokálisan**, modellhívás nélkül állítja elő ezt a szöveget.
-Determinisztikus, és valószínűleg rövid, címkeszerű. Ezért a jelenetnek két
-megjelenítési módja van, és a valódi adat ismeretében kell választani:
-mondatszerű indoklásnál egyetlen glass-panel, rövid címkéknél két-három chip.
+**Az indoklás kezelése.** A `/api/news/season-scores` a `fitReason()`
+függvénnyel lokálisan, modellhívás nélkül állítja elő a `reason` mezőt. A
+valódi adat ezt adja, mind a 15 címnél azonos sablonnal:
+
+```
+"ezeket szereted: Male Protagonist, Tragedy, Adventure"
+```
+
+Két gond van vele: a fiók locale-ja miatt magyar, a klip pedig angol; és
+sablonos, tehát önmagában nem tölt ki 7 másodpercet. Ezért a videó **eldobja
+a sablon-előtagot**, kiparszolja a tageket, és saját angol címke alatt
+chipként jeleníti meg őket. Így a megjelenített tartalom végig valódi
+alkalmazás-adat, de nem függ az app locale-jától.
 
 ### 0:18–0:24 MÉRET ÉS HITELESSÉG (3 ütem)
 

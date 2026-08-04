@@ -928,22 +928,37 @@ git commit -m "feat: theme tokens, base components, hook scene, contact sheet"
 
 ### Task 5: SETUP és ÁTRENDEZŐDÉS jelenet
 
-A klip hős-pillanata. A pozíciók adatból számolódnak, nem kézzel animáltak, így szezonváltáskor magától újrahangolódik.
+> **REVÍZIÓ 2026-08-04, a Task 2 kapujának eredménye alapján.** Az alábbi
+> lépések eredetileg két borító-oszlopot és 5 sort írtak elő. A valódi adaton
+> mérve az 5 soros nézetben 3 kártya az 5-ből meg sem mozdul, tehát a
+> hős-pillanat halott lenne. A mért optimum 8 sor (6/8 mozdul, legnagyobb
+> ugrás 6 hely, divergencia 0,393), az viszont két oszlopban 9:16-ban
+> olvashatatlanul kicsi kártyákat adna.
+>
+> **Érvényes terv:** egyetlen teljes szélességű lista, **8 sorral**, amely
+> **helyben** rendeződik át. Fejléc `MOST POPULAR`-ról `YOUR RANKING`-re vált.
+> A `splitLayout` helyett `rowLayout`, a `Split.tsx` helyett `Ranking.tsx`.
+> A lenti Step 1, 3, 6 és 7 kódja ennek megfelelően módosul; a TDD-ciklus és
+> a checkpoint változatlan. A részletes indoklás és a mérési tábla a spec
+> 3. pontjában van.
 
 **Files:**
 - Create: `C:\Users\konig\anime-graph-promo\src\layout.ts`
 - Test: `C:\Users\konig\anime-graph-promo\src\layout.test.ts`
 - Create: `C:\Users\konig\anime-graph-promo\src\components\FitBadge.tsx`
-- Create: `C:\Users\konig\anime-graph-promo\src\scenes\Split.tsx`
+- Create: `C:\Users\konig\anime-graph-promo\src\components\RankRow.tsx`
+- Create: `C:\Users\konig\anime-graph-promo\src\scenes\Ranking.tsx`
 - Modify: `C:\Users\konig\anime-graph-promo\src\Promo.tsx`
 
 **Interfaces:**
-- Consumes: `PromoItem`, `THEME`, `PosterCard`, `Caption`, `SCENES`.
+- Consumes: `PromoItem`, `THEME`, `Caption`, `SCENES`.
 - Produces:
-  - `splitLayout(width: number, height: number, rows: number): { cardWidth: number; rowHeight: number; leftX: number; rightX: number; topY: number }`
-  - `rowY(rank: number, layout: ReturnType<typeof splitLayout>): number`
+  - `ROWS = 8`
+  - `rowLayout(width: number, height: number, rows: number): { rowHeight: number; thumbWidth: number; thumbHeight: number; listTop: number; sidePad: number }`
+  - `rowY(rank: number, layout: { listTop: number; rowHeight: number }): number`
   - `staggerDelay(rank: number): number`
   - `<FitBadge score={number} progress={number} />`
+  - `<RankRow item layout rank progress badge />`
 
 - [ ] **Step 1: Írd meg a bukó tesztet**
 
@@ -1184,6 +1199,18 @@ git commit -m "feat: split columns and data-driven reorder animation"
 ---
 
 ### Task 6: BIZONYÍTÉK jelenet
+
+> **REVÍZIÓ 2026-08-04.** A lenti Step 1 azt írta elő, hogy a valódi adat
+> ismeretében válasszunk `sentence` és `chips` mód között. A döntés megszületett:
+> **`chips`**, és a `sentence` mód nem készül el. Ok: a `reason` mező mind a 15
+> címnél azonos sablonú és a fiók locale-ja miatt magyar
+> (`"ezeket szereted: Male Protagonist, Tragedy, Adventure"`). A videó eldobja
+> a sablon-előtagot, kiparszolja a tageket, és saját angol `MATCHES YOUR TASTE`
+> címke alatt jeleníti meg őket. Így a tartalom valódi alkalmazás-adat marad,
+> de nem függ az app nyelvi beállításától.
+>
+> Ehhez a `src/data/tags.ts` modul készül el, `parseTags(reason: string): string[]`
+> függvénnyel, saját tesztekkel. A `reasonMode` prop és a zod-enum kimarad.
 
 **Files:**
 - Create: `C:\Users\konig\anime-graph-promo\src\scenes\Proof.tsx`
