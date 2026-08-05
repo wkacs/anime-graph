@@ -5,6 +5,7 @@ import GlowField from "@/components/GlowField";
 import SpecularTracker from "@/components/SpecularTracker";
 import TopNav from "@/components/TopNav";
 import MobileTabBar from "@/components/MobileTabBar";
+import InstallPrompt from "@/components/InstallPrompt";
 import SiteFooter from "@/components/SiteFooter";
 import { siteUrl } from "@/lib/seo";
 import "./globals.css";
@@ -67,6 +68,9 @@ export default function RootLayout({
           {children}
           <SiteFooter />
           <MobileTabBar />
+          {/* A sav csak a fooldalon latszik, de a listenernek mindenhol elnie
+              kell: a beforeinstallprompt a betoltes utan azonnal tuzel. */}
+          <InstallPrompt />
         </IntlProvider>
       </body>
     </html>

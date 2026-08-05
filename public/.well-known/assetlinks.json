@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "hu.animegraph.app",
+      "sha256_cert_fingerprints": [
+        "CC:E5:2A:2D:88:46:96:95:E8:58:E5:6F:C3:28:4D:48:25:98:16:E4:BC:FA:2E:5B:55:79:02:37:C4:96:BF:95"
+      ]
+    }
+  }
+]

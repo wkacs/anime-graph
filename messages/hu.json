@@ -384,6 +384,15 @@
     "on": "🔔 Push bekapcsolva — kikapcsol",
     "off": "🔕 Push-értesítés bekapcsolása"
   },
+  "installPrompt": {
+    "title": "Tedd ki a kezdőképernyőre",
+    "body": "Így az Anime Graph saját ikonnal, böngészősáv nélkül nyílik, és az értesítések is megbízhatóbban érkeznek.",
+    "add": "Hozzáadás",
+    "dismiss": "Sáv bezárása",
+    "iosBody": "Két koppintás a Safariban, és az Anime Graph saját ikont kap:",
+    "iosStep1": "Koppints alul a Megosztás gombra.",
+    "iosStep2": "Válaszd a „Hozzáadás a Home képernyőhöz” elemet."
+  },
   "themes": {
     "openingsEndings": "Openingek & endingek",
     "openingTrailer": "Opening / trailer",

@@ -384,6 +384,15 @@
     "on": "🔔 Push is on — turn off",
     "off": "🔕 Turn on push notifications"
   },
+  "installPrompt": {
+    "title": "Add it to your home screen",
+    "body": "Anime Graph opens with its own icon and no browser bar, and notifications arrive more reliably.",
+    "add": "Add",
+    "dismiss": "Dismiss",
+    "iosBody": "Two taps in Safari and Anime Graph gets its own icon:",
+    "iosStep1": "Tap the Share button at the bottom.",
+    "iosStep2": "Choose “Add to Home Screen”."
+  },
   "themes": {
     "openingsEndings": "Openings & endings",
     "openingTrailer": "Opening / trailer",
