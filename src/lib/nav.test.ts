@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import {PRIMARY_TABS, MORE_TABS, MOBILE_TABS, MOBILE_MORE_TABS,
-  isTabActive, isNavHidden, isMoreActive, isMobileMoreActive, isFooterHidden } from './nav'
+import {PRIMARY_TABS, MORE_TABS, MOBILE_TABS, MOBILE_MORE_TABS, DISCOVER_TABS,
+  isTabActive, isNavTabActive, isNavHidden, isMoreActive, isMobileMoreActive, isFooterHidden } from './nav'
 
 describe('nav szerkezet', () => {
-  it('5 elsodleges es 7 tovabbi tab', () => {
+  it('5 elsodleges es 6 tovabbi tab', () => {
     expect(PRIMARY_TABS).toHaveLength(5)
-    expect(MORE_TABS).toHaveLength(7)
+    expect(MORE_TABS).toHaveLength(6)
   })
 
   it('egy href nem szerepel ket helyen', () => {
@@ -75,9 +75,16 @@ describe('isNavHidden', () => {
 
 describe('isMoreActive', () => {
   it('igaz, ha a Tovabb menu barmelyik tabjan allunk', () => {
-    expect(isMoreActive('/vibe')).toBe(true)
+    expect(isMoreActive('/community')).toBe(true)
     expect(isMoreActive('/statistics')).toBe(true)
     expect(isMoreActive('/wrapped')).toBe(true)
+  })
+
+  // A Vibe atkerult a Felfedezes-teruletbe: ott a Felfedezes-tab jeloli,
+  // nem a Tovabb menu.
+  it('a Vibe egyik Tovabb menut sem jeloli', () => {
+    expect(isMoreActive('/vibe')).toBe(false)
+    expect(isMobileMoreActive('/vibe')).toBe(false)
   })
 
   it('hamis az elsodleges tabokon', () => {
@@ -121,5 +128,36 @@ describe('isFooterHidden', () => {
 
   it('a grafhoz hasonlo nevu utvonalat nem rejti el tevedesbol', () => {
     expect(isFooterHidden('/graphical')).toBe(false)
+  })
+})
+
+describe('Felfedezes-terulet', () => {
+  it('a Vibe a Felfedezes modjai kozott van, nem a Tovabb menuben', () => {
+    expect(DISCOVER_TABS.map((t) => t.href)).toContain('/vibe')
+    expect(MORE_TABS.map((t) => t.href)).not.toContain('/vibe')
+  })
+
+  it('a terulet elso modja az elsodleges savban levo tab', () => {
+    expect(PRIMARY_TABS.map((t) => t.href)).toContain(DISCOVER_TABS[0].href)
+  })
+
+  it('a Felfedezes-tab a terulet BARMELY modjan aktiv', () => {
+    const browse = PRIMARY_TABS.find((t) => t.href === '/browse')!
+    expect(isNavTabActive(browse, '/browse')).toBe(true)
+    expect(isNavTabActive(browse, '/vibe')).toBe(true)
+    // a puszta utvonal-egyezes ezt nem tudna
+    expect(isTabActive('/browse', '/vibe')).toBe(false)
+  })
+
+  it('mas teruleten nem aktiv', () => {
+    const browse = PRIMARY_TABS.find((t) => t.href === '/browse')!
+    expect(isNavTabActive(browse, '/list')).toBe(false)
+    expect(isNavTabActive(browse, '/')).toBe(false)
+  })
+
+  it('a tobbi tab jelolese valtozatlan', () => {
+    const list = PRIMARY_TABS.find((t) => t.href === '/list')!
+    expect(isNavTabActive(list, '/list/5')).toBe(true)
+    expect(isNavTabActive(list, '/vibe')).toBe(false)
   })
 })

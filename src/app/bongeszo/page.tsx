@@ -11,6 +11,7 @@ import { useAuthStatus } from '@/lib/use-auth-status'
 import ScoreBadge from '@/components/ui/ScoreBadge'
 import PageShell from '@/components/ui/PageShell'
 import SectionHeader from '@/components/ui/SectionHeader'
+import DiscoverTabs from '@/components/DiscoverTabs'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import Skeleton from '@/components/ui/Skeleton'
@@ -218,6 +219,7 @@ export default function BrowsePage() {
       <div>
         <p className="label-mono mb-2">{tr('eyebrow')}</p>
         <h1 className="display-l text-text-1">{tr('heading')}</h1>
+        <div className="mt-5"><DiscoverTabs /></div>
       </div>
 
       {authenticated === true && <TourSpotlight page="bongeszo" steps={BONGESZO_TOUR} />}

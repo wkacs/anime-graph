@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { springFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import {
-  MOBILE_TABS, MOBILE_MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMobileMoreActive,
+  MOBILE_TABS, MOBILE_MORE_TABS, GUEST_TABS, isTabActive, isNavTabActive, isNavHidden, isMobileMoreActive,
 } from '@/lib/nav'
 import { useAuthStatus } from '@/lib/use-auth-status'
 
@@ -58,7 +58,7 @@ export default function MobileTabBar() {
         style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom))' }}
       >
         {(guest ? GUEST_TABS : MOBILE_TABS).map((tab) => {
-          const active = isTabActive(tab.href, pathname)
+          const active = isNavTabActive(tab, pathname)
           return (
             <Link
               key={tab.href}

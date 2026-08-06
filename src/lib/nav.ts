@@ -17,10 +17,21 @@ export const MORE_TABS: NavTab[] = [
   { href: '/leaderboard', key: 'leaderboard' },
   { href: '/community', key: 'community' },
   { href: '/notifications', key: 'notifications' },
-  { href: '/vibe', key: 'vibe' },
   { href: '/statistics', key: 'stats' },
   { href: '/versus', key: 'vs' },
   { href: '/wrapped', key: 'wrapped' },
+]
+
+/**
+ * A felfedezes modjai EGY teruletkent. A Vibe ezert nincs a 'Tovabb' menuben:
+ * onmagaban allo menupontkent a felhasznalonak kellett kitalalnia, mikor keres
+ * katalogusban es mikor hangulat szerint. Ez nem az o dolga.
+ */
+// A savban a TERULET neve all („Felfedezes"), a teruleten belul viszont a MODOK
+// nevei — a katalogus-mod nem hivhato ugyanugy, mint az egesz terulet.
+export const DISCOVER_TABS: NavTab[] = [
+  { href: '/browse', key: 'catalog' },
+  { href: '/vibe', key: 'vibe' },
 ]
 
 // Vendegnek a Taste Scan az elso ajanlat: az az egyetlen felulet, ami fiok
@@ -55,6 +66,18 @@ export const MOBILE_MORE_TABS: NavTab[] = [
 export function isTabActive(href: string, pathname: string): boolean {
   if (href === '/') return pathname === '/'
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+/**
+ * A savban levo tab jelolese. A Felfedezes-tab a TERULETET kepviseli, nem egy
+ * utvonalat: a Vibe-on allva is annak kell aktivnak latszania, kulonben a
+ * felhasznalo ugy erzi, kiesett a navigaciobol.
+ */
+export function isNavTabActive(tab: NavTab, pathname: string): boolean {
+  if (tab.href === DISCOVER_TABS[0].href) {
+    return DISCOVER_TABS.some((d) => isTabActive(d.href, pathname))
+  }
+  return isTabActive(tab.href, pathname)
 }
 
 export function isNavHidden(pathname: string): boolean {

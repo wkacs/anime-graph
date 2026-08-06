@@ -6,7 +6,9 @@ import { motion, useScroll, useMotionValueEvent } from 'framer-motion'
 import { springFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
 import LocaleSwitcher from './LocaleSwitcher'
-import { PRIMARY_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
+import {
+  PRIMARY_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavTabActive, isNavHidden, isMoreActive,
+} from '@/lib/nav'
 import { useAuthStatus } from '@/lib/use-auth-status'
 
 export default function TopNav() {
@@ -96,7 +98,7 @@ export default function TopNav() {
 
       <ul className="flex items-center gap-0.5">
         {(guest ? GUEST_TABS : PRIMARY_TABS).map((tab) => {
-          const active = isTabActive(tab.href, pathname)
+          const active = isNavTabActive(tab, pathname)
           return (
             <li key={tab.href}>
               <Link href={tab.href} className={tabClass(active)}>

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import MediaCard from '@/components/MediaCard'
+import DiscoverTabs from '@/components/DiscoverTabs'
 import { VIBE_PRESETS, buildVibePrompt } from '@/lib/vibe-presets'
 import type { ApiAnime } from '@/lib/types'
 
@@ -97,6 +98,7 @@ export default function VibePage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight">{t('heading')}</h1>
         <p className="text-sm text-text-2 mt-1">{t('lead')}</p>
+        <div className="mt-4"><DiscoverTabs /></div>
       </div>
 
       <section className="glass rounded-3xl p-5 flex flex-col gap-4">
