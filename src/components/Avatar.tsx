@@ -1,6 +1,20 @@
 import { avatarInitials, avatarHue } from '@/lib/avatar'
 
-export default function Avatar({ username, size = 48 }: { username: string; size?: number }) {
+// src: a felhasználó által választott AniList CDN-kép (profil-személyreszabás).
+// Nélküle marad a névből generált monogram — a kettő ugyanazt a geometriát kapja.
+export default function Avatar({ username, size = 48, src }: { username: string; size?: number; src?: string | null }) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        className="rounded-full object-cover shrink-0 border border-white/10"
+        style={{ width: size, height: size }}
+      />
+    )
+  }
   const hue = avatarHue(username)
   return (
     <div

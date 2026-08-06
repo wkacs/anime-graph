@@ -21,6 +21,34 @@ const FILTERS = ['all', 'watching', 'completed', 'planned', 'dropped'] as const
 
 const MEDIA_MODES = ['ANIME', 'MANGA', 'ALL'] as const satisfies readonly MediaMode[]
 
+// rács-módban a rendezés legördülőből megy; a tábla-fejléc kulcsai közül
+// a stúdió kimarad (rács-kártyán nem látszik, ott félrevezető lenne)
+const GRID_SORT_KEYS: SortKey[] = ['titleRomaji', 'year', 'status', 'myScore']
+
+type ListView = 'grid' | 'table'
+const VIEW_STORAGE_KEY = 'anime-graph-list-view'
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden>
+      <rect x="1" y="1" width="6" height="6" rx="1.5" />
+      <rect x="9" y="1" width="6" height="6" rx="1.5" />
+      <rect x="1" y="9" width="6" height="6" rx="1.5" />
+      <rect x="9" y="9" width="6" height="6" rx="1.5" />
+    </svg>
+  )
+}
+
+function RowsIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden>
+      <rect x="1" y="2" width="14" height="3" rx="1.5" />
+      <rect x="1" y="6.5" width="14" height="3" rx="1.5" />
+      <rect x="1" y="11" width="14" height="3" rx="1.5" />
+    </svg>
+  )
+}
+
 export default function ListaPage() {
   // `null` = MÉG TÖLT, `[]` = tényleg üres a lista. Korábban mindkettő `[]`
   // volt, ezért egy 400 címes felhasználó is a „Kezdjük itt / Hozd át a
@@ -33,6 +61,17 @@ export default function ListaPage() {
   const [mediaMode, setMediaMode] = useState<MediaMode>('ANIME')
   const [sortKey, setSortKey] = useState<SortKey>('titleRomaji')
   const [sortDir, setSortDir] = useState<1 | -1>(1)
+  // rács az alap (user-panasz: a tábla kis bélyegei + sok üres tér); a
+  // localStorage csak effectben olvasható, különben SSR-hidratálás-eltérés
+  const [view, setView] = useState<ListView>('grid')
+  useEffect(() => {
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY)
+    if (stored === 'table' || stored === 'grid') setView(stored)
+  }, [])
+  function switchView(v: ListView) {
+    setView(v)
+    localStorage.setItem(VIEW_STORAGE_KEY, v)
+  }
   const router = useRouter()
   const t = useTranslations('list')
   const tc = useTranslations('common')
@@ -214,6 +253,49 @@ export default function ListaPage() {
           <span aria-hidden className="mr-1">✨</span>
           {aiLoading ? t('askBusy') : t('askLabel')}
         </button>
+
+        {/* rács-módban nincs rendezhető fejléc — a legördülő veszi át */}
+        {view === 'grid' && (
+          <div className="flex items-center gap-1.5">
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              aria-label={t('sortLabel')}
+              className="field rounded-full px-3 py-2 text-xs"
+            >
+              {GRID_SORT_KEYS.map((k) => (
+                <option key={k} value={k}>
+                  {t(`col${k === 'titleRomaji' ? 'Title' : k === 'year' ? 'Year' : k === 'status' ? 'Status' : 'Score'}`)}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setSortDir((d) => (d === 1 ? -1 : 1))}
+              title={t('sortDirTooltip')}
+              className="btn-ghost border border-white/10 rounded-full w-8 h-8 grid place-items-center text-xs"
+            >
+              {sortDir === 1 ? '↑' : '↓'}
+            </button>
+          </div>
+        )}
+
+        {/* nézet-váltó: mobilon mindig rács, ezért csak sm-től látszik */}
+        <div className="hidden sm:flex rounded-full border border-white/10 overflow-hidden" role="group" aria-label={t('viewToggle')}>
+          {([['grid', t('viewGrid'), GridIcon] as const, ['table', t('viewTable'), RowsIcon] as const]).map(([v, label, Icon]) => (
+            <button
+              key={v}
+              onClick={() => switchView(v)}
+              aria-pressed={view === v}
+              title={label}
+              className={`px-3 py-2 transition-colors ${
+                view === v ? 'bg-white/12 text-text-1' : 'text-text-3 hover:text-text-1'
+              }`}
+            >
+              <Icon />
+              <span className="sr-only">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {aiAnswer && (
@@ -265,53 +347,95 @@ export default function ListaPage() {
           </div>
         )}
 
-        {/* Mobil: poszter-rács. A táblázat 52px-es bélyegképe telefonon
-            olvashatatlan volt (user-visszajelzés 2026-08-06); itt a borító a
-            fő elem, a státusz pötty + pont a borítón ül. */}
+        {/* Poszter-rács — az alap nézet minden méreten (a tábla 52px-es
+            bélyegképe és a sok üres tér volt a fő user-panasz): a borító a
+            fő elem, a pont nagy, a haladás a poszter alján fut. Tábla-módban
+            mobilon marad a rács (ott a tábla olvashatatlan). */}
         {list != null && !loadError && rows.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 p-3 sm:hidden">
-            {rows.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => router.push(`/anime/${a.id}`)}
-                className="group text-left"
-              >
-                <div className="relative">
-                  {a.coverUrl ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={a.coverUrl}
-                      alt=""
-                      loading="lazy"
-                      className="w-full rounded-[var(--r-sm)] object-cover"
-                      style={{ aspectRatio: '2 / 3' }}
+          <div
+            className={`grid grid-cols-3 gap-3 p-3 sm:grid-cols-4 sm:gap-4 sm:p-4 lg:grid-cols-5 xl:grid-cols-6 ${
+              view === 'table' ? 'sm:hidden' : ''
+            }`}
+          >
+            {rows.map((a) => {
+              const isPinned = pinnedTitles != null && pinnedTitles.includes(a.titleId)
+              const progressPct = a.episodes
+                ? Math.min(100, Math.round((a.progress / a.episodes) * 100))
+                : null
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => router.push(`/anime/${a.id}`)}
+                  className="group text-left transition-transform duration-200 sm:hover:-translate-y-1"
+                >
+                  <div className="relative rounded-[var(--r-md)] overflow-hidden border border-white/8 sm:group-hover:border-white/25 transition-colors shadow-lg shadow-black/30">
+                    {a.coverUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={a.coverUrl}
+                        alt=""
+                        loading="lazy"
+                        className="w-full object-cover"
+                        style={{ aspectRatio: '2 / 3' }}
+                      />
+                    ) : (
+                      <div className="w-full bg-white/5" style={{ aspectRatio: '2 / 3' }} />
+                    )}
+                    <span
+                      className={`absolute left-2 top-2 inline-block h-2.5 w-2.5 rounded-full ring-2 ring-black/60 ${
+                        a.status === 'watching' ? 'animate-pulse' : ''
+                      }`}
+                      style={{ background: STATUS_CSS_VARS[a.status] ?? 'white' }}
+                      aria-label={statusLabel(a.status)}
                     />
-                  ) : (
-                    <div className="w-full rounded-[var(--r-sm)] bg-white/5" style={{ aspectRatio: '2 / 3' }} />
-                  )}
-                  <span
-                    className={`absolute left-1.5 top-1.5 inline-block h-2 w-2 rounded-full ring-2 ring-black/60 ${
-                      a.status === 'watching' ? 'animate-pulse' : ''
-                    }`}
-                    style={{ background: STATUS_CSS_VARS[a.status] ?? 'white' }}
-                    aria-label={statusLabel(a.status)}
-                  />
-                  {a.myScore != null && (
-                    <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/75 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-text-1">
-                      {a.myScore}
-                    </span>
-                  )}
-                  {pinnedTitles != null && pinnedTitles.includes(a.titleId) && (
-                    <span aria-hidden className="absolute right-1 top-1 text-xs">📌</span>
-                  )}
-                </div>
-                <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-text-2">{a.titleRomaji}</p>
-              </button>
-            ))}
+                    {a.myScore != null && (
+                      <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/75 px-2 py-0.5 font-mono text-xs sm:text-sm tabular-nums text-text-1">
+                        {a.myScore}
+                      </span>
+                    )}
+                    {pinnedTitles != null && (
+                      <span
+                        role="button"
+                        tabIndex={-1}
+                        onClick={(e) => { e.stopPropagation(); togglePin(a.titleId) }}
+                        title={isPinned ? t('unpinTooltip') : t('pinTooltip')}
+                        className={`absolute right-1.5 top-1.5 text-sm transition-opacity cursor-pointer ${
+                          isPinned ? 'opacity-100' : 'opacity-0 sm:group-hover:opacity-70 hover:!opacity-100'
+                        }`}
+                      >
+                        📌
+                      </span>
+                    )}
+                    {a.status === 'watching' && (
+                      <span
+                        role="button"
+                        tabIndex={-1}
+                        onClick={(e) => { e.stopPropagation(); bumpOne(a) }}
+                        title={t('watchedOneEpisode')}
+                        className="absolute bottom-1.5 left-1.5 hidden sm:grid place-items-center rounded-full bg-black/75 hover:bg-black px-2 py-0.5 font-mono text-xs text-text-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      >
+                        +1
+                      </span>
+                    )}
+                    {progressPct != null && a.status === 'watching' && (
+                      <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 bg-black/50">
+                        <span className="block h-full bg-white/85" style={{ width: `${progressPct}%` }} />
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-xs sm:text-[13px] leading-snug text-text-1">{a.titleRomaji}</p>
+                  <p className="mt-0.5 font-mono text-[10px] sm:text-[11px] text-text-3 tabular-nums">
+                    {a.year ?? ''}
+                    {a.status === 'watching' && a.episodes ? `${a.year ? ' · ' : ''}${a.progress}/${a.episodes}` : ''}
+                    {a.status === 'watching' && !a.episodes && a.progress ? `${a.year ? ' · ' : ''}${a.progress}` : ''}
+                  </p>
+                </button>
+              )
+            })}
           </div>
         )}
 
-        {list != null && !loadError && rows.length > 0 && (
+        {list != null && !loadError && rows.length > 0 && view === 'table' && (
         <table className="hidden w-full text-15 rounded-[var(--r-lg)] sm:table">
           {/* A közel opak kitöltés MARAD: ez tartja olvashatóan a text-3
               oszlopcímkéket a gördülő poszter-sorok fölött. Ami változott: a
@@ -352,7 +476,7 @@ export default function ListaPage() {
                         className="poster-glow opacity-0 group-hover:opacity-45"
                       />
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={a.coverUrl} alt="" className="relative w-[52px] h-[72px] object-cover rounded-[var(--r-sm)] border border-white/10" />
+                      <img src={a.coverUrl} alt="" className="relative w-16 h-[90px] object-cover rounded-[var(--r-sm)] border border-white/10" />
                     </>
                   )}
                 </td>
@@ -380,16 +504,16 @@ export default function ListaPage() {
                           style={{ width: `${Math.min(100, Math.round((a.progress / a.episodes) * 100))}%` }}
                         />
                       </div>
-                      <span className="font-mono text-[10px] text-text-3 tabular-nums shrink-0">
+                      <span className="font-mono text-xs text-text-2 tabular-nums shrink-0">
                         {a.progress}/{a.episodes}
                       </span>
                     </div>
                   ) : (
-                    <span className="font-mono text-[10px] text-text-3">{a.progress || '–'}</span>
+                    <span className="font-mono text-xs text-text-3">{a.progress || '–'}</span>
                   )}
                 </td>
-                <td className="px-3 py-2 pr-4 text-right font-mono text-xs text-text-2">
-                  {a.myScore != null ? `${a.myScore}/10` : '–'}
+                <td className="px-3 py-2 pr-4 text-right font-mono text-sm text-text-1 tabular-nums">
+                  {a.myScore != null ? `${a.myScore}/10` : <span className="text-text-3">–</span>}
                 </td>
                 <td className="px-2 py-2 text-right hidden sm:table-cell">
                   <Button

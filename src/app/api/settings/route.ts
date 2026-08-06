@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
-import { settings, tasteMemory, users } from '@/db/schema'
+import { settings, tasteMemory, title, users, userTitle } from '@/db/schema'
+import { sanitizeProfileCustom } from '@/lib/profile-custom'
 import { requireUserId } from '@/lib/session'
 import { validateRegistration } from '@/lib/registration'
 import { sendEmail, verifyEmailTemplate } from '@/lib/email'
@@ -42,6 +43,7 @@ export async function GET() {
     username: user?.username ?? null,
     bio: user?.bio ?? '',
     profileVisibility: map.profileVisibility ?? 'private',
+    profileCustom: map.profileCustom ?? null,
   })
 }
 
@@ -66,6 +68,25 @@ export async function PUT(req: NextRequest) {
 
   if (body.profileVisibility === 'public' || body.profileVisibility === 'private') {
     await upsert(userId, 'profileVisibility', body.profileVisibility)
+  }
+
+  // profil-személyreszabás: minden mező a sanitizeren át; a banner-cím csak
+  // a saját listáról jöhet, bannerrel, és felnőtt-jelölés nélkül (publikus felület)
+  if (body.profileCustom !== undefined) {
+    const custom = sanitizeProfileCustom(body.profileCustom)
+    if (custom.bannerTitleId != null) {
+      const [owned] = await db.select({ id: title.id })
+        .from(userTitle)
+        .innerJoin(title, eq(title.id, userTitle.titleId))
+        .where(and(
+          eq(userTitle.userId, userId),
+          eq(title.id, custom.bannerTitleId),
+          eq(title.isAdult, 0),
+          sql`${title.bannerUrl} is not null`,
+        ))
+      if (!owned) custom.bannerTitleId = null
+    }
+    await upsert(userId, 'profileCustom', custom)
   }
 
   // e-mail-cím pótlása a nyílt regisztráció előtti fiókoknak (id=1):
