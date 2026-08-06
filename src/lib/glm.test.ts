@@ -1,5 +1,32 @@
-import { describe, it, expect } from 'vitest'
-import { extractJson } from './glm'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { extractJson, glmChat } from './glm'
+
+afterEach(() => vi.unstubAllGlobals())
+
+describe('glmChat', () => {
+  it('kikapcsolja a flash reasoning-módot (thinking: disabled), különben a nagy promptok túllépik a 30s timeoutot', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await glmChat([{ role: 'user', content: 'hi' }])
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)
+    expect(body.thinking).toEqual({ type: 'disabled' })
+    expect(body.model).toBe('glm-4.7-flash')
+  })
+
+  it('429 után újrapróbál, és a következő sikeres választ adja vissza', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response('{"error":{"code":"1305"}}', { status: 429 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: 'masodik' } }] }), { status: 200 }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(glmChat([{ role: 'user', content: 'hi' }])).resolves.toBe('masodik')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
 
 describe('extractJson', () => {
   it('parses a bare JSON object', () => {

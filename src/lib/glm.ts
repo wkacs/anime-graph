@@ -44,7 +44,10 @@ export async function glmChat(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.GLM_API_KEY}`,
         },
-        body: JSON.stringify({ model: MODEL, messages, temperature: 0.4 }),
+        // thinking KIKAPCSOLVA: a flash 2026 nyara óta defaultból reasoning-öl,
+        // amitől egy triviális válasz is 25s+ — a nagy (teljes listás) promptok
+        // átlépték a 30s timeoutot, és minden retry ugyanígy halt meg.
+        body: JSON.stringify({ model: MODEL, messages, temperature: 0.4, thinking: { type: 'disabled' } }),
         // a hanging upstream must not block the route (Vercel cap is 60s anyway)
         signal: AbortSignal.timeout(30_000),
       })
