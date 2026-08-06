@@ -319,7 +319,22 @@
     "nicheAxis": "Niche-mutató",
     "ctaTitle": "Ez még csak a felszín.",
     "ctaText": "A teljes 3D-gráfhoz, a fit-score-hoz és ahhoz, hogy a térkép veled együtt tanuljon, hozz létre fiókot. Az importtal a most látott lista is átjön.",
-    "ctaButton": "Fiók létrehozása"
+    "ctaButton": "Fiók létrehozása",
+    "shareLabel": "Megosztható link",
+    "shareCopy": "Link másolása",
+    "shareCopied": "✓ Másolva",
+    "shareHeading": "Így néz ki {username} anime-ízlése",
+    "shareTitle": "{username} anime-ízlés-térképe",
+    "shareDescription": "Ízlés-szigetek, szignatúra-jel és niche-mutató {username} publikus AniList-listájából.",
+    "shareOwnCta": "Térképezd fel a sajátodat",
+    "shareErrorText": "Lehet, hogy a lista privát, üres, vagy elgépelted a nevet.",
+    "shareError": {
+      "badUsername": "Ez nem érvényes AniList-felhasználónév.",
+      "noSuchUser": "Nincs ilyen AniList-felhasználó.",
+      "emptyOrPrivateList": "Ez a lista üres vagy nem publikus.",
+      "notEnoughData": "Túl kevés cím van a listán ahhoz, hogy bármit is állítsunk.",
+      "anilistDown": "Az AniList most nem válaszol. Próbáld újra kicsit később."
+    }
   },
   "landing": {
     "kicker": "Anime Graph · ízlésréteg a listád fölé",

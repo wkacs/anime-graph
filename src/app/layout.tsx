@@ -37,12 +37,12 @@ export const metadata: Metadata = {
   title: { default: 'Anime Graph — the list that works for you', template: '%s | Anime Graph' },
   description: 'Personal anime and manga tracker with taste-based discovery, a public catalogue and MAL/AniList import.',
   keywords: ['anime tracker', 'manga tracker', 'anime recommendations', 'AniList import', 'MAL import'],
-  openGraph: {
-    type: 'website', siteName: 'Anime Graph', title: 'Anime Graph — the list that works for you',
-    description: 'Personal anime and manga tracker with taste-based discovery.',
-    images: [{ url: '/opengraph-image' }],
-  },
-  twitter: { card: 'summary_large_image', title: 'Anime Graph', description: 'The list that works for you.', images: ['/opengraph-image'] },
+  // 🔴 Se kep, se cim, se leiras NINCS itt bedrotozva a megosztas-metaadatba.
+  // A gyoker sajat `opengraph-image.tsx`-e igy is ervenyre jut (fajl-konvencio),
+  // viszont a bedrotozott ertekek MINDEN aloldalon felulirtak volna a sajatjukat:
+  // egy megosztott izles-terkep is a generikus app-kartyat mutatta volna.
+  openGraph: { type: 'website', siteName: 'Anime Graph' },
+  twitter: { card: 'summary_large_image' },
 };
 
 export const viewport = {

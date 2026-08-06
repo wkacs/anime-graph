@@ -319,7 +319,22 @@
     "nicheAxis": "Niche index",
     "ctaTitle": "This is only the surface.",
     "ctaText": "Create an account for the full 3D graph, fit scores, and a map that keeps learning with you. The import brings over the list you just scanned.",
-    "ctaButton": "Create an account"
+    "ctaButton": "Create an account",
+    "shareLabel": "Shareable link",
+    "shareCopy": "Copy link",
+    "shareCopied": "✓ Copied",
+    "shareHeading": "This is what {username}'s anime taste looks like",
+    "shareTitle": "{username}'s anime taste map",
+    "shareDescription": "Taste islands, signature signal and niche index from {username}'s public AniList list.",
+    "shareOwnCta": "Map your own",
+    "shareErrorText": "The list may be private, empty, or the name may be misspelled.",
+    "shareError": {
+      "badUsername": "That is not a valid AniList username.",
+      "noSuchUser": "No such AniList user.",
+      "emptyOrPrivateList": "That list is empty or not public.",
+      "notEnoughData": "Too few titles on that list to claim anything.",
+      "anilistDown": "AniList is not responding right now. Try again in a moment."
+    }
   },
   "landing": {
     "kicker": "Anime Graph · a taste layer over your list",
