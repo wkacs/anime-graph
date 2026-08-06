@@ -286,6 +286,32 @@
       "low": "Nem illik"
     }
   },
+  "duo": {
+    "eyebrow": "Ízlés-összevetés · fiók nélkül",
+    "heading": "Mennyire passzol az ízlésed {username} ízléséhez?",
+    "lead": "{username} megosztotta veled ezt a linket. Írd be a saját publikus AniList-neved, és rögtön látod, mennyire fedi egymást a listátok, mik a közös kedvenceitek, és mit érdemes tőle átvenned.",
+    "placeholder": "A te AniList felhasználóneved",
+    "submit": "Összevetés",
+    "working": "Összevetjük…",
+    "sameName": "Ez ugyanaz a név, írd be a sajátodat.",
+    "genericError": "Nem sikerült az összevetés. Próbáld újra kicsit később.",
+    "resultKicker": "{a} és {b}",
+    "resultMeta": "{common} közös cím · a te listád {mine}, az övé {theirs} címből áll",
+    "commonFavorites": "Közös kedvencek",
+    "theyRecommend": "Amit {username} listájáról érdemes megnézned",
+    "ctaTitle": "A teljes közös térképhez fiók kell.",
+    "ctaText": "Regisztrálva megkapjátok a közös gráfot, a páros ajánlót és azt is, hogy miben tértek el.",
+    "ctaButton": "Fiók létrehozása",
+    "ownScanCta": "A saját térképem",
+    "shareTitle": "Passzol az ízlésünk? · {username}",
+    "shareDescription": "Vesd össze az anime-ízlésedet {username} publikus AniList-listájával, fiók nélkül.",
+    "badLink": "Ez a link hibás.",
+    "badLinkText": "A meghívóban szereplő felhasználónév nem érvényes AniList-név.",
+    "ownCta": "Térképezd fel a sajátodat",
+    "inviteLabel": "Hívj meg egy barátot",
+    "inviteText": "Küldd el ezt a linket, és rögtön látjátok, mennyire passzol az ízlésetek.",
+    "compareCta": "Passzolunk {username}-nal?"
+  },
   "scan": {
     "eyebrow": "Taste Scan · fiók nélkül",
     "title": "Nézzük meg, mit mond rólad a listád.",

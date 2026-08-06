@@ -286,6 +286,32 @@
       "low": "Low fit"
     }
   },
+  "duo": {
+    "eyebrow": "Taste comparison · no account needed",
+    "heading": "How close is your taste to {username}'s?",
+    "lead": "{username} shared this link with you. Enter your own public AniList name and you'll see straight away how much your lists overlap, what your shared favourites are, and what's worth taking from theirs.",
+    "placeholder": "Your AniList username",
+    "submit": "Compare",
+    "working": "Comparing…",
+    "sameName": "That's the same name, enter your own.",
+    "genericError": "The comparison failed. Try again in a moment.",
+    "resultKicker": "{a} and {b}",
+    "resultMeta": "{common} titles in common · your list has {mine}, theirs has {theirs}",
+    "commonFavorites": "Shared favourites",
+    "theyRecommend": "Worth taking from {username}'s list",
+    "ctaTitle": "The full shared map needs an account.",
+    "ctaText": "Sign up and you both get the shared graph, the duo picker and where your tastes diverge.",
+    "ctaButton": "Create an account",
+    "ownScanCta": "My own map",
+    "shareTitle": "Do our tastes match? · {username}",
+    "shareDescription": "Compare your anime taste with {username}'s public AniList list, no account needed.",
+    "badLink": "This link is broken.",
+    "badLinkText": "The username in the invite is not a valid AniList name.",
+    "ownCta": "Map your own",
+    "inviteLabel": "Invite a friend",
+    "inviteText": "Send this link and you'll both see how closely your tastes match.",
+    "compareCta": "Do we match, {username}?"
+  },
   "scan": {
     "eyebrow": "Taste Scan · no account needed",
     "title": "Let's see what your list says about you.",

@@ -18,8 +18,11 @@ export default function ScanResultView({
   shareUrl?: string
 }) {
   const t = useTranslations('scan')
-  const [copied, setCopied] = useState(false)
+  const td = useTranslations('duo')
+  const [copied, setCopied] = useState<'share' | 'invite' | null>(null)
   const dominant = result.islands[0] && result.islands[0].share >= DOMINANT_ISLAND_SHARE
+  // A meghivo-link ugyanabbol az origóbol epul, mint a megoszto.
+  const inviteUrl = shareUrl?.replace(/\/scan\/[^/]+$/, `/duo/${username}`) ?? ''
 
   // Az allitasokat a lib adja strukturaltan, a szoveg itt szuletik: igy a szamok
   // es a fogalmazas nem csusznak szet, es forditani is lehet.
@@ -40,12 +43,12 @@ export default function ScanResultView({
     }
   }
 
-  async function copyShare() {
-    if (!shareUrl) return
+  async function copy(url: string, which: 'share' | 'invite') {
+    if (!url) return
     try {
-      await navigator.clipboard.writeText(shareUrl)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
+      await navigator.clipboard.writeText(url)
+      setCopied(which)
+      setTimeout(() => setCopied(null), 2500)
     } catch {
       /* a link a gomb mellett szovegkent is ott van */
     }
@@ -120,14 +123,34 @@ export default function ScanResultView({
 
       {shareUrl && (
         <Reveal>
-          <div className="surface-1 flex flex-wrap items-center justify-between gap-4 rounded-[var(--r-md)] p-5">
-            <div className="min-w-0">
-              <p className="label-mono">{t('shareLabel')}</p>
-              <p className="mt-1 truncate font-mono text-sm text-text-2">{shareUrl}</p>
+          <div className="flex flex-col gap-3">
+            <div className="surface-1 flex flex-wrap items-center justify-between gap-4 rounded-[var(--r-md)] p-5">
+              <div className="min-w-0">
+                <p className="label-mono">{t('shareLabel')}</p>
+                <p className="mt-1 truncate font-mono text-sm text-text-2">{shareUrl}</p>
+              </div>
+              <button
+                onClick={() => copy(shareUrl, 'share')}
+                className="btn-ghost surface-2 shrink-0 px-4 py-2.5 text-sm"
+              >
+                {copied === 'share' ? t('shareCopied') : t('shareCopy')}
+              </button>
             </div>
-            <button onClick={copyShare} className="btn-ghost surface-2 shrink-0 px-4 py-2.5 text-sm">
-              {copied ? t('shareCopied') : t('shareCopy')}
-            </button>
+
+            {/* A meghivo-link a masik iranyba visz: nem rolad szol, hanem
+                kettotokrol — ezert van oka a masik felnek is megnyitni. */}
+            <div className="surface-1 flex flex-wrap items-center justify-between gap-4 rounded-[var(--r-md)] p-5">
+              <div className="min-w-0">
+                <p className="label-mono">{td('inviteLabel')}</p>
+                <p className="mt-1 text-sm text-text-2">{td('inviteText')}</p>
+              </div>
+              <button
+                onClick={() => copy(inviteUrl, 'invite')}
+                className="btn-ghost surface-2 shrink-0 px-4 py-2.5 text-sm"
+              >
+                {copied === 'invite' ? t('shareCopied') : t('shareCopy')}
+              </button>
+            </div>
           </div>
         </Reveal>
       )}

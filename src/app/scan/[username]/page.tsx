@@ -41,6 +41,7 @@ export default async function SharedScanPage(
 ) {
   const { username } = await params
   const t = await getTranslations('scan')
+  const td = await getTranslations('duo')
   const outcome = await runScan(username)
 
   if (!outcome.ok) {
@@ -65,7 +66,12 @@ export default async function SharedScanPage(
       <div className="mt-10">
         <ScanResultView result={outcome.result} username={outcome.username} />
       </div>
-      <div className="mt-10 text-center">
+      {/* Aki valaki MAS terkepet nezi, annak a kezenfekvo kovetkezo lepes nem az,
+          hogy sajatot csinal, hanem hogy megnezi, mennyire passzolnak. */}
+      <div className="mt-10 flex flex-wrap justify-center gap-3">
+        <Link href={`/duo/${outcome.username}`} className="btn-solid px-5 py-3">
+          {td('compareCta', { username: outcome.username })}
+        </Link>
         <Link href="/scan" className="btn-ghost surface-1 px-5 py-3">{t('shareOwnCta')}</Link>
       </div>
     </PageShell>
