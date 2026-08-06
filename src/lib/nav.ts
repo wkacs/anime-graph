@@ -23,7 +23,10 @@ export const MORE_TABS: NavTab[] = [
   { href: '/wrapped', key: 'wrapped' },
 ]
 
+// Vendegnek a Taste Scan az elso ajanlat: az az egyetlen felulet, ami fiok
+// nelkul is mond rola valamit.
 export const GUEST_TABS: NavTab[] = [
+  { href: '/scan', key: 'scan' },
   { href: '/browse', key: 'browse' },
   { href: '/leaderboard', key: 'leaderboard' },
 ]

@@ -22,6 +22,7 @@
     "more": "Több",
     "search": "Keresés",
     "settings": "Beállítások",
+    "scan": "Scan",
     "signIn": "Belépés"
   },
   "browse": {
@@ -270,6 +271,41 @@
     "tasteTextMax": "Az ízléslista legfeljebb {max} karakter lehet",
     "vibePromptMax": "A szöveges kérés legfeljebb {max} karakter lehet",
     "envUnset": "{envVar} nincs beállítva"
+  },
+  "scan": {
+    "eyebrow": "Taste Scan · fiók nélkül",
+    "title": "Nézzük meg, mit mond rólad a listád.",
+    "lead": "Írd be a publikus AniList-felhasználóneved. Regisztráció nélkül megmutatjuk, milyen ízlés-szigeteid vannak, mi köti össze őket, és mi a legerősebb egyéni jeled.",
+    "placeholder": "AniList felhasználónév",
+    "submit": "Térképezés",
+    "working": "Olvassuk a listád…",
+    "privacy": "Csak a publikus listádat olvassuk, és nem mentünk el belőle semmit. Az eredmény akkor marad meg, ha fiókot hozol létre.",
+    "genericError": "Nem sikerült beolvasni a listát. Próbáld újra kicsit később.",
+    "resultKicker": "{username} ízlés-térképe",
+    "resultTitle": "{count, plural, one {Egy összefüggő ízlés-szigeted van} other {# külön ízlés-szigeted van}}",
+    "resultTitleDominant": "A listád egy nagy, összefüggő tömb: {name}.",
+    "insightIslandsDominant": "Nem szigeteid vannak, hanem egy nagy tömböd: a listád zöme {name}. A többi ({count} kisebb csoport) inkább kinyúlás belőle, mint önálló érdeklődés.",
+    "resultMeta": "{sample} cím alapján, ebből {rated} pontozott",
+    "insightLabel": {
+      "islands": "Szerkezet",
+      "signature": "Szignatúra",
+      "topStudio": "Stúdió",
+      "rating": "Pontozás",
+      "niche": "Mainstream · niche"
+    },
+    "insightIslands": "{count} külön ízlés-szigeted van: {names}. Ezek nem folynak egybe, külön dolgokat keresel bennük.",
+    "insightSignature": "A legerősebb egyéni jeled: {feature}. A kedvenceidben {lift}-szer annyiszor fordul elő, mint a lista alján.",
+    "insightStudio": "A kedveléseid között a leggyakoribb stúdió a {studio}, {count} címmel.",
+    "insightHarsh": "Szigorúbban pontozol a közösségnél: átlagosan {delta} ponttal alacsonyabbra.",
+    "insightGenerous": "Engedékenyebben pontozol a közösségnél: átlagosan {delta} ponttal magasabbra.",
+    "insightNiche": "A listád zöme a mainstreamen kívül van ({score}/100 niche).",
+    "insightMainstream": "A listád zöme széles körben nézett cím ({score}/100 niche).",
+    "loves": "Amit keresel",
+    "avoids": "Amit kerülsz",
+    "nicheAxis": "Niche-mutató",
+    "ctaTitle": "Ez még csak a felszín.",
+    "ctaText": "A teljes 3D-gráfhoz, a fit-score-hoz és ahhoz, hogy a térkép veled együtt tanuljon, hozz létre fiókot. Az importtal a most látott lista is átjön.",
+    "ctaButton": "Fiók létrehozása"
   },
   "landing": {
     "kicker": "Anime Graph · ízlésréteg a listád fölé",

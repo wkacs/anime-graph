@@ -56,7 +56,13 @@ export async function anilistFetch<T>(
       await new Promise((resolve) => setTimeout(resolve, delayMs))
       continue
     }
-    if (!res.ok) throw new Error(`AniList HTTP ${res.status}`)
+    if (!res.ok) {
+      // A statusz maga is informacio: a 404 „nincs ilyen felhasznalo/cim", nem
+      // kimaradas. A hivo igy kulon tudja kezelni, uzenet-parszolas nelkul.
+      const err = new Error(`AniList HTTP ${res.status}`) as Error & { status?: number }
+      err.status = res.status
+      throw err
+    }
     const json = await res.json()
     if (json.errors?.length) throw new Error(`AniList: ${json.errors[0].message}`)
     return json.data as T
@@ -431,4 +437,59 @@ export async function fetchStaff(anilistId: number): Promise<StaffEntry[]> {
   const data = await anilistFetch<R>(STAFF_QUERY, { id: anilistId })
   return data.Media.staff.edges
     .map((e) => ({ staffId: e.node.id, name: e.node.name.full, image: e.node.image?.medium ?? null, role: e.role }))
+}
+
+// A Taste Scan sajat, szuk lekerese. Szandekosan NEM a MEDIA_FIELDS megy ki:
+// egy 500 cimes listanal a description es a relations tobb megabajt felesleges
+// atvitel, viszont kell a `popularity`, ami a katalogus-syncnek nem kell.
+const SCAN_LIST_QUERY = `
+query ($userName: String!, $type: MediaType!) {
+  MediaListCollection(userName: $userName, type: $type) {
+    lists {
+      entries {
+        status
+        score(format: POINT_10)
+        media {
+          id
+          title { romaji english }
+          coverImage { large }
+          genres
+          tags { name rank }
+          studios(isMain: true) { nodes { name } }
+          seasonYear
+          averageScore
+          popularity
+          isAdult
+        }
+      }
+    }
+  }
+}`
+
+export type ScanListEntry = {
+  status: string
+  score: number | null
+  media: {
+    id: number
+    title: { romaji: string; english: string | null }
+    coverImage: { large: string | null } | null
+    genres: string[]
+    tags: { name: string; rank: number }[]
+    studios: { nodes: { name: string }[] }
+    seasonYear: number | null
+    averageScore: number | null
+    popularity: number | null
+    isAdult: boolean
+  }
+}
+
+/** Publikus AniList-lista scanhez. Privat vagy nem letezo profil: ures tomb. */
+export async function fetchUserListForScan(
+  userName: string,
+  type: 'ANIME' | 'MANGA' = 'ANIME',
+): Promise<ScanListEntry[]> {
+  type R = { MediaListCollection: { lists: { entries: ScanListEntry[] }[] } | null }
+  const data = await anilistFetch<R>(SCAN_LIST_QUERY, { userName, type })
+  if (!data.MediaListCollection) return []
+  return data.MediaListCollection.lists.flatMap((l) => l.entries)
 }

@@ -22,6 +22,7 @@
     "more": "More",
     "search": "Search",
     "settings": "Settings",
+    "scan": "Scan",
     "signIn": "Sign in"
   },
   "browse": {
@@ -270,6 +271,41 @@
     "tasteTextMax": "The taste list can be at most {max} characters",
     "vibePromptMax": "The text request can be at most {max} characters",
     "envUnset": "{envVar} is not configured"
+  },
+  "scan": {
+    "eyebrow": "Taste Scan · no account needed",
+    "title": "Let's see what your list says about you.",
+    "lead": "Enter your public AniList username. Without signing up we'll show you which taste islands you have, what connects them, and what your strongest personal signal is.",
+    "placeholder": "AniList username",
+    "submit": "Map it",
+    "working": "Reading your list…",
+    "privacy": "We only read your public list and store nothing from it. The result sticks around once you create an account.",
+    "genericError": "Could not read that list. Try again in a moment.",
+    "resultKicker": "{username}'s taste map",
+    "resultTitle": "{count, plural, one {You have one connected taste island} other {You have # separate taste islands}}",
+    "resultTitleDominant": "Your list is one large connected mass: {name}.",
+    "insightIslandsDominant": "You don't have islands, you have one landmass: most of your list is {name}. The rest ({count} smaller groups) read as outcrops of it rather than separate interests.",
+    "resultMeta": "Based on {sample} titles, {rated} of them rated",
+    "insightLabel": {
+      "islands": "Structure",
+      "signature": "Signature",
+      "topStudio": "Studio",
+      "rating": "Rating",
+      "niche": "Mainstream · niche"
+    },
+    "insightIslands": "You have {count} separate taste islands: {names}. They don't blend into one another — you look for different things in each.",
+    "insightSignature": "Your strongest personal signal: {feature}. It shows up {lift}× more often in your favourites than at the bottom of your list.",
+    "insightStudio": "The most frequent studio among the titles you liked is {studio}, with {count} entries.",
+    "insightHarsh": "You rate harder than the community: {delta} points lower on average.",
+    "insightGenerous": "You rate softer than the community: {delta} points higher on average.",
+    "insightNiche": "Most of your list sits outside the mainstream ({score}/100 niche).",
+    "insightMainstream": "Most of your list is widely watched ({score}/100 niche).",
+    "loves": "What you look for",
+    "avoids": "What you avoid",
+    "nicheAxis": "Niche index",
+    "ctaTitle": "This is only the surface.",
+    "ctaText": "Create an account for the full 3D graph, fit scores, and a map that keeps learning with you. The import brings over the list you just scanned.",
+    "ctaButton": "Create an account"
   },
   "landing": {
     "kicker": "Anime Graph · a taste layer over your list",

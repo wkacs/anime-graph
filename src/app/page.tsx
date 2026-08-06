@@ -215,7 +215,9 @@ export default function NewsPage() {
                 {landing('body')}
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <Link href="/login" className="btn-solid px-5 py-3">{landing('start')}</Link>
+                {/* Az elsodleges CTA a Taste Scanre megy, nem a regisztraciora:
+                    igy a gomb pontosan azt csinalja, amit igér, meg fiok elott. */}
+                <Link href="/scan" className="btn-solid px-5 py-3">{landing('start')}</Link>
                 <Link href="/browse" className="btn-ghost surface-1 px-5 py-3">{landing('browse')}</Link>
               </div>
             </div>
