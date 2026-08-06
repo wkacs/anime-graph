@@ -42,7 +42,8 @@ export type GraphAnime = {
 
 export type GraphNode = {
   id: string
-  type: 'dim' | 'anime' | 'char'
+  /** `ghost`: NINCS a listadon — ajanlas, ami a graf szelen lebeg */
+  type: 'dim' | 'anime' | 'char' | 'ghost'
   label: string
   // char-node: másodlagos felirat (seiyuu neve) a tooltiphez
   sub?: string
@@ -60,9 +61,19 @@ export type GraphNode = {
   bubble?: boolean
   // bubble decoration: top covers of the genre
   covers?: string[]
+  // ghost-node: az ajanlott cim adatai (nincs sajat `anime.id`-ja, mert nincs a listan)
+  anilistId?: number
+  reason?: string
+  fitScore?: number
+  /** melyik listas cimhez kotottuk — a „miert pont ez?" valasza */
+  anchorLabel?: string
 }
 
-export type GraphLink = { source: string; target: string; kind: 'chain' | 'relation' | 'vibe' | 'char' | 'seiyuu' }
+export type GraphLink = {
+  source: string
+  target: string
+  kind: 'chain' | 'relation' | 'vibe' | 'char' | 'seiyuu' | 'ghost'
+}
 
 /**
  * A csoport-node felirata EGYBEN az azonositoja is (`dim:genre:<label>`), ezert
@@ -204,6 +215,70 @@ export function buildGenreDetail(
     }
   }
   links.push(...vibeLinks(subset))
+  return { nodes, links }
+}
+
+export type GhostPick = {
+  anilistId: number
+  title: string
+  coverUrl: string | null
+  genres: string[]
+  score: number
+  reason: string
+}
+
+/** Ennyi ajanlas lebeg egyszerre a grafon. Tobb mar zaj, nem meghivas. */
+export const MAX_GHOSTS = 5
+/** Enne1 kevesebb kozos mufajnal nem huzunk elt — a veletlen kapcsolat rosszabb a semminel. */
+const GHOST_MIN_SHARED_GENRES = 1
+
+/**
+ * Ghost-node-ok: cimek, amik NINCSENEK a listadon, de a jelenlegi nezet mellett
+ * allnak. Mindegyik ahhoz a LATHATO sajat cimedhez kotodik, amivel a legtobb
+ * mufajt osztja — ez adja a „miert pont ez?" valaszat, es ez teszi a grafot
+ * dontesi feluletté ahelyett, hogy egyszeri latvany maradna.
+ *
+ * Amihez nem talalunk horgonyt a lathato halmazban, az kimarad: a semmibol logo
+ * ajanlas nem magyarazhato, tehat nem is ér semmit.
+ */
+export function buildGhostLayer(
+  picks: GhostPick[],
+  visible: GraphAnime[],
+  max = MAX_GHOSTS,
+): { nodes: GraphNode[]; links: GraphLink[] } {
+  const nodes: GraphNode[] = []
+  const links: GraphLink[] = []
+  if (!visible.length) return { nodes, links }
+
+  for (const p of picks) {
+    if (nodes.length >= max) break
+    const pickGenres = new Set(p.genres)
+    let anchor: GraphAnime | null = null
+    let best = 0
+    for (const a of visible) {
+      const shared = a.genres.filter((g) => pickGenres.has(g)).length
+      // dontetlennel a jobbra ertekelt sajat cim nyer: onnan hihetobb az atvezetes
+      if (shared > best || (shared === best && shared > 0 && (a.myScore ?? 0) > (anchor?.myScore ?? 0))) {
+        best = shared
+        anchor = a
+      }
+    }
+    if (!anchor || best < GHOST_MIN_SHARED_GENRES) continue
+
+    const id = `ghost:${p.anilistId}`
+    nodes.push({
+      id,
+      type: 'ghost',
+      label: p.title,
+      img: p.coverUrl ?? undefined,
+      val: 4,
+      anilistId: p.anilistId,
+      reason: p.reason,
+      fitScore: p.score,
+      anchorLabel: anchor.titleRomaji,
+    })
+    links.push({ source: `anime:${anchor.id}`, target: id, kind: 'ghost' })
+  }
   return { nodes, links }
 }
 

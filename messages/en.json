@@ -272,6 +272,20 @@
     "vibePromptMax": "The text request can be at most {max} characters",
     "envUnset": "{envVar} is not configured"
   },
+  "ghost": {
+    "eyebrow": "Not on your list",
+    "why": "Why is this here?",
+    "anchor": "Connected in the graph to: {title}",
+    "plan": "Add to Plan",
+    "notForMe": "Not for me",
+    "close": "Close",
+    "tier": {
+      "strong": "Strong fit",
+      "mixed": "Mixed fit",
+      "experimental": "Experimental fit",
+      "low": "Low fit"
+    }
+  },
   "scan": {
     "eyebrow": "Taste Scan · no account needed",
     "title": "Let's see what your list says about you.",

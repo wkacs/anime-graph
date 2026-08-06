@@ -12,9 +12,11 @@ import RecommendMorph from '@/components/RecommendMorph'
 import TourSpotlight from '@/components/TourSpotlight'
 import type { TourStep } from '@/lib/tour'
 import {
-  buildBubbles, buildCharacterLayer, buildGenreDetail, buildGraph, buildStaffLayer, buildTimeline, filterByMedia,
-  COVER_AUTO_LIMIT, DEFAULT_CONFIG, type FavChar, type GraphConfig, type GraphNode, type MediaMode, type StaffRow,
+  buildBubbles, buildCharacterLayer, buildGenreDetail, buildGhostLayer, buildGraph, buildStaffLayer, buildTimeline,
+  filterByMedia, COVER_AUTO_LIMIT, DEFAULT_CONFIG,
+  type FavChar, type GhostPick, type GraphConfig, type GraphNode, type MediaMode, type StaffRow,
 } from '@/lib/graph-builder'
+import GhostPanel from '@/components/GhostPanel'
 import { useStatusLabel } from '@/components/useLabels'
 import { STATUS_CSS_VARS } from '@/lib/status'
 import type { ApiAnime, ApiFact } from '@/lib/types'
@@ -38,6 +40,9 @@ export default function GrafPage() {
   const [flythrough, setFlythrough] = useState(0) // 0 = nem idővonal, timestamp = idővonal
   const [advanced, setAdvanced] = useState(false)
   const [focusGenre, setFocusGenre] = useState<string | null>(null)
+  // lebego ajanlasok: a listan MEG NEM szereplo cimek, a graf szelen
+  const [ghosts, setGhosts] = useState<GhostPick[]>([])
+  const [openGhost, setOpenGhost] = useState<GraphNode | null>(null)
   const [fitKey, setFitKey] = useState(0)
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null)
   const [yearCutoff, setYearCutoff] = useState<number | null>(null) // null = teljes térkép
@@ -130,7 +135,37 @@ export default function GrafPage() {
     if (added) flyToAnime(added)
   }, [refresh, flyToAnime])
 
+  const loadGhosts = useCallback(() => {
+    fetch('/api/graph/ghosts')
+      .then((r) => (r.ok ? r.json() : { picks: [] }))
+      .then((j) => setGhosts(j.picks ?? []))
+      .catch(() => { /* ajanlasok nelkul is el a graf */ })
+  }, [])
+
   useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { loadGhosts() }, [loadGhosts])
+
+  // Felvettem: a cim mostantol a listan van, tehat nem lehet tobbe lebego ajanlas.
+  const addGhost = useCallback(async (node: GraphNode) => {
+    if (!node.anilistId) return
+    const res = await fetch('/api/anime', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId: node.anilistId, status: 'planned' }),
+    })
+    setGhosts((g) => g.filter((x) => x.anilistId !== node.anilistId))
+    setOpenGhost(null)
+    if (res.ok) refresh()
+  }, [refresh])
+
+  const dismissGhost = useCallback(async (node: GraphNode) => {
+    if (!node.anilistId) return
+    setGhosts((g) => g.filter((x) => x.anilistId !== node.anilistId))
+    setOpenGhost(null)
+    await fetch('/api/graph/ghosts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anilistId: node.anilistId }),
+    }).catch(() => { /* a helyi eltuntetes igy is megtortent */ })
+  }, [])
 
   // kedvenc karakterek a réteghez — csak bekapcsolt toggle-nál töltjük
   useEffect(() => {
@@ -192,6 +227,20 @@ export default function GrafPage() {
     return merged
   }, [rows, config, timelineMode, advanced, focusGenre, showChars, favChars, showStaff, staffRows, graphLabels])
 
+  // A ghostok a MOST lathato sajat cimekhez kotodnek, ezert a bazis-graf utan
+  // szamolunk. Idovonal-modban kimaradnak: ott a pozicio datum szerint rogzitett,
+  // egy nem-latott cimnek nincs hol allnia.
+  const withGhosts = useMemo(() => {
+    if (timelineMode || !ghosts.length) return graph
+    const visibleIds = new Set(
+      graph.nodes.filter((n) => n.type === 'anime' && n.animeId != null).map((n) => n.animeId!),
+    )
+    const visible = rows.filter((r) => visibleIds.has(r.id))
+    const layer = buildGhostLayer(ghosts, visible)
+    if (!layer.nodes.length) return graph
+    return { nodes: [...graph.nodes, ...layer.nodes], links: [...graph.links, ...layer.links] }
+  }, [graph, ghosts, rows, timelineMode])
+
   const animeNodeCount = useMemo(
     () => graph.nodes.filter((n) => n.type === 'anime').length,
     [graph],
@@ -234,7 +283,7 @@ export default function GrafPage() {
         transition={tweenFluid}
       >
         <Graph3D
-          data={graph}
+          data={withGhosts}
           onAnimeClick={openAnime}
           onAnimeHover={setHoverId}
           flythrough={flythrough}
@@ -242,6 +291,7 @@ export default function GrafPage() {
           onDimClick={!advanced && !timelineMode ? handleDimClick : undefined}
           fitKey={fitKey}
           focusNodeId={focusNodeId}
+          onGhostClick={setOpenGhost}
         />
       </motion.div>
 
@@ -378,6 +428,15 @@ export default function GrafPage() {
       )}
 
       {/* első látogatás: oldalankénti spotlight-túra (a régi hint-sávot váltja) */}
+      {openGhost && (
+        <GhostPanel
+          node={openGhost}
+          onAdd={() => addGhost(openGhost)}
+          onDismiss={() => dismissGhost(openGhost)}
+          onClose={() => setOpenGhost(null)}
+        />
+      )}
+
       {animeList.length > 0 && <TourSpotlight page="graf" steps={GRAF_TOUR} />}
 
       {hoverAnime && (

@@ -272,6 +272,20 @@
     "vibePromptMax": "A szöveges kérés legfeljebb {max} karakter lehet",
     "envUnset": "{envVar} nincs beállítva"
   },
+  "ghost": {
+    "eyebrow": "Nincs a listádon",
+    "why": "Miért van itt?",
+    "anchor": "A gráfban ehhez kötöttük: {title}",
+    "plan": "Felveszem a tervezettek közé",
+    "notForMe": "Nem nekem való",
+    "close": "Bezárás",
+    "tier": {
+      "strong": "Erősen illik",
+      "mixed": "Vegyesen illik",
+      "experimental": "Kísérleti",
+      "low": "Nem illik"
+    }
+  },
   "scan": {
     "eyebrow": "Taste Scan · fiók nélkül",
     "title": "Nézzük meg, mit mond rólad a listád.",

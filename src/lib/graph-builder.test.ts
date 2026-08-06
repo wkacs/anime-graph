@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildCharacterLayer, buildGraph, buildStaffLayer, filterByMedia, scoreBand, type GraphAnime } from './graph-builder'
+import {
+  buildCharacterLayer, buildGhostLayer, buildGraph, buildStaffLayer, filterByMedia, scoreBand,
+  type GhostPick, type GraphAnime,
+} from './graph-builder'
 
 const mk = (over: Partial<GraphAnime>): GraphAnime => ({
   id: 1, anilistId: 100, titleRomaji: 'A', coverUrl: null,
@@ -124,5 +127,47 @@ describe('buildStaffLayer', () => {
     const { nodes, links } = buildStaffLayer(rows, new Set([3]))
     expect(nodes.map((n) => n.id)).toEqual(['staff:200'])
     expect(links).toHaveLength(1)
+  })
+})
+
+describe('buildGhostLayer', () => {
+  const pick = (over: Partial<GhostPick> = {}): GhostPick => ({
+    anilistId: 500, title: 'Ghost', coverUrl: null, genres: ['Action'],
+    score: 78, reason: 'ezeket szereted: Action', ...over,
+  })
+
+  it('a legtobb kozos mufaju sajat cimhez koti', () => {
+    const visible = [mk({ id: 1, titleRomaji: 'Akcio', genres: ['Action'] }),
+      mk({ id: 2, titleRomaji: 'Romi', genres: ['Romance'] })]
+    const { nodes, links } = buildGhostLayer([pick()], visible)
+    expect(nodes[0]).toMatchObject({ id: 'ghost:500', type: 'ghost', anchorLabel: 'Akcio' })
+    expect(links).toEqual([{ source: 'anime:1', target: 'ghost:500', kind: 'ghost' }])
+  })
+
+  it('dontetlennel a jobbra ertekelt sajat cim a horgony', () => {
+    const visible = [mk({ id: 1, titleRomaji: 'Gyenge', genres: ['Action'], myScore: 4 }),
+      mk({ id: 2, titleRomaji: 'Kedvenc', genres: ['Action'], myScore: 10 })]
+    expect(buildGhostLayer([pick()], visible).nodes[0].anchorLabel).toBe('Kedvenc')
+  })
+
+  it('horgony nelkuli ajanlas kimarad — a megmagyarazhatatlan ajanlas rosszabb a semminel', () => {
+    const visible = [mk({ id: 1, genres: ['Romance'] })]
+    expect(buildGhostLayer([pick({ genres: ['Mecha'] })], visible)).toEqual({ nodes: [], links: [] })
+  })
+
+  it('ures lathato halmazon nem tesz ki semmit', () => {
+    expect(buildGhostLayer([pick()], [])).toEqual({ nodes: [], links: [] })
+  })
+
+  it('legfeljebb a megadott darabszamot adja', () => {
+    const visible = [mk({ id: 1, genres: ['Action'] })]
+    const picks = Array.from({ length: 12 }, (_, i) => pick({ anilistId: 600 + i }))
+    expect(buildGhostLayer(picks, visible, 3).nodes).toHaveLength(3)
+  })
+
+  it('az indoklast es a pontszamot atviszi a node-ra', () => {
+    const visible = [mk({ id: 1, genres: ['Action'] })]
+    const n = buildGhostLayer([pick({ score: 91, reason: 'mert' })], visible).nodes[0]
+    expect(n).toMatchObject({ fitScore: 91, reason: 'mert', anilistId: 500 })
   })
 })

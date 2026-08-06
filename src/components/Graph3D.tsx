@@ -200,6 +200,32 @@ function bubbleObject(node: GraphNode): THREE.Object3D {
   return group
 }
 
+// A ghost SOSEM nezhet ki listas cimnek: nincs statusz-szine, a boritoja halvany,
+// es egy nyitott gyuru jelzi, hogy meg nem a tied. Ha ugyanugy nezne ki, a graf
+// hazudna arrol, mit lattal mar.
+const GHOST_RING_GEO = new THREE.TorusGeometry(2.2, 0.28, 8, 24)
+const GHOST_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 })
+
+function ghostObject(node: GraphNode): THREE.Object3D {
+  const group = new THREE.Group()
+  group.add(new THREE.Mesh(GHOST_RING_GEO, GHOST_MAT))
+  if (node.img) {
+    // KLONOZVA: a coverMaterial cache-elt es megosztott — az opacity kozvetlen
+    // irasa minden mas node boritojat is elhalvanyitana. Ghostbol max 5 van, a
+    // par extra material nem szamit.
+    const cover = new THREE.Sprite(coverMaterial(node.img, true).clone())
+    cover.material.opacity = 0.55
+    cover.scale.set(6, 8.2, 1)
+    cover.position.set(0, 7.6, 0)
+    group.add(cover)
+  }
+  const name = new SpriteText(truncate(node.label, 22), 2.4, '#9a9aa4')
+  name.fontFace = 'Instrument Sans, Arial'
+  name.position.set(0, 4.4, 0)
+  group.add(name)
+  return group
+}
+
 // dimension node: name above a plain white dot (genre reads bigger than studio/year/…)
 function dimObject(node: GraphNode): THREE.Object3D {
   if (node.timeNode) return timeObject(node)
@@ -224,6 +250,7 @@ export default function Graph3D({
   onDimClick,
   fitKey = 0,
   focusNodeId = null,
+  onGhostClick,
 }: {
   data: { nodes: GraphNode[]; links: GraphLink[] }
   onAnimeClick: (animeId: number) => void
@@ -238,6 +265,8 @@ export default function Graph3D({
   fitKey?: number
   // fly to this node once the layout has placed it (e.g. a freshly added anime)
   focusNodeId?: string | null
+  // lebego ajanlas kattintasa — a hivo nyitja ra a dontesi panelt
+  onGhostClick?: (node: GraphNode) => void
 }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fgRef = useRef<any>(null)
@@ -369,6 +398,7 @@ export default function Graph3D({
     (n: GraphNode) =>
       n.type === 'anime' ? animeObject(n, nodeMode)
       : n.type === 'char' ? charObject(n)
+      : n.type === 'ghost' ? ghostObject(n)
       : dimObject(n),
     [nodeMode],
   )
@@ -376,6 +406,7 @@ export default function Graph3D({
   const linkColor = useCallback(
     (l: GraphLink) =>
       l.kind === 'relation' ? '#ffffff'
+      : l.kind === 'ghost' ? '#6f6f7a'
       : l.kind === 'vibe' || l.kind === 'seiyuu' ? '#5c5c66'
       : '#8f8f96',
     [],
@@ -383,6 +414,8 @@ export default function Graph3D({
   const linkLineDash = useCallback(
     (l: GraphLink) =>
       l.kind === 'relation' ? [3, 2]
+      // a ghost-el hosszabb szaggatassal: „ide vezet at, de meg nem lepted meg"
+      : l.kind === 'ghost' ? [2, 4]
       : l.kind === 'vibe' || l.kind === 'seiyuu' ? [1.5, 3.5]
       : null,
     [],
@@ -391,6 +424,10 @@ export default function Graph3D({
   const handleNodeClick = useCallback((n: any) => {
     if (n.type === 'anime' && n.animeId) {
       onAnimeClick(n.animeId)
+      return
+    }
+    if (onGhostClick && n.type === 'ghost') {
+      onGhostClick(n as GraphNode)
       return
     }
     if (onDimClick && n.type === 'dim' && !n.timeNode) {
@@ -405,7 +442,7 @@ export default function Graph3D({
       n,
       1000,
     )
-  }, [onAnimeClick, onDimClick])
+  }, [onAnimeClick, onDimClick, onGhostClick])
 
   useEffect(() => {
     if (!fitKey) return
@@ -453,7 +490,8 @@ export default function Graph3D({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleNodeHover = useCallback((n: any) => {
     onAnimeHover(n?.type === 'anime' ? n.animeId ?? null : null)
-    const clickable = n?.type === 'anime' || (!!onDimClick && n?.type === 'dim' && !n.timeNode)
+    const clickable = n?.type === 'anime' || n?.type === 'ghost'
+      || (!!onDimClick && n?.type === 'dim' && !n.timeNode)
     document.body.style.cursor = clickable ? 'pointer' : 'default'
   }, [onAnimeHover, onDimClick])
 
