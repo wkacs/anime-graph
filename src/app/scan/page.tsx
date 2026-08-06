@@ -114,6 +114,27 @@ export default function ScanPage() {
                     </span>
                   ))}
                 </div>
+
+                {/* A tengelyek ide, a terkep melle tartoznak: kulon savkent lent
+                    egy foltnyi ures hely maradt a kartya bal oldalan. */}
+                <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/8 pt-5">
+                  {result.loves.length > 0 && (
+                    <div>
+                      <dt className="label-mono">{t('loves')}</dt>
+                      <dd className="mt-1 text-sm text-text-1">{result.loves.join(', ')}</dd>
+                    </div>
+                  )}
+                  {result.avoids.length > 0 && (
+                    <div>
+                      <dt className="label-mono">{t('avoids')}</dt>
+                      <dd className="mt-1 text-sm text-text-2">{result.avoids.join(', ')}</dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt className="label-mono">{t('nicheAxis')}</dt>
+                    <dd className="mt-1 font-mono text-sm text-text-1">{result.nicheScore}/100</dd>
+                  </div>
+                </dl>
               </div>
               {/* reszleges graf: a teljes, mozgathato 3D-vaszon a fiok mogott van */}
               <div className="relative mx-auto aspect-square w-full max-w-[320px]">
@@ -136,29 +157,6 @@ export default function ScanPage() {
               </RevealItem>
             ))}
           </RevealGroup>
-
-          {(result.loves.length > 0 || result.avoids.length > 0) && (
-            <Reveal>
-              <div className="surface-1 flex flex-wrap gap-x-10 gap-y-4 rounded-[var(--r-md)] p-5">
-                {result.loves.length > 0 && (
-                  <div>
-                    <p className="label-mono">{t('loves')}</p>
-                    <p className="mt-1.5 text-text-1">{result.loves.join(', ')}</p>
-                  </div>
-                )}
-                {result.avoids.length > 0 && (
-                  <div>
-                    <p className="label-mono">{t('avoids')}</p>
-                    <p className="mt-1.5 text-text-2">{result.avoids.join(', ')}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="label-mono">{t('nicheAxis')}</p>
-                  <p className="mt-1.5 font-mono text-text-1">{result.nicheScore}/100</p>
-                </div>
-              </div>
-            </Reveal>
-          )}
 
           <Reveal>
             <div className="glass flex flex-wrap items-center justify-between gap-4 rounded-[var(--r-lg)] p-6">

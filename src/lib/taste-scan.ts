@@ -76,13 +76,6 @@ export type ScanResult = {
 /** Ennyi listaelem alatt nem allitunk semmit — inkabb semmi, mint vaktipp. */
 export const MIN_SCAN_SAMPLE = 10
 
-/**
- * AniList-felhasznalonev alakja. A scan bejelentkezes nelkuli, publikus vegpont,
- * ezert a bemenet mar itt szuk: ami nem fer ebbe, az el sem jut az AniListig.
- */
-export function isValidAnilistUsername(name: unknown): name is string {
-  return typeof name === 'string' && /^[A-Za-z0-9_]{2,20}$/.test(name)
-}
 /** A sziget-kuszob: ez alatt egy mufaj zaj, nem iranyzat. */
 const ISLAND_MIN_SHARE = 0.06
 /**
@@ -96,10 +89,24 @@ const ISLAND_MERGE_CONTAINMENT = 0.6
 const MAX_ISLANDS = 5
 /** E folott a fosziget MAGA a lista, es nem a szigetek szama a mondanivalo. */
 export const DOMINANT_ISLAND_SHARE = 0.75
+/** A szignatura-allitashoz ennyi pontozott cim kell. */
+export const MIN_SIGNATURE_RATED = 20
+/** Ez alatti lift meg nem allitas. */
+const MIN_SIGNATURE_LIFT = 1.5
 const MAX_CONSTELLATION = 40
 const MAX_EDGES = 70
 /** Ket cim kozott akkor huzunk elt, ha ennyi mufajt osztanak. */
 const EDGE_MIN_SHARED_GENRES = 2
+/** 1/φ — alacsony diszkrepanciaju leptek a csillagkep szogosztasahoz. */
+const GOLDEN_FRACTION = 0.618033988749895
+
+/**
+ * AniList-felhasznalonev alakja. A scan bejelentkezes nelkuli, publikus vegpont,
+ * ezert a bemenet mar itt szuk: ami nem fer ebbe, az el sem jut az AniListig.
+ */
+export function isValidAnilistUsername(name: unknown): name is string {
+  return typeof name === 'string' && /^[A-Za-z0-9_]{2,20}$/.test(name)
+}
 
 /** A statusz onmagaban is jel: amit befejeztel, azt vegignezted; amit dobtal, nem. */
 const STATUS_WEIGHT: Record<string, number> = {
@@ -193,8 +200,11 @@ export function nicheScore(entries: ScanEntry[]): number {
  * ertelmezett — nem allitunk semmit arrol, mas felhasznalok mit szeretnek.
  */
 export function signatureFeature(entries: ScanEntry[]): { feature: string; lift: number } | null {
+  // Szigorubb kuszob, mint a tobbi allitasnal: a lift egy harmadolt mintan
+  // szuletik, es 20 pontozott cim alatt a felso harmad mar csak par cim —
+  // ott egy 1,4-szeres arany veletlen, nem szignatura.
   const rated = entries.filter((e) => e.score != null && e.score > 0)
-  if (rated.length < MIN_SCAN_SAMPLE) return null
+  if (rated.length < MIN_SIGNATURE_RATED) return null
   const sorted = [...rated].sort((a, b) => b.score! - a.score!)
   const cut = Math.max(3, Math.floor(sorted.length / 3))
   const top = sorted.slice(0, cut)
@@ -223,7 +233,7 @@ export function signatureFeature(entries: ScanEntry[]): { feature: string; lift:
       best = { feature: name, lift: Math.round(lift * 10) / 10 }
     }
   }
-  return best && best.lift > 1.2 ? best : null
+  return best && best.lift >= MIN_SIGNATURE_LIFT ? best : null
 }
 
 /** Szigorubb vagy engedekenyebb vagy a kozossegnel? Csak pontozott cimekbol. */
@@ -315,25 +325,51 @@ export function buildConstellation(
     .slice(0, MAX_CONSTELLATION)
   if (ranked.length === 0) return { constellation: [], edges: [] }
 
-  const perIsland = new Map<number, number>()
+  // Ket menet. Eloszor szigetenkent csoportositunk, mert csak a teljes csoport
+  // ismereteben lehet aranyos korcikket adni neki: fix szog-lepessel a nagy
+  // sziget csomoba all, a kicsi meg szetszorodik.
   const lanes = Math.max(1, islands.length)
-  const constellation: ConstellationNode[] = ranked.map(({ e, w }) => {
-    const idx = e.genres.map((g) => islandOf.get(g)).find((i) => i != null) ?? lanes
-    const seen = perIsland.get(idx) ?? 0
-    perIsland.set(idx, seen + 1)
-    // a szigeten belul legyezoszeruen nyitunk, hogy ne fedjek egymast
-    const angle = ((idx + 0.5) / (lanes + 1)) * Math.PI * 2 + (seen % 7) * 0.16 - 0.5
-    const radius = 1 - w * 0.55 + (seen % 3) * 0.06
-    return {
-      anilistId: e.anilistId,
-      title: e.title,
-      coverUrl: e.coverUrl,
-      island: islands[idx]?.name ?? 'other',
-      x: Math.round(Math.cos(angle) * Math.min(1, radius) * 1000) / 1000,
-      y: Math.round(Math.sin(angle) * Math.min(1, radius) * 1000) / 1000,
-      r: Math.round(Math.min(1, Math.max(0.25, w)) * 1000) / 1000,
-    }
-  })
+  const laneOf = (e: ScanEntry) => e.genres.map((g) => islandOf.get(g)).find((i) => i != null) ?? lanes
+  const groups = new Map<number, { e: ScanEntry; w: number }[]>()
+  for (const item of ranked) {
+    const idx = laneOf(item.e)
+    const g = groups.get(idx) ?? []
+    g.push(item)
+    groups.set(idx, g)
+  }
+
+  const placed = new Map<number, ConstellationNode>()
+  let cursor = 0
+  for (const idx of [...groups.keys()].sort((a, b) => a - b)) {
+    const group = groups.get(idx)!
+    const sector = (group.length / ranked.length) * Math.PI * 2
+    const start = cursor
+    cursor += sector
+    group.forEach(({ e, w }, k) => {
+      // Napraforgo-elrendezes a sziget korcikkeben. Ket dolgot kell egyszerre
+      // teljesitenie, es a naiv megoldasok mindig az egyiket rontjak el:
+      //   - a sugar sulybol szamolva gyurut ad, mert egy csomo cim ugyanaz a 10-es;
+      //   - a sugar rangbol, egyenletes szoggel viszont ivet ad, mert a ketto
+      //     egyutt no, es a korcikk belseje ures marad.
+      // A gyokos sugar teruletre nezve egyenletesen tolt, az aranymetszet-lepteku
+      // szog pedig szethuzza az egymas utani elemeket. A sorrend igy is szamit:
+      // a `ranked` suly szerinti, tehat a kedvencek a kozeppont korul allnak.
+      const t = (k + 0.5) / group.length
+      const angle = start + sector * ((k * GOLDEN_FRACTION) % 1)
+      const radius = Math.min(1, 0.14 + Math.sqrt(t) * 0.8)
+      placed.set(e.anilistId, {
+        anilistId: e.anilistId,
+        title: e.title,
+        coverUrl: e.coverUrl,
+        island: islands[idx]?.name ?? 'other',
+        x: Math.round(Math.cos(angle) * radius * 1000) / 1000,
+        y: Math.round(Math.sin(angle) * radius * 1000) / 1000,
+        r: Math.round(Math.min(1, Math.max(0.25, w)) * 1000) / 1000,
+      })
+    })
+  }
+  // az elek a `ranked` indexeire hivatkoznak, ezert a sorrend nem valtozhat
+  const constellation: ConstellationNode[] = ranked.map(({ e }) => placed.get(e.anilistId)!)
 
   // Eloszor MINDEN el, aztan a legerosebbek maradnak. Ha menet kozben vagnank,
   // a lista elejen allo csomopontok kapnak minden elt, a vegen allok egyet sem.
