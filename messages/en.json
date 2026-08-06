@@ -272,34 +272,34 @@
     "envUnset": "{envVar} is not configured"
   },
   "landing": {
-    "kicker": "Anime Graph · the list that works for you",
-    "title": "Don't just track anime and manga. Understand what you love.",
-    "body": "Bring over your MAL or AniList library, follow each season, and find personal matches based on your ratings — not just popularity.",
-    "start": "Start with my list",
+    "kicker": "Anime Graph · a taste layer over your list",
+    "title": "Your anime taste, mapped.",
+    "body": "Import your AniList or MAL library. Discover the patterns behind what you love and get explainable picks for what to watch next.",
+    "start": "Map my taste",
     "browse": "Browse the catalogue first",
     "catalogKicker": "Live catalogue",
     "catalogTitle": "Take a look before you sign up",
     "catalogLink": "Browse the full catalogue →",
     "catalogFallback": "Anime, manga, current seasons and community rankings are available to browse without an account.",
-    "feature1Title": "Import, don't restart",
-    "feature1Text": "Bring across MAL and AniList statuses, scores and progress. Your old list stays useful.",
-    "feature2Title": "Taste, not just an algorithm",
-    "feature2Text": "A fit score built from your own ratings shows which titles may work for you, and why.",
-    "feature3Title": "A catalogue made for discovery",
-    "feature3Text": "Public title pages, seasonal views and rankings make finding a new favourite easier.",
+    "feature1Title": "Your taste, on a map",
+    "feature1Text": "Your list becomes a 3D graph: see how many separate taste islands you have, and what connects them.",
+    "feature2Title": "Explainable picks, not a black box",
+    "feature2Text": "A fit score built from your own ratings shows how well a title suits you, and why.",
+    "feature3Title": "Import, don't restart",
+    "feature3Text": "Bring across MAL and AniList statuses, scores and progress. Your old list stays useful.",
     "closingTitle": "Start with the list you already have, or explore first.",
     "closingText": "After creating an account, you can begin with a MAL or AniList import.",
     "create": "Create an account",
     "visualKicker": "Your taste, in focus",
     "visualTitle": "A calmer way to discover",
     "visualMeta": "ANIME · MANGA",
-    "stat1Value": "22,000+",
-    "stat1Label": "anime in the catalogue",
-    "stat2Value": "136,000+",
-    "stat2Label": "manga in the catalogue",
-    "stat3Value": "MAL · AniList",
-    "stat3Label": "import in minutes",
-    "seo": "Personal anime and manga tracker with taste-based discovery."
+    "stat1Value": "MAL · AniList",
+    "stat1Label": "import in minutes",
+    "stat2Value": "3D",
+    "stat2Label": "taste map from your own list",
+    "stat3Value": "150,000+",
+    "stat3Label": "anime and manga in the catalogue",
+    "seo": "Map your anime taste: import your AniList or MAL list and get explainable recommendations."
   },
   "community": {
     "eyebrow": "Community ratings",
@@ -321,7 +321,19 @@
     "for": "for: {list}",
     "against": "against: {list}",
     "dropRisk": "⚠ drop risk {score}%",
-    "dropTooltip": "You tend to drop similar ones: {list}"
+    "dropTooltip": "You tend to drop similar ones: {list}",
+    "tier": {
+      "strong": "Strong fit",
+      "mixed": "Mixed fit",
+      "experimental": "Experimental fit",
+      "low": "Low fit"
+    },
+    "confidence": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "low": "Low confidence"
+    },
+    "basedOn": "Based on {count, plural, one {# related title} other {# related titles}}"
   },
   "onboardingCta": {
     "kicker": "Start here",

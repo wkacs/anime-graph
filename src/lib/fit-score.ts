@@ -1,3 +1,5 @@
+import { SCORE_THRESHOLDS } from './score-color'
+
 // Fit-score: „mennyire illik hozzád ez a cím?" — tisztán lokális, AI-hívás nélkül.
 // A user listájából műfaj/tag-súlyvektort épít (pont > státusz-jel), a célcím
 // feature-eivel vetíti össze. Ismeretlen feature nem büntet (kimarad a nevezőből);
@@ -109,6 +111,50 @@ export function computeDropRisk(items: TasteItem[], target: FitTarget): FitResul
   if (vec.sample < MIN_DROP_SAMPLE) return null
   // a computeFit MIN_SAMPLE-je a teljes listára van kalibrálva; droppból kevesebb is elég
   return computeFit({ ...vec, sample: Math.max(vec.sample, MIN_SAMPLE) }, target)
+}
+
+// A puszta „78%" pontosabbnak latszik, mint amit egy heurisztikus becsles birni
+// tud. Ezert a felulet elsodleges informacioja a fokozat, a szazalek masodlagos.
+// A kuszobok a kozos SCORE_THRESHOLDS.fit-bol jonnek, hogy a szin es a cimke
+// soha ne mondjon mast; a 'low' hataran alul kulon fokozat all, mert az „nem
+// tipikus neked, de nem is kizarva" eset nem ugyanaz, mint a tiszta elutasitas.
+export type FitTier = 'strong' | 'mixed' | 'experimental' | 'low'
+export const EXPERIMENTAL_MIN = 30
+
+export function fitTier(score: number): FitTier {
+  const { high, mid } = SCORE_THRESHOLDS.fit
+  if (score >= high) return 'strong'
+  if (score >= mid) return 'mixed'
+  if (score >= EXPERIMENTAL_MIN) return 'experimental'
+  return 'low'
+}
+
+// Mennyi bizonyitek all a becsles mogott. Ket fuggetlen tenyezo: mekkora a
+// lista (sample) es abbol hany cim kapcsolodik egyaltalan a celcimhez (related).
+// Nagy lista onmagaban nem eleg: 600 shonen mellett egy iyashikei becslese
+// tovabbra is vaktipp.
+export type FitConfidence = 'high' | 'medium' | 'low'
+export const CONFIDENCE_HIGH = { sample: 40, related: 15 } as const
+export const CONFIDENCE_MEDIUM = { sample: 15, related: 5 } as const
+
+export function fitConfidence(sample: number, related: number): FitConfidence {
+  if (sample >= CONFIDENCE_HIGH.sample && related >= CONFIDENCE_HIGH.related) return 'high'
+  if (sample >= CONFIDENCE_MEDIUM.sample && related >= CONFIDENCE_MEDIUM.related) return 'medium'
+  return 'low'
+}
+
+// Hany listaelem oszt legalabb egy feature-t a celcimmel. Ez a „Based on N
+// related titles" allitas forrasa — csak azt szamolja, ami tenyleg szamitott.
+export function relatedCount(items: TasteItem[], target: FitTarget): number {
+  const keys = new Set(targetFeatures(target).map((f) => f.key))
+  let n = 0
+  for (const it of items) {
+    const hit =
+      it.genres.some((g) => keys.has(`g:${g.toLowerCase()}`)) ||
+      it.tags.some((t) => keys.has(`t:${t.name.toLowerCase()}`))
+    if (hit) n++
+  }
+  return n
 }
 
 export function computeFit(taste: TasteVector, target: FitTarget): FitResult | null {

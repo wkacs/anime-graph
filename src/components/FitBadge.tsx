@@ -1,14 +1,22 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { fitTier, fitConfidence, type FitTier } from '@/lib/fit-score'
 
 type Fit = { score: number; top: { name: string }[]; against: { name: string }[] }
-type FitResponse = { fit: Fit | null; drop?: Fit | null; authed: boolean }
+type FitResponse = {
+  fit: Fit | null; drop?: Fit | null; authed: boolean
+  sample?: number; related?: number
+}
 
-function scoreColor(score: number): string {
-  if (score >= 70) return 'var(--status-watching)'
-  if (score >= 45) return 'rgba(255,255,255,0.85)'
-  return 'var(--status-dropped)'
+// A fokozat viszi a fo informaciot, ezert az kap szint. A 'low' az egyetlen
+// elutasito allapot — az 'experimental' szandekosan semleges, mert az „nem
+// tipikus neked", nem pedig „rossz".
+const TIER_COLOR: Record<FitTier, string> = {
+  strong: 'var(--status-watching)',
+  mixed: 'var(--text-1)',
+  experimental: 'var(--text-2)',
+  low: 'var(--status-dropped)',
 }
 
 // „Neked való?" badge a katalógus-oldalon — bejelentkezve valós fit-score,
@@ -40,30 +48,53 @@ export default function FitBadge({ titleId }: { titleId: number }) {
   if (!res.fit) return null // kevés adat a listán — inkább semmi, mint vak tipp
 
   const { score, top, against } = res.fit
+  const tier = fitTier(score)
+  // A szamlalok nelkul (regi valaszalak) nem allitunk megbizhatosagot.
+  const evidence =
+    res.sample != null && res.related != null
+      ? { level: fitConfidence(res.sample, res.related), related: res.related }
+      : null
+
   return (
-    <section data-tour="fit" className="glass rounded-3xl px-5 py-3.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-      <span className="label-mono">{t('title')}</span>
-      <span className="text-xl font-mono font-semibold tracking-tight" style={{ color: scoreColor(score) }}>
-        {score}%
-      </span>
-      {top.length > 0 && (
-        <span className="text-xs text-text-2">
-          {t('for', { list: top.map((x) => x.name).join(', ') })}
+    <section data-tour="fit" className="glass rounded-3xl px-5 py-4">
+      {/* A fokozat all elol es nagyobb: egy heurisztikus becslesnel a „Strong fit"
+          allitas fedezete megvan, a ket tizedesnyi pontossagot sugallo szazaleke nem. */}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="label-mono">{t('title')}</span>
+        <span className="text-lg font-medium tracking-tight" style={{ color: TIER_COLOR[tier] }}>
+          {t(`tier.${tier}`)}
         </span>
+        <span className="font-mono text-sm text-text-3">{score}%</span>
+      </div>
+
+      {evidence && (
+        <p className="mt-1.5 text-xs text-text-3">
+          {t(`confidence.${evidence.level}`)} · {t('basedOn', { count: evidence.related })}
+        </p>
       )}
-      {against.length > 0 && (
-        <span className="text-xs text-text-3">
-          {t('against', { list: against.map((x) => x.name).join(', ') })}
-        </span>
-      )}
-      {res.drop && res.drop.score >= 65 && (
-        <span
-          className="text-xs font-mono"
-          style={{ color: 'var(--status-dropped)' }}
-          title={t('dropTooltip', { list: res.drop.top.map((x) => x.name).join(', ') })}
-        >
-          {t('dropRisk', { score: res.drop.score })}
-        </span>
+
+      {(top.length > 0 || against.length > 0 || res.drop) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {top.length > 0 && (
+            <span className="text-xs text-text-2">
+              {t('for', { list: top.map((x) => x.name).join(', ') })}
+            </span>
+          )}
+          {against.length > 0 && (
+            <span className="text-xs text-text-3">
+              {t('against', { list: against.map((x) => x.name).join(', ') })}
+            </span>
+          )}
+          {res.drop && res.drop.score >= 65 && (
+            <span
+              className="text-xs font-mono"
+              style={{ color: 'var(--status-dropped)' }}
+              title={t('dropTooltip', { list: res.drop.top.map((x) => x.name).join(', ') })}
+            >
+              {t('dropRisk', { score: res.drop.score })}
+            </span>
+          )}
+        </div>
       )}
     </section>
   )

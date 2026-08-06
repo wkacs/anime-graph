@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { springFluid } from '@/lib/motion'
 import { useTranslations } from 'next-intl'
-import { MOBILE_TABS, MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMoreActive } from '@/lib/nav'
+import {
+  MOBILE_TABS, MOBILE_MORE_TABS, GUEST_TABS, isTabActive, isNavHidden, isMobileMoreActive,
+} from '@/lib/nav'
 import { useAuthStatus } from '@/lib/use-auth-status'
 
 // Also tab-sav <md alatt. Korabban a felso pillt vizszintesen kellett huzni
@@ -35,19 +37,13 @@ export default function MobileTabBar() {
             className="surface-menu absolute right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] min-w-44 rounded-[var(--r-md)] p-1.5 flex flex-col gap-0.5"
             onClick={(e) => e.stopPropagation()}
           >
-            {MORE_TABS.map((tab) => (
+            {MOBILE_MORE_TABS.map((tab) => (
               <li key={tab.href}>
                 <Link href={tab.href} className={itemClass(isTabActive(tab.href, pathname))}>
                   {t(tab.key)}
                 </Link>
               </li>
             ))}
-            {/* a graf mobilon innen erheto el */}
-            <li>
-              <Link href="/graph" className={itemClass(isTabActive('/graph', pathname))}>
-                {t('graph')}
-              </Link>
-            </li>
             <li>
               <Link href="/settings" className={itemClass(isTabActive('/settings', pathname))}>
                 {t('settings')}
@@ -90,13 +86,13 @@ export default function MobileTabBar() {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           className={`flex-1 rounded-[var(--r-sm)] px-1 py-2 text-center text-[11px] transition-colors ${
-            isMoreActive(pathname) || open ? 'text-text-1' : 'text-text-3'
+            isMobileMoreActive(pathname) || open ? 'text-text-1' : 'text-text-3'
           }`}
         >
           <span className="block truncate">{t('more')}</span>
           <span
             className={`mx-auto mt-1 block h-0.5 w-5 rounded-full transition-opacity ${
-              isMoreActive(pathname) ? 'bg-white/70 opacity-100' : 'opacity-0'
+              isMobileMoreActive(pathname) ? 'bg-white/70 opacity-100' : 'opacity-0'
             }`}
           />
         </button>}

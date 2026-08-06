@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildTasteVector, computeFit, computeDropRisk, MIN_SAMPLE, MIN_DROP_SAMPLE, SIGNAL_ALPHA } from './fit-score'
+import {
+  buildTasteVector, computeFit, computeDropRisk, MIN_SAMPLE, MIN_DROP_SAMPLE, SIGNAL_ALPHA,
+  fitTier, fitConfidence, relatedCount,
+} from './fit-score'
 
 const item = (over: Partial<Parameters<typeof buildTasteVector>[0][number]> = {}) => ({
   genres: ['Action'], tags: [], status: 'completed', myScore: null, ...over,
@@ -155,5 +158,68 @@ describe('kibovitett FitTarget', () => {
     const a = computeFit(v, { genres: ['Action'], tags: [] })
     const b = computeFit(v, { genres: ['Action'], tags: [], extraKeys: [] })
     expect(a).toEqual(b)
+  })
+})
+
+describe('fitTier', () => {
+  it('a fokozat a kozos fit-kuszobokre ul ra', () => {
+    expect(fitTier(78)).toBe('strong')
+    expect(fitTier(70)).toBe('strong')
+    expect(fitTier(69)).toBe('mixed')
+    expect(fitTier(45)).toBe('mixed')
+    expect(fitTier(44)).toBe('experimental')
+    expect(fitTier(30)).toBe('experimental')
+    expect(fitTier(29)).toBe('low')
+    expect(fitTier(0)).toBe('low')
+  })
+
+  it('a szelso ertekek is ervenyes fokozatot adnak', () => {
+    expect(fitTier(100)).toBe('strong')
+  })
+})
+
+describe('fitConfidence', () => {
+  it('nagy lista sok kapcsolodo cimmel: magas', () => {
+    expect(fitConfidence(120, 31)).toBe('high')
+  })
+
+  it('nagy lista, de alig kapcsolodik barmi: nem magas', () => {
+    // 600 shonen mellett egy iyashikei becslese tovabbra is vaktipp
+    expect(fitConfidence(600, 2)).toBe('low')
+    expect(fitConfidence(600, 6)).toBe('medium')
+  })
+
+  it('kis lista sosem ad magasat, meg ha minden kapcsolodik is', () => {
+    expect(fitConfidence(12, 12)).toBe('low')
+  })
+
+  it('kozepes savban medium', () => {
+    expect(fitConfidence(20, 8)).toBe('medium')
+  })
+})
+
+describe('relatedCount', () => {
+  const target = { genres: ['Action'], tags: [{ name: 'Time Skip' }] }
+
+  it('mufaj-egyezest szamol', () => {
+    expect(relatedCount([item({ genres: ['Action'] }), item({ genres: ['Romance'] })], target)).toBe(1)
+  })
+
+  it('tag-egyezest is szamol', () => {
+    const it2 = item({ genres: ['Romance'], tags: [{ name: 'Time Skip' }] })
+    expect(relatedCount([it2], target)).toBe(1)
+  })
+
+  it('egy cimet csak egyszer szamol, akkor is ha tobb feature egyezik', () => {
+    const both = item({ genres: ['Action'], tags: [{ name: 'Time Skip' }] })
+    expect(relatedCount([both], target)).toBe(1)
+  })
+
+  it('kis- es nagybetu nem szamit', () => {
+    expect(relatedCount([item({ genres: ['ACTION'] })], target)).toBe(1)
+  })
+
+  it('nulla, ha semmi nem kapcsolodik', () => {
+    expect(relatedCount([item({ genres: ['Romance'], tags: [{ name: 'Iyashikei' }] })], target)).toBe(0)
   })
 })

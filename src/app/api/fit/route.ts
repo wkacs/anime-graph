@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db/client'
 import { anime, title } from '@/db/schema'
 import { requireUserId } from '@/lib/session'
-import { buildTasteVector, computeFit, computeDropRisk } from '@/lib/fit-score'
+import { buildTasteVector, computeFit, computeDropRisk, relatedCount } from '@/lib/fit-score'
 import { and, eq } from 'drizzle-orm'
 import { apiError } from '@/lib/api-error'
 
@@ -28,5 +28,11 @@ export async function GET(req: NextRequest) {
 
   const fit = computeFit(buildTasteVector(items), target)
   const drop = computeDropRisk(items, target)
-  return NextResponse.json({ fit, drop, authed: true })
+  // A megbizhatosag-fokozathoz a felulet a nyers szamlalokat kapja meg, nem a
+  // kesz cimket: igy a „31 kapcsolodo cim" is kiirhato a badge alatt.
+  return NextResponse.json({
+    fit, drop, authed: true,
+    sample: items.length,
+    related: relatedCount(items, target),
+  })
 }

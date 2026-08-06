@@ -28,15 +28,24 @@ export const GUEST_TABS: NavTab[] = [
   { href: '/leaderboard', key: 'leaderboard' },
 ]
 
-// Mobilon a napi-hasznalatu negy. A 3D-graf tudatosan kimarad: egy
-// force-graph 390px-en nem napi muvelet, a 'Tovabb' menubol elerheto.
-const MOBILE_HREFS = ['/', '/list', '/browse', '/reviews'] as const
+// Mobilon a napi-hasznalatu negy. A graf itt van, mert az a termek neve es fo
+// megkulonbozteto eleme — ha a 'Tovabb' menuben all, a legtobb mobil-latogato
+// sosem latja. A velemenyiras ezzel szemben kontextualis muvelet (befejezett
+// cim utan, illetve a profil alatti bejovo listabol), nem napi tab.
+const MOBILE_HREFS = ['/', '/list', '/browse', '/graph'] as const
 
 export const MOBILE_TABS: NavTab[] = MOBILE_HREFS.map((href) => {
   const tab = PRIMARY_TABS.find((t) => t.href === href)
   if (!tab) throw new Error(`MOBILE_TABS: nincs ilyen elsodleges tab: ${href}`)
   return tab
 })
+
+// A mobil 'Tovabb' menu tartalma. Az elsodleges tabok kozul az kerul ide, ami
+// nem fert be a savba; a /settings a komponensben, kulon zaroelemkent all.
+export const MOBILE_MORE_TABS: NavTab[] = [
+  ...PRIMARY_TABS.filter((t) => !MOBILE_TABS.includes(t)),
+  ...MORE_TABS,
+]
 
 // Pontos egyezes vagy valodi alutvonal. A korabbi startsWith() a
 // '/listazas'-t is a '/lista' tabnak jelolte.
@@ -59,6 +68,12 @@ export function isFooterHidden(pathname: string): boolean {
   return FULL_VIEW_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`))
 }
 
+// Az asztali 'Tovabb' legordulo: ott mind az ot elsodleges tab kint van a savban.
 export function isMoreActive(pathname: string): boolean {
   return MORE_TABS.some((t) => isTabActive(t.href, pathname))
+}
+
+// A mobil 'Tovabb' tobbet fed le, mert a savba csak negy tab fer.
+export function isMobileMoreActive(pathname: string): boolean {
+  return MOBILE_MORE_TABS.some((t) => isTabActive(t.href, pathname))
 }

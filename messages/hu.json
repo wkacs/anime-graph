@@ -272,34 +272,34 @@
     "envUnset": "{envVar} nincs beállítva"
   },
   "landing": {
-    "kicker": "Anime Graph · a lista, ami dolgozik neked",
-    "title": "Ne csak vezesd az anime- és manga-listádat. Értsd is, mit szeretsz.",
-    "body": "Hozd át a MAL- vagy AniList-listádat, kövesd a szezont, és kapj személyes találatokat az értékeléseid, nem pusztán a népszerűség alapján.",
-    "start": "Kezdem a listámmal",
+    "kicker": "Anime Graph · ízlésréteg a listád fölé",
+    "title": "Térképezd fel az anime-ízlésedet.",
+    "body": "Hozd át az AniList- vagy MAL-listádat. Meglátod a mintázatot a kedvenceid mögött, és indokolt találatot kapsz arra, mit nézz következőnek.",
+    "start": "Térképezd fel az ízlésem",
     "browse": "Nézz körül a katalógusban",
     "catalogKicker": "Élő katalógus",
     "catalogTitle": "Nézz bele, mielőtt regisztrálsz",
     "catalogLink": "Teljes katalógus →",
     "catalogFallback": "Anime, manga, aktuális szezon és közösségi toplisták — bejelentkezés nélkül is böngészhetők.",
-    "feature1Title": "Import, nem újrakezdés",
-    "feature1Text": "A MAL- és AniList-listád státuszai, pontjai és haladása áthozható; a régi listád nem vész el.",
-    "feature2Title": "Ízlés, nem csak algoritmus",
-    "feature2Text": "A saját értékeléseidből épülő fit-score megmutatja, melyik cím miért lehet neked való.",
-    "feature3Title": "Katalógus, ami felfedezésre kész",
-    "feature3Text": "Publikus címoldalak, szezonális nézetek és toplisták segítenek új kedvenceket találni.",
+    "feature1Title": "Az ízlésed, térképen",
+    "feature1Text": "A listád 3D-gráffá áll össze: látod, hány külön ízlés-szigeted van, és mi köti őket össze.",
+    "feature2Title": "Indokolt találat, nem fekete doboz",
+    "feature2Text": "A saját értékeléseidből épülő fit-score megmondja, mennyire illik hozzád egy cím, és hogy miért.",
+    "feature3Title": "Import, nem újrakezdés",
+    "feature3Text": "A MAL- és AniList-listád státuszai, pontjai és haladása áthozható; a régi listád nem vész el.",
     "closingTitle": "Kezdd a meglévő listáddal, vagy nézz körül előbb.",
     "closingText": "A fiók létrehozása után MAL- vagy AniList-importtal indulhatsz.",
     "create": "Fiók létrehozása",
     "visualKicker": "Az ízlésed fókuszban",
     "visualTitle": "Nyugodtabb felfedezés",
     "visualMeta": "ANIME · MANGA",
-    "stat1Value": "22 000+",
-    "stat1Label": "anime a katalógusban",
-    "stat2Value": "136 000+",
-    "stat2Label": "manga a katalógusban",
-    "stat3Value": "MAL · AniList",
-    "stat3Label": "import pár perc alatt",
-    "seo": "Személyes anime- és manga-követő ízlésalapú felfedezéssel."
+    "stat1Value": "MAL · AniList",
+    "stat1Label": "import pár perc alatt",
+    "stat2Value": "3D",
+    "stat2Label": "ízléstérkép a saját listádból",
+    "stat3Value": "150 000+",
+    "stat3Label": "anime és manga a katalógusban",
+    "seo": "Térképezd fel az anime-ízlésedet: importáld az AniList- vagy MAL-listádat, és kapj indokolt ajánlást."
   },
   "community": {
     "eyebrow": "Közösségi értékelések",
@@ -321,7 +321,19 @@
     "for": "mellette: {list}",
     "against": "ellene: {list}",
     "dropRisk": "⚠ droppolás-rizikó {score}%",
-    "dropTooltip": "Hasonlókat szoktál dobni: {list}"
+    "dropTooltip": "Hasonlókat szoktál dobni: {list}",
+    "tier": {
+      "strong": "Erősen illik",
+      "mixed": "Vegyesen illik",
+      "experimental": "Kísérleti",
+      "low": "Nem illik"
+    },
+    "confidence": {
+      "high": "Magas megbízhatóság",
+      "medium": "Közepes megbízhatóság",
+      "low": "Alacsony megbízhatóság"
+    },
+    "basedOn": "{count} kapcsolódó cím alapján"
   },
   "onboardingCta": {
     "kicker": "Kezdjük itt",

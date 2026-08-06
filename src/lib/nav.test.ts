@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import {PRIMARY_TABS, MORE_TABS, MOBILE_TABS,
-  isTabActive, isNavHidden, isMoreActive, isFooterHidden } from './nav'
+import {PRIMARY_TABS, MORE_TABS, MOBILE_TABS, MOBILE_MORE_TABS,
+  isTabActive, isNavHidden, isMoreActive, isMobileMoreActive, isFooterHidden } from './nav'
 
 describe('nav szerkezet', () => {
   it('5 elsodleges es 7 tovabbi tab', () => {
@@ -13,12 +13,27 @@ describe('nav szerkezet', () => {
     expect(new Set(all).size).toBe(all.length)
   })
 
-  it('a mobil sav 4 napi-hasznalatu tabot ad', () => {
-    expect(MOBILE_TABS.map((t) => t.href)).toEqual(['/', '/list', '/browse', '/reviews'])
+  it('a mobil sav 4 napi-hasznalatu tabot ad, benne a graffal', () => {
+    expect(MOBILE_TABS.map((t) => t.href)).toEqual(['/', '/list', '/browse', '/graph'])
   })
 
   it('a mobil tabok az elsodlegesek kozul valok (ugyanaz az objektum)', () => {
     for (const t of MOBILE_TABS) expect(PRIMARY_TABS).toContain(t)
+  })
+
+  it('a mobil Tovabb menu pontosan azt hozza, ami nem fert a savba', () => {
+    const inBar = new Set(MOBILE_TABS.map((t) => t.href))
+    const inMore = MOBILE_MORE_TABS.map((t) => t.href)
+    // a velemenyek kontextualis muvelet lett, ezert innen erheto el
+    expect(inMore).toContain('/reviews')
+    for (const href of inBar) expect(inMore).not.toContain(href)
+    for (const t of MORE_TABS) expect(inMore).toContain(t.href)
+    expect(new Set(inMore).size).toBe(inMore.length)
+  })
+
+  it('minden elsodleges tab elerheto mobilon is', () => {
+    const reachable = new Set([...MOBILE_TABS, ...MOBILE_MORE_TABS].map((t) => t.href))
+    for (const t of PRIMARY_TABS) expect(reachable.has(t.href)).toBe(true)
   })
 
   it('a velemenyek tab viszi a pending-badge-et', () => {
@@ -68,6 +83,18 @@ describe('isMoreActive', () => {
   it('hamis az elsodleges tabokon', () => {
     expect(isMoreActive('/')).toBe(false)
     expect(isMoreActive('/list')).toBe(false)
+  })
+
+  // Asztalon mind az ot elsodleges tab kint van, ezert a velemenyek NEM jeloli
+  // a legordulot; mobilon viszont a Tovabb menubol nyilik, ott jelolnie kell.
+  it('a velemenyek csak a mobil Tovabb-ot jeloli', () => {
+    expect(isMoreActive('/reviews')).toBe(false)
+    expect(isMobileMoreActive('/reviews')).toBe(true)
+  })
+
+  it('a mobil savban levo tab egyiket sem jeloli', () => {
+    expect(isMobileMoreActive('/graph')).toBe(false)
+    expect(isMobileMoreActive('/list')).toBe(false)
   })
 })
 
