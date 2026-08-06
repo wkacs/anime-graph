@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { extractJson, glmChat } from './glm'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 describe('glmChat', () => {
   it('kikapcsolja a flash reasoning-módot (thinking: disabled), különben a nagy promptok túllépik a 30s timeoutot', async () => {
@@ -13,6 +16,27 @@ describe('glmChat', () => {
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)
     expect(body.thinking).toEqual({ type: 'disabled' })
     expect(body.model).toBe('glm-4.7-flash')
+  })
+
+  it('OpenRouter-failover: eltűnt modellnél (404) a lánc következő tagjára lép', async () => {
+    vi.stubEnv('OPENROUTER_API_KEY', 'test-kulcs')
+    const fetchMock = vi
+      .fn()
+      // GLM: egyetlen próba (retries:0), 429
+      .mockResolvedValueOnce(new Response('{"error":{"code":"1305"}}', { status: 429 }))
+      // OpenRouter 1. modell: 404 (a free modellek jönnek-mennek)
+      .mockResolvedValueOnce(new Response('{"error":"No endpoints found"}', { status: 404 }))
+      // OpenRouter 2. modell: siker
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ choices: [{ message: { content: 'or-valasz' } }] }), { status: 200 }),
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(glmChat([{ role: 'user', content: 'hi' }], { retries: 0 })).resolves.toBe('or-valasz')
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    const m1 = JSON.parse(fetchMock.mock.calls[1][1].body as string).model
+    const m2 = JSON.parse(fetchMock.mock.calls[2][1].body as string).model
+    expect(m1).not.toBe(m2) // tényleg másik modellel próbálkozott
+    expect(fetchMock.mock.calls[1][0]).toContain('openrouter.ai')
   })
 
   it('429 után újrapróbál, és a következő sikeres választ adja vissza', async () => {

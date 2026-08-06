@@ -83,27 +83,53 @@ export async function glmChat(
   throw lastError instanceof Error ? lastError : new Error('GLM: minden próbálkozás elbukott')
 }
 
+// Az ingyenes OpenRouter-modellek jönnek-mennek (a korábbi deepseek-default
+// 404-gyel tűnt el, és vele halt a teljes failover) — ezért lánc: 404/429/5xx/
+// timeout esetén a következő modellre lépünk. OPENROUTER_MODEL env a lánc elé kerül.
+const OR_FALLBACK_MODELS = [
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'google/gemma-4-31b-it:free',
+  'openai/gpt-oss-20b:free',
+]
+
 async function openRouterChat(messages: ChatMessage[], opts: GlmOpts = {}): Promise<string> {
-  const orModel = process.env.OPENROUTER_MODEL ?? 'deepseek/deepseek-chat-v3-0324:free'
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: orModel,
-      messages,
-      temperature: 0.4,
-    }),
-    signal: AbortSignal.timeout(30_000),
-  })
-  if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}`)
-  const json = await res.json()
-  const content = json?.choices?.[0]?.message?.content
-  if (typeof content !== 'string' || !content) throw new Error('OpenRouter: üres válasz')
-  await logUsage(orModel, json?.usage, opts, content.length)
-  return content
+  const chain = process.env.OPENROUTER_MODEL
+    ? [process.env.OPENROUTER_MODEL, ...OR_FALLBACK_MODELS]
+    : OR_FALLBACK_MODELS
+  let lastError: unknown
+  for (const orModel of chain) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: orModel,
+          messages,
+          temperature: 0.4,
+        }),
+        // rövidebb, mint a GLM 30s-e: a lánc 3 tagja se lóghat túl a route-kereten
+        signal: AbortSignal.timeout(15_000),
+      })
+      if (!res.ok) {
+        lastError = new Error(`OpenRouter HTTP ${res.status} (${orModel})`)
+        continue
+      }
+      const json = await res.json()
+      const content = json?.choices?.[0]?.message?.content
+      if (typeof content !== 'string' || !content) {
+        lastError = new Error(`OpenRouter: üres válasz (${orModel})`)
+        continue
+      }
+      await logUsage(orModel, json?.usage, opts, content.length)
+      return content
+    } catch (e) {
+      lastError = e // network/timeout → következő modell
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('OpenRouter: minden modell elbukott')
 }
 
 export function extractJson(text: string): unknown {
