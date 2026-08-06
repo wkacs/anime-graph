@@ -12,7 +12,7 @@ export const PUBLIC_PATHS = [
   '/anime/', '/manga/', '/browse', '/leaderboard', '/community', '/u/',
   // Taste Scan es a paros osszevetes: a hidegindito es a meghivo-hurok eppen
   // attol mukodik, hogy fiok nelkul is fut.
-  '/scan', '/api/scan', '/duo', '/api/duo',
+  '/scan', '/api/scan', '/duo', '/api/duo', '/season',
   // A jogi tajekoztatokra a lablec MINDEN publikus oldalrol es a regisztracios
   // urlap is linkel. Auth mogott a link holt, es elfogadhatatlan feltetelt kerne.
   '/aszf', '/adatvedelem',

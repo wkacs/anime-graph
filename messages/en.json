@@ -287,6 +287,34 @@
       "low": "Low fit"
     }
   },
+  "seasonFit": {
+    "eyebrow": "Season fit · no account needed",
+    "heading": "{season} according to {username}'s taste",
+    "lead": "We ranked the {count} titles of the {season} season against your public AniList list. Anything already on your list is left out.",
+    "noPicks": "Not enough data for this season yet.",
+    "noPicksText": "Either the season's line-up has not synced yet, or your list is too short to rank against.",
+    "tier": {
+      "strong": "Strong fit",
+      "mixed": "Mixed fit",
+      "experimental": "Experimental fit",
+      "low": "Low fit"
+    },
+    "ctaTitle": "We'll tell you when the next season starts.",
+    "ctaText": "With an account the season ranking refreshes on its own, and you get notified about new episodes of what you follow.",
+    "ctaButton": "Create an account",
+    "mapCta": "My taste map",
+    "mapEntry": "This season for me",
+    "ownCta": "Map your own",
+    "shareTitle": "{username}'s season",
+    "shareDescription": "The current anime season ranked against {username}'s public AniList list.",
+    "error": {
+      "badUsername": "That is not a valid AniList username.",
+      "noSuchUser": "No such AniList user.",
+      "emptyOrPrivateList": "That list is empty or not public.",
+      "notEnoughData": "Too few titles on that list to rank against.",
+      "anilistDown": "AniList is not responding right now. Try again in a moment."
+    }
+  },
   "duo": {
     "eyebrow": "Taste comparison · no account needed",
     "heading": "How close is your taste to {username}'s?",

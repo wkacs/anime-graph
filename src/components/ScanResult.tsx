@@ -19,6 +19,7 @@ export default function ScanResultView({
 }) {
   const t = useTranslations('scan')
   const td = useTranslations('duo')
+  const ts = useTranslations('seasonFit')
   const [copied, setCopied] = useState<'share' | 'invite' | null>(null)
   const dominant = result.islands[0] && result.islands[0].share >= DOMINANT_ISLAND_SHARE
   // A meghivo-link ugyanabbol az origóbol epul, mint a megoszto.
@@ -161,7 +162,14 @@ export default function ScanResultView({
             <p className="h2 text-text-1">{t('ctaTitle')}</p>
             <p className="mt-1.5 text-sm text-text-2">{t('ctaText')}</p>
           </div>
-          <Link href="/login" className="btn-solid px-5 py-3">{t('ctaButton')}</Link>
+          <div className="flex flex-wrap gap-2">
+            {/* A szezon-nezet ugyanebbol a listabol el, tehat itt a
+                kezenfekvo tovabblepes — es szezononkent ujra idoszeru. */}
+            <Link href={`/season/${username}`} className="btn-ghost surface-1 px-5 py-3">
+              {ts('mapEntry')}
+            </Link>
+            <Link href="/login" className="btn-solid px-5 py-3">{t('ctaButton')}</Link>
+          </div>
         </div>
       </Reveal>
     </div>

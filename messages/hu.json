@@ -287,6 +287,34 @@
       "low": "Nem illik"
     }
   },
+  "seasonFit": {
+    "eyebrow": "Szezon-fit · fiók nélkül",
+    "heading": "{season} {username} ízlése szerint",
+    "lead": "A {season} szezon {count} címét rangsoroltuk a publikus AniList-listád alapján. Ami már a listádon van, kimarad.",
+    "noPicks": "Ehhez a szezonhoz még nincs elég adat.",
+    "noPicksText": "Vagy a szezon kínálata még nem szinkronizált, vagy a listád túl rövid a rangsoroláshoz.",
+    "tier": {
+      "strong": "Erősen illik",
+      "mixed": "Vegyesen illik",
+      "experimental": "Kísérleti",
+      "low": "Nem illik"
+    },
+    "ctaTitle": "Szólunk, ha indul a következő szezon.",
+    "ctaText": "Fiókkal a szezon-rangsor magától frissül, és értesítést kapsz a követett címek új részeiről.",
+    "ctaButton": "Fiók létrehozása",
+    "mapCta": "Az ízlés-térképem",
+    "mapEntry": "Ez a szezon nekem",
+    "ownCta": "Térképezd fel a sajátodat",
+    "shareTitle": "{username} szezonja",
+    "shareDescription": "Az aktuális anime-szezon {username} publikus AniList-listája szerint rangsorolva.",
+    "error": {
+      "badUsername": "Ez nem érvényes AniList-felhasználónév.",
+      "noSuchUser": "Nincs ilyen AniList-felhasználó.",
+      "emptyOrPrivateList": "Ez a lista üres vagy nem publikus.",
+      "notEnoughData": "Túl kevés cím van a listán a rangsoroláshoz.",
+      "anilistDown": "Az AniList most nem válaszol. Próbáld újra kicsit később."
+    }
+  },
   "duo": {
     "eyebrow": "Ízlés-összevetés · fiók nélkül",
     "heading": "Mennyire passzol az ízlésed {username} ízléséhez?",
