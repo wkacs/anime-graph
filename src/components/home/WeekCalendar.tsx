@@ -15,12 +15,70 @@ export default function WeekCalendar({ mine }: { mine: MineItem[] }) {
     <section>
       <SectionHeader title={t('yourWeek')} />
 
-      {/* Mobilon vízszintesen görgethető sáv 108px-es napokkal: hét egyenlő
-          oszlop 390px-en 48px-et adott naponként, amibe csak bélyegkép fért.
-          sm-től valódi 7 oszlopos rács. A flex/grid váltás Tailwinden megy,
-          nem a .snap-row osztályon, hogy ne kelljen display-specificitást
-          csatázni. */}
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:grid sm:grid-cols-7 sm:overflow-visible sm:px-0">
+      {/* Mobil: CSAK a napok, amikor tényleg jön valami — a korábbi vízszintes
+          sáv félbevágott, üres „–" oszlopokat mutatott a jobb szélen, ami
+          töröttnek hatott (user-visszajelzés 2026-08-06). */}
+      <div className="flex flex-col gap-2.5 sm:hidden">
+        {WEEKDAY_KEYS.map((key, day) => {
+          const label = tw(key)
+          const items = mine.filter((m) => weekdayIndexBudapest(m.airingAt) === day)
+          if (items.length === 0) return null
+          const today = day === todayIdx
+          return (
+            <div
+              key={key}
+              aria-current={today ? 'date' : undefined}
+              className={`flex gap-3 rounded-[var(--r-md)] p-2.5 ${
+                today ? 'surface-2 ring-1 ring-white/15' : 'surface-1'
+              }`}
+            >
+              <p
+                className={`w-12 shrink-0 pt-1 text-center text-xs font-medium uppercase tracking-wide ${
+                  today ? 'text-text-1' : 'text-text-2'
+                }`}
+              >
+                {label}
+              </p>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                {items.map((m) => (
+                  <Link
+                    key={m.animeId}
+                    href={`/anime/${m.animeId}`}
+                    className="flex items-center gap-2.5"
+                  >
+                    {m.coverUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={m.coverUrl}
+                        alt=""
+                        loading="lazy"
+                        className="w-10 shrink-0 rounded-[var(--r-sm)] object-cover"
+                        style={{ aspectRatio: '2 / 3' }}
+                      />
+                    ) : (
+                      <div
+                        className="w-10 shrink-0 rounded-[var(--r-sm)] bg-white/5"
+                        style={{ aspectRatio: '2 / 3' }}
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-xs leading-snug text-text-1">{m.title}</p>
+                      {m.nextEpisode > 0 && (
+                        <p className="mt-0.5 font-mono text-[10px] tabular-nums text-text-3">
+                          EP {m.nextEpisode}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* sm-től a teljes heti rács — ott elfér mind a 7 oszlop */}
+      <div className="hidden sm:grid sm:grid-cols-7 gap-2">
         {WEEKDAY_KEYS.map((key, day) => {
           const label = tw(key)
           const items = mine.filter((m) => weekdayIndexBudapest(m.airingAt) === day)
@@ -29,7 +87,7 @@ export default function WeekCalendar({ mine }: { mine: MineItem[] }) {
             <div
               key={key}
               aria-current={today ? 'date' : undefined}
-              className={`w-[108px] shrink-0 rounded-[var(--r-md)] p-2 sm:w-auto ${
+              className={`rounded-[var(--r-md)] p-2 ${
                 today ? 'surface-2 ring-1 ring-white/20' : 'surface-1'
               }`}
             >

@@ -65,8 +65,10 @@ export default function MobileTabBar() {
         )}
       </AnimatePresence>
 
+      {/* surface-dock, nem surface-3: a 8%-os üveg csak a blurtól élt, és ahol
+          a backdrop-filter kiesett (iOS fixed-elem), a sáv a tartalomra folyt */}
       <nav
-        className="surface-3 md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around rounded-t-[var(--r-lg)] px-1 pt-1.5"
+        className="surface-dock md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch justify-around rounded-t-[var(--r-lg)] px-1 pt-1.5"
         style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom))' }}
       >
         {pending && (

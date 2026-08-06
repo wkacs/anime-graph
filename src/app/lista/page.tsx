@@ -229,7 +229,90 @@ export default function ListaPage() {
       {/* NINCS overflow-hidden: az scroll-kontenert csinal, ami elrontja a
           <thead> position:sticky-jet. A sarok-lekerekites a tablan van. */}
       <div className="surface-1 rounded-[var(--r-lg)]">
-        <table className="w-full text-15 rounded-[var(--r-lg)]">
+        {list == null && (
+          // BETÖLTÉS: vázlat, nem onboarding-CTA. A szomszédos /bongeszo
+          // már így csinálja — a primitív megvolt, csak itt nem használtuk.
+          <div className="px-4 py-6">
+            <div className="flex flex-col gap-3"><Skeleton variant="row" count={8} /></div>
+          </div>
+        )}
+        {list != null && loadError && (
+          <div className="px-4 py-6">
+            <EmptyState
+              eyebrow={tc('error')}
+              title={tc('error')}
+              text={t('loadFailed')}
+              action={<Button onClick={reload}>{tc('retry')}</Button>}
+            />
+          </div>
+        )}
+        {list != null && !loadError && rows.length === 0 && (
+          <div className="px-4 py-6">
+            {list.length === 0 ? (
+              <OnboardingCTA compact />
+            ) : (
+              <EmptyState
+                eyebrow={t('filterEyebrow')}
+                title={t('noMatch')}
+                text={t('noMatchText')}
+                action={
+                  <Button onClick={() => { setQ(''); setFilter('all'); setAiAnswer(null); setAiMatches(null) }}>
+                    {t('clearFilters')}
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        )}
+
+        {/* Mobil: poszter-rács. A táblázat 52px-es bélyegképe telefonon
+            olvashatatlan volt (user-visszajelzés 2026-08-06); itt a borító a
+            fő elem, a státusz pötty + pont a borítón ül. */}
+        {list != null && !loadError && rows.length > 0 && (
+          <div className="grid grid-cols-3 gap-3 p-3 sm:hidden">
+            {rows.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => router.push(`/anime/${a.id}`)}
+                className="group text-left"
+              >
+                <div className="relative">
+                  {a.coverUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={a.coverUrl}
+                      alt=""
+                      loading="lazy"
+                      className="w-full rounded-[var(--r-sm)] object-cover"
+                      style={{ aspectRatio: '2 / 3' }}
+                    />
+                  ) : (
+                    <div className="w-full rounded-[var(--r-sm)] bg-white/5" style={{ aspectRatio: '2 / 3' }} />
+                  )}
+                  <span
+                    className={`absolute left-1.5 top-1.5 inline-block h-2 w-2 rounded-full ring-2 ring-black/60 ${
+                      a.status === 'watching' ? 'animate-pulse' : ''
+                    }`}
+                    style={{ background: STATUS_CSS_VARS[a.status] ?? 'white' }}
+                    aria-label={statusLabel(a.status)}
+                  />
+                  {a.myScore != null && (
+                    <span className="absolute bottom-1.5 right-1.5 rounded-full bg-black/75 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-text-1">
+                      {a.myScore}
+                    </span>
+                  )}
+                  {pinnedTitles != null && pinnedTitles.includes(a.titleId) && (
+                    <span aria-hidden className="absolute right-1 top-1 text-xs">📌</span>
+                  )}
+                </div>
+                <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-text-2">{a.titleRomaji}</p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {list != null && !loadError && rows.length > 0 && (
+        <table className="hidden w-full text-15 rounded-[var(--r-lg)] sm:table">
           {/* A közel opak kitöltés MARAD: ez tartja olvashatóan a text-3
               oszlopcímkéket a gördülő poszter-sorok fölött. Ami változott: a
               kemény 1px-es elválasztó helyett halványuló él (§12 — az úszó
@@ -332,49 +415,9 @@ export default function ListaPage() {
                 </td>
               </tr>
             ))}
-            {list == null && (
-              // BETÖLTÉS: vázlat, nem onboarding-CTA. A szomszédos /bongeszo
-              // már így csinálja — a primitív megvolt, csak itt nem használtuk.
-              <tr>
-                <td colSpan={9} className="px-4 py-6">
-                  <div className="flex flex-col gap-3"><Skeleton variant="row" count={8} /></div>
-                </td>
-              </tr>
-            )}
-            {list != null && loadError && (
-              <tr>
-                <td colSpan={9} className="px-4 py-6">
-                  <EmptyState
-                    eyebrow={tc('error')}
-                    title={tc('error')}
-                    text={t('loadFailed')}
-                    action={<Button onClick={reload}>{tc('retry')}</Button>}
-                  />
-                </td>
-              </tr>
-            )}
-            {list != null && !loadError && rows.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-4 py-6">
-                  {list.length === 0 ? (
-                    <OnboardingCTA compact />
-                  ) : (
-                    <EmptyState
-                      eyebrow={t('filterEyebrow')}
-                      title={t('noMatch')}
-                      text={t('noMatchText')}
-                      action={
-                        <Button onClick={() => { setQ(''); setFilter('all'); setAiAnswer(null); setAiMatches(null) }}>
-                          {t('clearFilters')}
-                        </Button>
-                      }
-                    />
-                  )}
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
+        )}
       </div>
       {list != null && (
         <p className="label-mono mt-3 text-right">{t('countOf', { shown: rows.length, total: list.length })}</p>

@@ -13,12 +13,12 @@
   /* ── felület-skála ────────────────────────────────────── */
   /* a liquid glass skálára kötve: a 13 nem átírt oldal is együtt mozdul */
   --surface-1-bg: rgba(255, 255, 255, 0.035);
-  --surface-1-border: rgba(255, 255, 255, 0.08);
+  --surface-1-border: rgba(255, 255, 255, 0.055);
   --surface-2-bg: rgba(255, 255, 255, 0.05);
-  --surface-2-border: rgba(255, 255, 255, 0.1);
+  --surface-2-border: rgba(255, 255, 255, 0.07);
   --surface-2-highlight: rgba(255, 255, 255, 0.16);
   --surface-3-bg: rgba(255, 255, 255, 0.08);
-  --surface-3-border: rgba(255, 255, 255, 0.14);
+  --surface-3-border: rgba(255, 255, 255, 0.1);
   --surface-3-highlight: rgba(255, 255, 255, 0.22);
 
   /* legacy aliasok: a 13 nem átírt oldal .glass/.glass-strong-ot használ */
@@ -76,7 +76,9 @@
   --glass-1-bg: rgba(255, 255, 255, 0.035);
   --glass-2-bg: rgba(255, 255, 255, 0.05);
   --glass-3-bg: rgba(255, 255, 255, 0.08);
-  --glass-br: rgba(255, 255, 255, 0.1);
+  /* user-visszajelzés 2026-08-06: „mindennek fehér kerete van" — a tónus
+     lejjebb, az él-fény (inset highlight) viszi tovább az üveg-identitást */
+  --glass-br: rgba(255, 255, 255, 0.065);
   --glass-hl: rgba(255, 255, 255, 0.14);
   --glass-blur-1: 16px;
   --glass-blur-2: 24px;
@@ -504,6 +506,18 @@ body::after {
     0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
+/* Rögzített mobil dokk (alsó tabsáv): görgő poszterek fölött ül, ezért a
+   .surface-overlay elve érvényes — majdnem opak alap, a blur csak ráadás.
+   A 8%-os surface-3 kizárólag a blurtól élt: ahol a backdrop-filter kiesik
+   (iOS fixed-elem quirk, régi böngésző), a sáv szövege a tartalomra folyt. */
+.surface-dock {
+  background: rgba(12, 12, 15, 0.94);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+}
+
 /* felugro menu: majdnem opak. A surface-3 backdrop-blurjan atszurodott a
    mogotte allo UI (sticky szuro-sav chipjei), ami olvashatatlan kasat adott. */
 .surface-menu {
@@ -746,6 +760,7 @@ body::after {
   .glass-strong,
   .surface-2,
   .surface-3,
+  .surface-dock,
   .surface-overlay {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -785,6 +800,7 @@ body::after {
   .glass-strong,
   .surface-2,
   .surface-3,
+  .surface-dock,
   .surface-overlay {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
